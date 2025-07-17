@@ -53,7 +53,7 @@ class powerSinema(private val context: android.content.Context, private val shar
                 }
 
 
-                HomePageList(title, show, isHorizontalImages = true)
+                HomePageList(title, show, isHorizontalImages = false)
             },
             hasNext = false
         )
