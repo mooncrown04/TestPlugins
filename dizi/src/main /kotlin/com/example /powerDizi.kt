@@ -1,4 +1,4 @@
-package com.sinetech.latte
+package com.example
 
 import android.content.SharedPreferences
 import android.util.Log
@@ -112,7 +112,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 }
             }
             if (searchResponses.isNotEmpty()) {
-                homePageLists.add(HomePageList("0-9 rakam olarak başlayan DİZİLER", searchResponses, isHorizontalImages = true))
+                homePageLists.add(HomePageList("0-9 rakam olarak başlayan DİZİLER", searchResponses, isHorizontalImages = false))
             }
         }
 
