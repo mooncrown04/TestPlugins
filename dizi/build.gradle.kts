@@ -1,7 +1,17 @@
-// TestPlugins/src/dizi/build.gradle.kts
+plugins {
+    // Cloudstream eklenti API'sini kullanmak için gerekli plugin
+    // Lütfen buradaki "LATEST_CLOUDSTREAM_PLUGIN_VERSION" yerine doğru versiyonu yazın!
+    id("com.lagradost.cloudstream") version "LATEST_CLOUDSTREAM_PLUGIN_VERSION"
 
-// NOT: ExampleProvider'ın build.gradle.kts dosyasında 'plugins { ... }' bloğu olmadığı için,
-// bu dosyadan da kaldırıldı. Cloudstream plugin'i artık settings.gradle.kts üzerinden yönetilmelidir.
+    // Kotlin Android projeleri için gerekli
+    id("org.jetbrains.kotlin.android")
+
+    // Parcelize anotasyonunu kullanmak için
+    id("kotlin-parcelize")
+
+    // Kapt (Kotlin Annotation Processing Tool) kullanmak için
+    id("kotlin-kapt")
+}
 
 version = 3
 
