@@ -1,7 +1,20 @@
+// settings.gradle.kts
+
+pluginManagement {
+    repositories {
+        gradlePluginPortal() // Gradle'ın kendi plugin portalı
+        mavenCentral()       // Yaygın Maven deposu
+        google()             // Google'ın Android için deposu
+        maven("https://jitpack.io") // JitPack, Cloudstream'in bazı bağımlılıklarını barındırabilir
+        // Cloudstream'in kendi plugin deposu: BU ÇOK ÖNEMLİ!
+        maven("https://maven.pkg.github.com/LagradOst/CloudStream-Releases/")
+    }
+}
+
 rootProject.name = "CloudstreamPlugins"
 
-// This file sets what projects are included.
-// All new projects should get automatically included unless specified in the "disabled" variable.
+// Bu dosya, hangi projelerin dahil edildiğini ayarlar.
+// Tüm yeni projeler, "disabled" değişkeninde belirtilmedikçe otomatik olarak dahil edilmelidir.
 
 val disabled = listOf<String>()
 
@@ -15,5 +28,5 @@ fun File.eachDir(block: (File) -> Unit) {
     listFiles()?.filter { it.isDirectory }?.forEach { block(it) }
 }
 
-// To only include a single project, comment out the previous lines (except the first one), and include your plugin like so:
+// Yalnızca tek bir projeyi dahil etmek için, önceki satırları (ilk hariç) yorumlayın ve eklentinizi şöyle dahil edin:
 include(":dizi",":ExampleProvider")
