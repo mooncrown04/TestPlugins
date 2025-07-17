@@ -3,21 +3,17 @@ version = 3
 dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
-    // AndroidX UI ve yardımcı kütüphaneler (Bunlar eksikti!)
-    // Temel AndroidX bileşenleri ve uyumluluk sınıfları için
-    implementation "androidx.core:core-ktx:1.13.1"
-    implementation "androidx.appcompat:appcompat:1.7.0"
+    // Eksik AndroidX UI ve yardımcı kütüphaneleri BURAYA EKLENDİ!
+    // Bu kütüphaneler, BlankFragment.kt dosyanızdaki "Unresolved reference" hatalarını çözecektir.
+    implementation "androidx.core:core-ktx:1.13.1" // ResourcesCompat ve TextViewCompat gibi temel yardımcılar
+    implementation "androidx.appcompat:appcompat:1.7.0" // Temel Android UI bileşenleri
 
-    // BottomSheetDialogFragment ve Material Design bileşenleri için
-    implementation "com.google.android.material:material:1.12.0"
+    implementation "com.google.android.material:material:1.12.0" // BottomSheetDialogFragment ve diğer Material Design bileşenleri için
+    implementation "androidx.fragment:fragment-ktx:1.7.1" // Fragment API'ları için (Material kütüphanesi bunu dolaylı olarak getirse de, açıkça belirtmek iyi bir pratik olabilir)
 
-    // Fragment ile ilgili uzantılar için (Material kütüphanesi bunu içerse de, açıkça eklemek sorunları önleyebilir)
-    implementation "androidx.fragment:fragment-ktx:1.7.1"
+    implementation "androidx.annotation:annotation:1.8.0" // @RequiresApi gibi özel annotation'lar için
 
-    // @RequiresApi gibi annotation'lar için
-    implementation "androidx.annotation:annotation:1.8.0"
-
-    // Buraya projenizdeki diğer bağımlılıkları ekleyebilirsiniz
+    // Projenizin diğer bağımlılıkları buraya eklenebilir
 }
 
 android {
@@ -26,7 +22,7 @@ android {
     }
 
     defaultConfig {
-        // tmdbApiKey adında bir proje özelliği bulunamazsa varsayılan olarak boş dize kullanır
+        // TMDB_SECRET_API'nin BuildConfig'e nasıl enjekte edildiği
         val apiKey = project.findProperty("tmdbApiKey")?.toString() ?: ""
         buildConfigField("String", "TMDB_SECRET_API", "\"$apiKey\"")
     }
