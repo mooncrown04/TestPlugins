@@ -1,93 +1,33 @@
-plugins {
-    // Cloudstream eklenti API'sini kullanmak için gerekli plugin
-    // Lütfen buradaki "LATEST_CLOUDSTREAM_PLUGIN_VERSION" yerine doğru versiyonu yazın!
-    id("com.lagradost.cloudstream") version "LATEST_CLOUDSTREAM_PLUGIN_VERSION"
-
-    // Kotlin Android projeleri için gerekli
-    id("org.jetbrains.kotlin.android")
-
-    // Parcelize anotasyonunu kullanmak için
-    id("kotlin-parcelize")
-
-    // Kapt (Kotlin Annotation Processing Tool) kullanmak için
-    id("kotlin-kapt")
-}
-
 version = 3
 
 dependencies {
-    // Tüm bağımlılıkları parantez () içine alın!
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-
-    // AndroidX UI ve yardımcı kütüphaneler
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.appcompat:appcompat:1.7.0")
-
-    implementation("com.google.android.material:material:1.12.0")
-    implementation("androidx.fragment:fragment-ktx:1.7.1")
-
-    implementation("androidx.annotation:annotation:1.8.0")
-
-    // Cloudstream API bağımlılıkları
-    // Bunlar Cloudstream eklenti geliştirme için temel API'lerdir
-    implementation(project(":app")) // Cloudstream core API'sine bağımlılık
 }
 
 android {
-    // Android SDK versiyonları ve derleme ayarları
-    compileSdk = 34 // Genellikle en son stabil versiyonu kullanın
+    buildFeatures {
+        buildConfig = true
+    }
 
     defaultConfig {
-        minSdk = 21 // Cloudstream için minimum desteklenen SDK
-        targetSdk = 34 // Hedeflenen SDK versiyonu
-
-        // BuildConfig alanları
-        // TMDB API anahtarınızı BuildConfig'e eklemek için
-        // local.properties dosyanızda 'tmdbApiKey="YOUR_API_KEY"' şeklinde tanımlanmalı
         val apiKey = project.findProperty("tmdbApiKey")?.toString() ?: ""
         buildConfigField("String", "TMDB_SECRET_API", "\"$apiKey\"")
     }
-
-    // JVM uyumluluğu
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17 // Kotlin 1.8.x ve Gradle 8+ için genellikle 17 idealdir
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
-    }
-
-    // Derleme özellikleri (build features)
-    buildFeatures {
-        buildConfig = true // BuildConfig sınıfı oluşturmayı etkinleştir
-    }
-
-    // Android kaynak birleştirme stratejisi, çakışmaları önlemek için
-    packagingOptions {
-        resources.excludes.add("META-INF/*.md")
-        resources.excludes.add("META-INF/*.txt")
-    }
 }
 
-// Cloudstream özel yapılandırma bloğu
 cloudstream {
-    // Eklenti için genel bilgiler
-    authors = listOf("GitLatte", "patr0nq", "keyiflerolsun") // Eklentinin yazarları
-    language = "tr" // Eklentinin desteklediği dil
-    description = "powerboard`un yabancı dizi arşivi" // Eklentinin kısa açıklaması
+    authors     = listOf("GitLatte", "patr0nq", "keyiflerolsun")
+    language    = "tr"
+    description = "powerboard`un yabancı dizi arşivi"
 
     /**
-     * Eklentinin durumu (0: Kapalı, 1: Tamam, 2: Yavaş, 3: Beta)
-     * Belirtilmezse varsayılan 3 (Beta) olur.
-     **/
-    status = 1 // Eklentinin durumu (örneğin, "Ok" yani çalışıyor)
-
-    // Eklentinin desteklediği içerik türleri
-    tvTypes = listOf("TvSeries") // Bu bir dizi eklentisi olduğu için 'TvSeries'
-
-    // Eklentinin ana simgesinin URL'si
+     * Status int as the following:
+     * 0: Down
+     * 1: Ok
+     * 2: Slow
+     * 3: Beta only
+    **/
+    status  = 1 // will be 3 if unspecified
+    tvTypes = listOf("TvSeries")
     iconUrl = "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powerdizi/powerdizi.png"
-
-    // Eklentinin dahili adı (build output dosya adı için kullanılır)
-    internalName = "Dizi" // Bu isim, .cs3 dosyasının adı olacaktır (örn: Dizi.cs3)
 }
