@@ -54,15 +54,15 @@ class PornHubProvider : MainAPI() {
         val link = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val posterUrl = fetchImgUrl(this.selectFirst("img"))
 
-        // MovieSearchResponse constructor'ı lambda ile posterUrl'ı ayarlanacak şekilde düzeltildi
+        // MovieSearchResponse constructor'ı posterUrl'ı ve data'yı doğrudan parametre olarak alacak şekilde düzeltildi
         return MovieSearchResponse(
             name = title,
             url = link,
             apiName = this@PornHubProvider.name,
-            type = globalTvType
-        ) {
-            this.posterUrl = posterUrl
-        }
+            type = globalTvType,
+            posterUrl = posterUrl, // posterUrl'ı doğrudan parametre olarak geçiyoruz
+            data = null // Lambda yerine null data map'i geçiyoruz
+        )
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -115,14 +115,18 @@ class PornHubProvider : MainAPI() {
         val tags = document.select("div.categoriesWrapper a[data-label='Category']")
             .map { it?.text()?.trim().toString().replace(", ", "") }
 
-        // recommendations ve relatedVideo için newMovieSearchResponse lambda ile posterUrl ayarlanacak şekilde düzeltildi
+        // recommendations için newMovieSearchResponse posterUrl ve data'yı doğrudan parametre olarak alacak şekilde düzeltildi
         val recommendations = document.selectXpath("//a[contains(@class, 'img')]").mapNotNull {
             val recName = it.attr("title").trim()
             val recHref = fixUrlNull(it.attr("href")) ?: return@mapNotNull null
             val recPosterUrl = fixUrlNull(it.selectFirst("img")?.attr("src"))
-            newMovieSearchResponse(recName, recHref, globalTvType) {
-                this.posterUrl = recPosterUrl
-            }
+            newMovieSearchResponse(
+                name = recName,
+                url = recHref,
+                type = globalTvType,
+                posterUrl = recPosterUrl, // posterUrl'ı doğrudan parametre olarak geçiyoruz
+                data = null // null data map'i geçiyoruz
+            )
         }
 
         // Aktör çekimi, Actor nesneleri oluşturacak şekilde düzeltildi
