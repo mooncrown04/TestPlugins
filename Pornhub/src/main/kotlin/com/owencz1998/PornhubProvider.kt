@@ -53,14 +53,15 @@ class PornHubProvider : MainAPI() {
         val link = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val posterUrl = fetchImgUrl(this.selectFirst("img"))
 
-        // MovieSearchResponse constructor'ı posterUrl'ı doğrudan parametre olarak alıyorsa bu şekilde olmalı
+        // Reverted to using a lambda block for posterUrl assignment
         return MovieSearchResponse(
             name = title,
             url = link,
             apiName = this@PornHubProvider.name,
-            type = globalTvType,
-            posterUrl = posterUrl // posterUrl'ı doğrudan parametre olarak geçiyoruz
-        )
+            type = globalTvType
+        ) {
+            this.posterUrl = posterUrl
+        }
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -114,13 +115,10 @@ class PornHubProvider : MainAPI() {
             val recName = it.attr("title").trim()
             val recHref = fixUrlNull(it.attr("href")) ?: return@mapNotNull null
             val recPosterUrl = fixUrlNull(it.selectFirst("img")?.attr("src"))
-            // newMovieSearchResponse'a posterUrl'ı doğrudan parametre olarak geçiyoruz
-            newMovieSearchResponse(
-                name = recName,
-                url = recHref,
-                type = globalTvType,
-                posterUrl = recPosterUrl
-            )
+            // Reverted to using a lambda block for posterUrl assignment
+            newMovieSearchResponse(recName, recHref, globalTvType) {
+                this.posterUrl = recPosterUrl
+            }
         }
 
         val actors =
