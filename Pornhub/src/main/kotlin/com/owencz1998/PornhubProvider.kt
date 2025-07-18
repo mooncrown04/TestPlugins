@@ -54,17 +54,15 @@ class PornHubProvider : MainAPI() {
         val link = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val posterUrl = fetchImgUrl(this.selectFirst("img"))
 
-        // MovieSearchResponse constructor'ı posterUrl'ı lambda içinde ayarlayacak şekilde düzeltildi
-        // ve 'data' parametresi null olarak açıkça belirtildi
+        // MovieSearchResponse constructor'ına posterUrl'ı doğrudan parametre olarak geçiyoruz
+        // 'data = null' parametresi kaldırıldı çünkü constructor'da beklenmiyor
         return MovieSearchResponse(
             name = title,
             url = link,
             apiName = this@PornHubProvider.name,
             type = globalTvType,
-            data = null // Map<String, String>? beklenen parametreye null geçiyoruz
-        ) {
-            this.posterUrl = posterUrl // posterUrl'ı lambda içinde ayarlıyoruz
-        }
+            posterUrl = posterUrl // posterUrl'ı doğrudan parametre olarak geçiyoruz
+        )
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -118,16 +116,14 @@ class PornHubProvider : MainAPI() {
             val recName = it.attr("title").trim()
             val recHref = fixUrlNull(it.attr("href")) ?: return@mapNotNull null
             val recPosterUrl = fixUrlNull(it.selectFirst("img")?.attr("src"))
-            // newMovieSearchResponse'a posterUrl'ı lambda içinde ayarlayacak şekilde düzeltildi
-            // ve 'data' parametresi null olarak açıkça belirtildi
+            // newMovieSearchResponse'a posterUrl'ı doğrudan parametre olarak geçiyoruz
+            // ve 'data' parametresi kaldırıldı çünkü constructor'da beklenmiyor
             newMovieSearchResponse(
                 name = recName,
                 url = recHref,
                 type = globalTvType,
-                data = null // Map<String, String>? beklenen parametreye null geçiyoruz
-            ) {
-                this.posterUrl = recPosterUrl // posterUrl'ı lambda içinde ayarlıyoruz
-            }
+                posterUrl = recPosterUrl // posterUrl'ı doğrudan parametre olarak geçiyoruz
+            )
         }
 
         val actors =
