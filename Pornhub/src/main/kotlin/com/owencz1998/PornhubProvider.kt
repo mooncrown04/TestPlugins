@@ -55,7 +55,7 @@ class PornHubProvider : MainAPI() {
         val posterUrl = fetchImgUrl(this.selectFirst("img"))
 
         // MovieSearchResponse constructor'ına posterUrl'ı doğrudan parametre olarak geçiyoruz
-        // 'data = null' parametresi kaldırıldı çünkü constructor'da beklenmiyor
+        // 'data' parametresi kaldırıldı çünkü constructor'da beklenmiyor
         return MovieSearchResponse(
             name = title,
             url = link,
