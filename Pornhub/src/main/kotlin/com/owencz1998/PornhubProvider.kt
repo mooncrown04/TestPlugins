@@ -2,7 +2,7 @@ package com.owencz1998
 
 import android.util.Log
 import org.jsoup.nodes.Element
-import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.* // Tekrar eden import kaldırıldı
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.mvvm.logError
@@ -55,14 +55,15 @@ class PornHubProvider : MainAPI() {
         val posterUrl = fetchImgUrl(this.selectFirst("img"))
 
         // MovieSearchResponse constructor'ı posterUrl'ı lambda içinde ayarlayacak şekilde düzeltildi
-        // 'data = null' parametresi kaldırıldı çünkü constructor'da beklenmiyor
+        // ve 'data' parametresi null olarak açıkça belirtildi
         return MovieSearchResponse(
             name = title,
             url = link,
             apiName = this@PornHubProvider.name,
-            type = globalTvType
+            type = globalTvType,
+            data = null // Map<String, String>? beklenen parametreye null geçiyoruz
         ) {
-            this.posterUrl = posterUrl
+            this.posterUrl = posterUrl // posterUrl'ı lambda içinde ayarlıyoruz
         }
     }
 
@@ -113,16 +114,17 @@ class PornHubProvider : MainAPI() {
         val tags = document.select("div.categoriesWrapper a[data-label='Category']")
             .map { it?.text()?.trim().toString().replace(", ", "") }
 
-        // recommendations için newMovieSearchResponse posterUrl'ı lambda içinde ayarlayacak şekilde düzeltildi
-        // 'data = null' parametresi kaldırıldı çünkü constructor'da beklenmiyor
         val recommendations = document.selectXpath("//a[contains(@class, 'img')]").mapNotNull {
             val recName = it.attr("title").trim()
             val recHref = fixUrlNull(it.attr("href")) ?: return@mapNotNull null
             val recPosterUrl = fixUrlNull(it.selectFirst("img")?.attr("src"))
+            // newMovieSearchResponse'a posterUrl'ı lambda içinde ayarlayacak şekilde düzeltildi
+            // ve 'data' parametresi null olarak açıkça belirtildi
             newMovieSearchResponse(
                 name = recName,
                 url = recHref,
-                type = globalTvType
+                type = globalTvType,
+                data = null // Map<String, String>? beklenen parametreye null geçiyoruz
             ) {
                 this.posterUrl = recPosterUrl // posterUrl'ı lambda içinde ayarlıyoruz
             }
