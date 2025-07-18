@@ -135,7 +135,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                     }
                 }
                 if (searchResponses.isNotEmpty()) {
-                    homePageLists.add(HomePageList("$letter ile başlayanlar DİZİLER", searchResponses, isHorizontalImages = true))
+                    homePageLists.add(HomePageList("$letter ile başlayanlar DİZİLER", searchResponses, isHorizontalImages = false))
                 }
             }
         }
