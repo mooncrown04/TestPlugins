@@ -54,15 +54,16 @@ class PornHubProvider : MainAPI() {
         val link = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val posterUrl = fetchImgUrl(this.selectFirst("img"))
 
-        // MovieSearchResponse constructor'ı posterUrl'ı ve data'yı doğrudan parametre olarak alacak şekilde düzeltildi
+        // MovieSearchResponse constructor'ı posterUrl'ı lambda içinde ayarlayacak şekilde düzeltildi
+        // 'data = null' parametresi kaldırıldı çünkü constructor'da beklenmiyor
         return MovieSearchResponse(
             name = title,
             url = link,
             apiName = this@PornHubProvider.name,
-            type = globalTvType,
-            posterUrl = posterUrl, // posterUrl'ı doğrudan parametre olarak geçiyoruz
-            data = null // Lambda yerine null data map'i geçiyoruz
-        )
+            type = globalTvType
+        ) {
+            this.posterUrl = posterUrl
+        }
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -107,7 +108,6 @@ class PornHubProvider : MainAPI() {
         val poster: String? = document.selectFirst("div.video-wrapper .mainPlayerDiv img")?.attr("src")
             ?: document.selectFirst("head meta[property=og:image]")?.attr("content")
 
-        // İkinci dosyadan alınan yıl, derecelendirme ve süre çekimi geri getirildi
         val year = Regex("""uploadDate": "(\d+)""").find(document.html())?.groupValues?.get(1)?.toIntOrNull()
         val rating = document.selectFirst("span.percent")?.text()?.first()?.toString()?.toRatingInt()
         val duration = Regex("duration' : '(.*)',").find(document.html())?.groupValues?.get(1)?.toIntOrNull()
@@ -115,7 +115,8 @@ class PornHubProvider : MainAPI() {
         val tags = document.select("div.categoriesWrapper a[data-label='Category']")
             .map { it?.text()?.trim().toString().replace(", ", "") }
 
-        // recommendations için newMovieSearchResponse posterUrl ve data'yı doğrudan parametre olarak alacak şekilde düzeltildi
+        // recommendations için newMovieSearchResponse posterUrl'ı lambda içinde ayarlayacak şekilde düzeltildi
+        // 'data = null' parametresi kaldırıldı çünkü constructor'da beklenmiyor
         val recommendations = document.selectXpath("//a[contains(@class, 'img')]").mapNotNull {
             val recName = it.attr("title").trim()
             val recHref = fixUrlNull(it.attr("href")) ?: return@mapNotNull null
@@ -123,13 +124,12 @@ class PornHubProvider : MainAPI() {
             newMovieSearchResponse(
                 name = recName,
                 url = recHref,
-                type = globalTvType,
-                posterUrl = recPosterUrl, // posterUrl'ı doğrudan parametre olarak geçiyoruz
-                data = null // null data map'i geçiyoruz
-            )
+                type = globalTvType
+            ) {
+                this.posterUrl = recPosterUrl // posterUrl'ı lambda içinde ayarlıyoruz
+            }
         }
 
-        // Aktör çekimi, Actor nesneleri oluşturacak şekilde düzeltildi
         val actors =
             document.select("div.pornstarsWrapper a[data-label='Pornstar']")
                 .mapNotNull {
@@ -143,7 +143,7 @@ class PornHubProvider : MainAPI() {
             this.tags = tags
             this.rating = rating
             this.duration = duration
-            this.recommendations = recommendations // Tek bir liste olarak birleştirildi
+            this.recommendations = recommendations
             addActors(actors)
         }
     }
