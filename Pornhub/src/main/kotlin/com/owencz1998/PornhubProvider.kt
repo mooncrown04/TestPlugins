@@ -53,16 +53,14 @@ class PornHubProvider : MainAPI() {
         val link = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val posterUrl = fetchImgUrl(this.selectFirst("img"))
 
-        // MovieSearchResponse constructor'ı posterUrl'ı doğrudan parametre olarak almıyorsa,
-        // bir lambda bloğu içinde ayarlanmalıdır.
+        // MovieSearchResponse constructor'ı posterUrl'ı doğrudan parametre olarak alıyorsa bu şekilde olmalı
         return MovieSearchResponse(
             name = title,
             url = link,
             apiName = this@PornHubProvider.name,
-            type = globalTvType
-        ) {
-            this.posterUrl = posterUrl
-        }
+            type = globalTvType,
+            posterUrl = posterUrl // posterUrl'ı doğrudan parametre olarak geçiyoruz
+        )
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -116,11 +114,13 @@ class PornHubProvider : MainAPI() {
             val recName = it.attr("title").trim()
             val recHref = fixUrlNull(it.attr("href")) ?: return@mapNotNull null
             val recPosterUrl = fixUrlNull(it.selectFirst("img")?.attr("src"))
-            // newMovieSearchResponse'un dördüncü parametresi posterUrl değilse,
-            // posterUrl'ı lambda içinde ayarlamalıyız.
-            newMovieSearchResponse(recName, recHref, globalTvType) {
-                this.posterUrl = recPosterUrl
-            }
+            // newMovieSearchResponse'a posterUrl'ı doğrudan parametre olarak geçiyoruz
+            newMovieSearchResponse(
+                name = recName,
+                url = recHref,
+                type = globalTvType,
+                posterUrl = recPosterUrl
+            )
         }
 
         val actors =
@@ -159,7 +159,7 @@ class PornHubProvider : MainAPI() {
         for (i in 0 until mediaDefinitions.length()) {
             if (mediaDefinitions.getJSONObject(i).optString("quality") != null) {
                 val quality = mediaDefinitions.getJSONObject(i).getString("quality")
-                // videoUrl çekimindeki fazlalık kaldırıldı
+                // videoUrl çekimindeki fazlalık kaldırıldı ve doğrudan getString kullanıldı
                 val videoUrl = mediaDefinitions.getJSONObject(i).getString("videoUrl")
                 val extlinkList = mutableListOf<ExtractorLink>()
                 M3u8Helper().m3u8Generation(
