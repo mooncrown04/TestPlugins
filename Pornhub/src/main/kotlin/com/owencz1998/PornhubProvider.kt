@@ -2,7 +2,7 @@ package com.owencz1998
 
 import android.util.Log
 import org.jsoup.nodes.Element
-import com.lagradost.cloudstream3.* // Tekrar eden import kaldırıldı
+import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.mvvm.logError
@@ -54,15 +54,17 @@ class PornHubProvider : MainAPI() {
         val link = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val posterUrl = fetchImgUrl(this.selectFirst("img"))
 
-        // MovieSearchResponse constructor'ına posterUrl'ı doğrudan parametre olarak geçiyoruz
-        // 'data' parametresi kaldırıldı çünkü constructor'da beklenmiyor
+        // MovieSearchResponse constructor'ı posterUrl'ı lambda içinde ayarlayacak şekilde düzeltildi
+        // ve 'data' parametresi null olarak açıkça belirtildi
         return MovieSearchResponse(
             name = title,
             url = link,
             apiName = this@PornHubProvider.name,
             type = globalTvType,
-            posterUrl = posterUrl // posterUrl'ı doğrudan parametre olarak geçiyoruz
-        )
+            data = null // Map<String, String>? beklenen parametreye null geçiyoruz
+        ) {
+            this.posterUrl = posterUrl // posterUrl'ı lambda içinde ayarlıyoruz
+        }
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -116,14 +118,16 @@ class PornHubProvider : MainAPI() {
             val recName = it.attr("title").trim()
             val recHref = fixUrlNull(it.attr("href")) ?: return@mapNotNull null
             val recPosterUrl = fixUrlNull(it.selectFirst("img")?.attr("src"))
-            // newMovieSearchResponse'a posterUrl'ı doğrudan parametre olarak geçiyoruz
-            // ve 'data' parametresi kaldırıldı çünkü constructor'da beklenmiyor
+            // newMovieSearchResponse'a posterUrl'ı lambda içinde ayarlayacak şekilde düzeltildi
+            // ve 'data' parametresi null olarak açıkça belirtildi
             newMovieSearchResponse(
                 name = recName,
                 url = recHref,
                 type = globalTvType,
-                posterUrl = recPosterUrl // posterUrl'ı doğrudan parametre olarak geçiyoruz
-            )
+                data = null // Map<String, String>? beklenen parametreye null geçiyoruz
+            ) {
+                this.posterUrl = recPosterUrl // posterUrl'ı lambda içinde ayarlıyoruz
+            }
         }
 
         val actors =
@@ -174,7 +178,7 @@ class PornHubProvider : MainAPI() {
                             source = name,
                             name = "${this.name}",
                             url = stream.streamUrl,
-                            type = ExtractorLinkType.M3U8,
+                            type = ExtractorLinkType.M3u8,
                         ) {
                             this.quality = Regex("(\\d+)").find(quality ?: "")?.groupValues?.get(1)
                                 .let { getQualityFromName(it) }
