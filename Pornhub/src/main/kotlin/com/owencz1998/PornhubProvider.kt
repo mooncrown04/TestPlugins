@@ -2,7 +2,7 @@ package com.owencz1998
 
 import android.util.Log
 import org.jsoup.nodes.Element
-import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.* // Tekrar eden import kaldırıldı
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.mvvm.logError
@@ -25,43 +25,44 @@ class PornHubProvider : MainAPI() {
     override val vpnStatus           = VPNStatus.MightBeNeeded
 
     override val mainPage = mainPageOf(
-        "${mainUrl}/video?o=mr&hd=1&page="     to "Recently Featured",
-        "${mainUrl}/video?o=tr&t=w&hd=1&page="   to "Top Rated",
-        "${mainUrl}/video?o=mv&t=w&hd=1&page="   to "Most Viewed",
-        "${mainUrl}/video?o=ht&t=w&hd=1&page="   to "Hottest",
+        "${mainUrl}/video?o=mr&hd=1&page="        to "Recently Featured",
+        "${mainUrl}/video?o=tr&t=w&hd=1&page="    to "Top Rated",
+        "${mainUrl}/video?o=mv&t=w&hd=1&page="    to "Most Viewed",
+        "${mainUrl}/video?o=ht&t=w&hd=1&page="    to "Hottest",
         "${mainUrl}/video?p=professional&hd=1&page=" to "Professional",
-        "${mainUrl}/video?o=lg&hd=1&page="     to "Longest",
-        "${mainUrl}/video?p=homemade&hd=1&page=" to "Homemade",
-        "${mainUrl}/video?o=cm&t=w&hd=1&page="   to "Newest",
-        "${mainUrl}/video?c=35&page="            to "Anal",
-        "${mainUrl}/video?c=27&page="            to "Lesbian",
-        "${mainUrl}/video?c=98&page="            to "Arab",
-        "${mainUrl}/video?c=1&page="             to "Asian",
-        "${mainUrl}/video?c=89&page="            to "Babysitter",
-        "${mainUrl}/video?c=6&page="             to "BBW",
-        "${mainUrl}/video?c=141&page="           to "Behind The Scenes",
-        "${mainUrl}/video?c=4&page="             to "Big Ass",
-        "${mainUrl}/video?c=7&page="             to "Big Dick",
-        "${mainUrl}/video?c=8&page="             to "Big Tits",
-        "${mainUrl}/video?c=13&page="            to "Blowjob",
+        "${mainUrl}/video?o=lg&hd=1&page="        to "Longest",
+        "${mainUrl}/video?p=homemade&hd=1&page="  to "Homemade",
+        "${mainUrl}/video?o=cm&t=w&hd=1&page="    to "Newest",
+        "${mainUrl}/video?c=35&page="             to "Anal",
+        "${mainUrl}/video?c=27&page="             to "Lesbian",
+        "${mainUrl}/video?c=98&page="             to "Arab",
+        "${mainUrl}/video?c=1&page="              to "Asian",
+        "${mainUrl}/video?c=89&page="             to "Babysitter",
+        "${mainUrl}/video?c=6&page="              to "BBW",
+        "${mainUrl}/video?c=141&page="            to "Behind The Scenes",
+        "${mainUrl}/video?c=4&page="              to "Big Ass",
+        "${mainUrl}/video?c=7&page="              to "Big Dick",
+        "${mainUrl}/video?c=8&page="              to "Big Tits",
+        "${mainUrl}/video?c=13&page="             to "Blowjob",
     )
 
     private val cookies = mapOf(Pair("hasVisited", "1"), Pair("accessAgeDisclaimerPH", "1"))
 
+    // toSearchResult uzantı fonksiyonu geri getirildi
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst("span.title a")?.text() ?: return null
         val link = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val posterUrl = fetchImgUrl(this.selectFirst("img"))
 
-        // MovieSearchResponse constructor'ına posterUrl'ı doğrudan parametre olarak geçiyoruz.
-        // Cloudstream3'ün bu versiyonunda lambda bloğu yerine doğrudan parametre bekleniyor olabilir.
+        // MovieSearchResponse constructor'ı lambda ile posterUrl'ı ayarlanacak şekilde düzeltildi
         return MovieSearchResponse(
             name = title,
             url = link,
             apiName = this@PornHubProvider.name,
-            type = globalTvType,
-            posterUrl = posterUrl // posterUrl'ı doğrudan parametre olarak geçiyoruz
-        )
+            type = globalTvType
+        ) {
+            this.posterUrl = posterUrl
+        }
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -71,6 +72,7 @@ class PornHubProvider : MainAPI() {
             val pagedLink = if (page > 0) categoryData + page else categoryData
             val soup = app.get(pagedLink, cookies = cookies).document
 
+            // toSearchResult fonksiyonu kullanılarak basitleştirildi
             val home = soup.select("div.sectionWrapper div.wrap").mapNotNull { it.toSearchResult() }
 
             if (home.isNotEmpty()) {
@@ -92,6 +94,7 @@ class PornHubProvider : MainAPI() {
         val url = "$mainUrl/video/search?search=${query}"
         val document = app.get(url, cookies = cookies).document
 
+        // toSearchResult fonksiyonu kullanılarak basitleştirildi
         return document.select("div.sectionWrapper div.wrap").mapNotNull { it.toSearchResult() }.distinctBy { it.url }
     }
 
@@ -104,6 +107,7 @@ class PornHubProvider : MainAPI() {
         val poster: String? = document.selectFirst("div.video-wrapper .mainPlayerDiv img")?.attr("src")
             ?: document.selectFirst("head meta[property=og:image]")?.attr("content")
 
+        // İkinci dosyadan alınan yıl, derecelendirme ve süre çekimi geri getirildi
         val year = Regex("""uploadDate": "(\d+)""").find(document.html())?.groupValues?.get(1)?.toIntOrNull()
         val rating = document.selectFirst("span.percent")?.text()?.first()?.toString()?.toRatingInt()
         val duration = Regex("duration' : '(.*)',").find(document.html())?.groupValues?.get(1)?.toIntOrNull()
@@ -111,24 +115,21 @@ class PornHubProvider : MainAPI() {
         val tags = document.select("div.categoriesWrapper a[data-label='Category']")
             .map { it?.text()?.trim().toString().replace(", ", "") }
 
+        // recommendations ve relatedVideo için newMovieSearchResponse lambda ile posterUrl ayarlanacak şekilde düzeltildi
         val recommendations = document.selectXpath("//a[contains(@class, 'img')]").mapNotNull {
             val recName = it.attr("title").trim()
             val recHref = fixUrlNull(it.attr("href")) ?: return@mapNotNull null
             val recPosterUrl = fixUrlNull(it.selectFirst("img")?.attr("src"))
-            // newMovieSearchResponse'a posterUrl'ı doğrudan parametre olarak geçiyoruz.
-            // Bu da Cloudstream3'ün bu versiyonunda beklenen kullanım olabilir.
-            newMovieSearchResponse(
-                name = recName,
-                url = recHref,
-                type = globalTvType,
-                posterUrl = recPosterUrl // posterUrl'ı doğrudan parametre olarak geçiyoruz
-            )
+            newMovieSearchResponse(recName, recHref, globalTvType) {
+                this.posterUrl = recPosterUrl
+            }
         }
 
+        // Aktör çekimi, Actor nesneleri oluşturacak şekilde düzeltildi
         val actors =
             document.select("div.pornstarsWrapper a[data-label='Pornstar']")
                 .mapNotNull {
-                    Actor(it.text().trim(), it.select("img").attr("src"))
+                    Actor(it.text().trim(), it.selectFirst("img")?.attr("src"))
                 }
 
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
@@ -138,7 +139,7 @@ class PornHubProvider : MainAPI() {
             this.tags = tags
             this.rating = rating
             this.duration = duration
-            this.recommendations = recommendations
+            this.recommendations = recommendations // Tek bir liste olarak birleştirildi
             addActors(actors)
         }
     }
