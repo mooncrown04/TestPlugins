@@ -2,7 +2,7 @@ package com.owencz1998
 
 import android.util.Log
 import org.jsoup.nodes.Element
-import com.lagradost.cloudstream3.* // Tekrar eden import kaldırıldı
+import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.mvvm.logError
@@ -48,22 +48,21 @@ class PornHubProvider : MainAPI() {
 
     private val cookies = mapOf(Pair("hasVisited", "1"), Pair("accessAgeDisclaimerPH", "1"))
 
-    // toSearchResult uzantı fonksiyonu geri getirildi
+    // toSearchResult uzantı fonksiyonu
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst("span.title a")?.text() ?: return null
         val link = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
         val posterUrl = fetchImgUrl(this.selectFirst("img"))
 
-        // MovieSearchResponse constructor'ı posterUrl'ı lambda içinde ayarlayacak şekilde düzeltildi
-        // 'data = null' parametresi kaldırıldı çünkü constructor'da beklenmiyor
+        // MovieSearchResponse constructor'ına posterUrl'ı ve data'yı doğrudan parametre olarak geçiyoruz
         return MovieSearchResponse(
             name = title,
             url = link,
             apiName = this@PornHubProvider.name,
-            type = globalTvType
-        ) {
-            this.posterUrl = posterUrl
-        }
+            type = globalTvType,
+            posterUrl = posterUrl, // posterUrl'ı doğrudan parametre olarak geçiyoruz
+            data = null // Map<String, String>? beklenen parametreye null geçiyoruz
+        )
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -73,7 +72,6 @@ class PornHubProvider : MainAPI() {
             val pagedLink = if (page > 0) categoryData + page else categoryData
             val soup = app.get(pagedLink, cookies = cookies).document
 
-            // toSearchResult fonksiyonu kullanılarak basitleştirildi
             val home = soup.select("div.sectionWrapper div.wrap").mapNotNull { it.toSearchResult() }
 
             if (home.isNotEmpty()) {
@@ -95,7 +93,6 @@ class PornHubProvider : MainAPI() {
         val url = "$mainUrl/video/search?search=${query}"
         val document = app.get(url, cookies = cookies).document
 
-        // toSearchResult fonksiyonu kullanılarak basitleştirildi
         return document.select("div.sectionWrapper div.wrap").mapNotNull { it.toSearchResult() }.distinctBy { it.url }
     }
 
@@ -115,19 +112,18 @@ class PornHubProvider : MainAPI() {
         val tags = document.select("div.categoriesWrapper a[data-label='Category']")
             .map { it?.text()?.trim().toString().replace(", ", "") }
 
-        // recommendations için newMovieSearchResponse posterUrl'ı lambda içinde ayarlayacak şekilde düzeltildi
-        // 'data = null' parametresi kaldırıldı çünkü constructor'da beklenmiyor
         val recommendations = document.selectXpath("//a[contains(@class, 'img')]").mapNotNull {
             val recName = it.attr("title").trim()
             val recHref = fixUrlNull(it.attr("href")) ?: return@mapNotNull null
             val recPosterUrl = fixUrlNull(it.selectFirst("img")?.attr("src"))
+            // newMovieSearchResponse'a posterUrl'ı ve data'yı doğrudan parametre olarak geçiyoruz
             newMovieSearchResponse(
                 name = recName,
                 url = recHref,
-                type = globalTvType
-            ) {
-                this.posterUrl = recPosterUrl // posterUrl'ı lambda içinde ayarlıyoruz
-            }
+                type = globalTvType,
+                posterUrl = recPosterUrl, // posterUrl'ı doğrudan parametre olarak geçiyoruz
+                data = null // Map<String, String>? beklenen parametreye null geçiyoruz
+            )
         }
 
         val actors =
