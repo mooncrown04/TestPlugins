@@ -2,7 +2,7 @@
 
 // Yapılandırma blokları için gerekli uzantıları import edin
 import com.android.build.gradle.LibraryExtension
-// import com.lagradost.cloudstream3.gradle.CloudstreamExtension // Bu artık doğrudan kullanılmayacak, kaldırıldı
+import com.lagradost.cloudstream3.gradle.CloudstreamExtension // CloudstreamExtension import'u geri getirildi ve kullanılacak
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.gradle.api.JavaVersion
 // import java.util.Properties // Artık API anahtarlarını okumadığımız için bu import'a gerek kalmayabilir
@@ -25,8 +25,8 @@ plugins {
 version = 41
 
 // Bu modül için cloudstream uzantısını yapılandırın
-// configure<CloudstreamExtension> sarmalayıcısı kaldırıldı, doğrudan cloudstream bloğu kullanıldı
-cloudstream {
+// configure<CloudstreamExtension> sarmalayıcısı geri getirildi
+configure<CloudstreamExtension> {
     // Kullanıcının verdiği değerler
     description = "The ultimate All-in-One home screen to access all of your extensions at one place (You need to select/deselect sections in Ultima's settings to load other extensions on home screen)"
     authors = listOf("RowdyRushya")
@@ -35,7 +35,7 @@ cloudstream {
     requiresResources = true
     language = "en"
     iconUrl = "https://raw.githubusercontent.com/Rowdy-Avocado/Rowdycado-Extensions/master/logos/ultima.png"
-    internalName = "Ultima" // internalName doğrudan cloudstream bloğunun içinde
+    internalName = "Ultima" // internalName, configure<CloudstreamExtension> bloğunun içinde
 }
 
 dependencies {
