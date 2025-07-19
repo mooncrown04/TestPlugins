@@ -2,7 +2,7 @@
 
 // Yapılandırma blokları için gerekli uzantıları import edin
 import com.android.build.gradle.LibraryExtension
-// import com.lagradost.cloudstream3.gradle.CloudstreamExtension // Bu import kaldırıldı
+// import com.lagradost.cloudstream3.gradle.CloudstreamExtension // Bu import kaldırıldı, tam nitelikli isim kullanılacak
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.gradle.api.JavaVersion
 // import java.util.Properties // Artık API anahtarlarını okumadığımız için bu import'a gerek kalmayabilir
@@ -14,6 +14,10 @@ plugins {
     // Bu nedenle, sadece bu modüle özgü ve global olarak uygulanmayan plugin'leri tutun.
     id("kotlin-parcelize")
     id("kotlin-kapt")
+    // Cloudstream eklentisinin uzantılarını tanımak için bu plugin'leri açıkça ekliyoruz
+    id("com.android.library") // Android kütüphane modülü için gerekli
+    id("com.lagradost.cloudstream3.gradle") // Cloudstream plugin'i
+    id("org.jetbrains.kotlin.android") // Kotlin Android plugin'i
 }
 
 // Kullanıcının verdiği versiyon numarası
