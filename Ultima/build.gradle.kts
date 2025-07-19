@@ -8,14 +8,16 @@ import org.gradle.api.JavaVersion
 // import java.util.Properties // Artık API anahtarlarını okumadığımız için bu import'a gerek kalmayabilir
 
 plugins {
-    // Bu plugin'ler, settings.gradle.kts veya ana build.gradle.kts dosyasında global olarak uygulanmadıysa
+    // Bu plugin'ler, settings.gr/adle.kts veya ana build.gradle.kts dosyasında global olarak uygulanmadıysa
     // yerel olarak uygulanır. 'com.android.library' ve 'kotlin-android' zaten root'taki subprojects tarafından uygulanmıştır.
     // 'com.lagradost.cloudstream3.gradle' da root'taki subprojects tarafından uygulanmıştır.
     // Bu nedenle, sadece bu modüle özgü ve global olarak uygulanmayan plugin'leri tutun.
     id("kotlin-parcelize")
     id("kotlin-kapt")
-    // 'com.android.library', 'com.lagradost.cloudstream3.gradle' ve 'org.jetbrains.kotlin.android'
-    // plugin'leri, muhtemelen global olarak uygulandıkları için buradan kaldırıldı.
+    // Cloudstream eklentisinin uzantılarını tanımak için bu plugin'leri açıkça ekliyoruz
+    id("com.android.library") // Android kütüphane modülü için gerekli
+    id("com.lagradost.cloudstream3.gradle") // Cloudstream plugin'i
+    // org.jetbrains.kotlin.android plugin'i genellikle global olarak uygulandığı için burada tekrar belirtilmesine gerek yoktur.
 }
 
 // Kullanıcının verdiği versiyon numarası
