@@ -7,12 +7,21 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.gradle.api.JavaVersion
 
 // Plugin'ler ana build.gradle.kts dosyasındaki subprojects bloğu tarafından uygulandığı için
-// bu modül seviyesindeki plugins bloğu kaldırılmıştır.
+// bu modül seviyesindeki plugins bloğu sadece bu modüle özgü plugin'leri içermelidir.
+plugins {
+    // 'com.android.library', 'kotlin-android' ve 'com.lagradost.cloudstream3.gradle'
+    // ana build.gradle.kts dosyasındaki subprojects bloğu tarafından zaten uygulanmaktadır.
+    // Bu nedenle, burada tekrar tanımlanmasına gerek yoktur.
+    // Sadece bu modüle özgü olanları burada bırakın:
+    id("kotlin-parcelize")
+    id("kotlin-kapt")
+}
 
 version = 3
 
-// Cloudstream özel yapılandırma bloğu - dependencies bloğundan önceye taşındı
-cloudstream {
+// Cloudstream özel yapılandırma bloğu
+// configure<CloudstreamExtension> kullanarak uzantıyı açıkça yapılandırıyoruz.
+configure<CloudstreamExtension> {
     // Eklenti için genel bilgiler
     authors = listOf("RowdyAvocado") // Eklentinin yazarları
     language = "en" // Eklentinin desteklediği dil
@@ -58,7 +67,9 @@ dependencies {
     // Diğer bağımlılıklar (eğer varsa)
 }
 
-android {
+// Android yapılandırma bloğu
+// configure<LibraryExtension> kullanarak uzantıyı açıkça yapılandırıyoruz.
+configure<LibraryExtension> {
     // Android SDK versiyonları ve derleme ayarları
     compileSdk = 34 // Genellikle en son stabil versiyonu kullanın
     namespace = "com.RowdyAvocado" // Ultima eklentinizin doğru paket adı
