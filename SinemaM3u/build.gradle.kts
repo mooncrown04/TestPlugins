@@ -1,5 +1,7 @@
 // TestPlugins/src/SinemaM3u/build.gradle.kts
 
+import java.util.Properties // Bu satırı ekleyin
+
 version = 3
 
 dependencies {
@@ -19,14 +21,45 @@ dependencies {
 }
 
 android {
-    buildFeatures {
-        buildConfig = true
+    // BU SATIRI EKLEYİN
+    namespace = "com.mooncrown" // Kotlin dosyalarınızdaki 'package com.mooncrown' ile eşleşmeli
+
+    compileSdk = 34 // Veya kullandığınız en yüksek SDK versiyonu
+    defaultConfig {
+        minSdk = 21 // Minimum SDK
+        // ... diğer defaultConfig ayarları
+
+        // TMDB_SECRET_API'yi local.properties'ten veya ortam değişkenlerinden yüklemek için
+        // properties nesnesini burada tanımlayın ve yükleyin
+        val properties = Properties().apply {
+            val propertiesFile = project.rootProject.file("local.properties")
+            if (propertiesFile.exists()) {
+                propertiesFile.inputStream().use { this.load(it) }
+            } else {
+                // Eğer local.properties yoksa, GitHub Actions ortamında ortam değişkenlerini kullanabiliriz.
+                // Bu durumda, GitHub Actions workflow'unuzda TMDB_SECRET_API'yi ortam değişkeni olarak ayarladığınızdan emin olun.
+                // Örneğin: TMDB_SECRET_API: ${{ secrets.TMDB_SECRET_API_KEY }}
+                setProperty("TMDB_SECRET_API", System.getenv("TMDB_SECRET_API") ?: "")
+            }
+        }
+        
+        // buildConfigField'ı güncellendi: properties nesnesinden değeri alacak
+        buildConfigField("String", "TMDB_SECRET_API", "\"${properties.getProperty("TMDB_SECRET_API") ?: ""}\"")
     }
 
-    defaultConfig {
-        val apiKey = project.findProperty("tmdbApiKey")?.toString() ?: ""
-        buildConfigField("String", "TMDB_SECRET_API", "\"$apiKey\"")
+    buildFeatures {
+        buildConfig = true // Bu satırın olduğundan emin olun
     }
+
+    // defaultConfig içinde tanımlandığı için bu bloğa gerek kalmadı
+    // buildTypes {
+    //     debug {
+    //         buildConfigField("String", "TMDB_SECRET_API", "\"${properties.getProperty("TMDB_SECRET_API") ?: ""}\"")
+    //     }
+    //     release {
+    //         buildConfigField("String", "TMDB_SECRET_API", "\"${properties.getProperty("TMDB_SECRET_API") ?: ""}\"")
+    //     }
+    // }
 }
 
 cloudstream {
