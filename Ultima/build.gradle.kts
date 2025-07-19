@@ -1,41 +1,8 @@
-// TestPlugins/src/Ultima/build.gradle.kts
+// TestPlugins/src/SinemaM3u/build.gradle.kts
 
-// Yapılandırma blokları için gerekli uzantıları import edin
-import com.android.build.gradle.LibraryExtension
-import com.lagradost.cloudstream3.gradle.CloudstreamExtension // Bu import geri getirildi
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.gradle.api.JavaVersion
-// import java.util.Properties // Artık API anahtarlarını okumadığımız için bu import'a gerek kalmayabilir
+import java.util.Properties // Bu satırı ekleyin
 
-plugins {
-    // Bu plugin'ler, settings.gr/adle.kts veya ana build.gradle.kts dosyasında global olarak uygulanmadıysa
-    // yerel olarak uygulanır. 'com.android.library' ve 'kotlin-android' zaten root'taki subprojects tarafından uygulanmıştır.
-    // 'com.lagradost.cloudstream3.gradle' da root'taki subprojects tarafından uygulanmıştır.
-    // Bu nedenle, sadece bu modüle özgü ve global olarak uygulanmayan plugin'leri tutun.
-    id("kotlin-parcelize")
-    id("kotlin-kapt")
-    // Cloudstream eklentisinin uzantılarını tanımak için bu plugin'leri açıkça ekliyoruz
-    id("com.android.library") // Android kütüphane modülü için gerekli
-    id("com.lagradost.cloudstream3.gradle") // Cloudstream plugin'i
-    // org.jetbrains.kotlin.android plugin'i genellikle global olarak uygulandığı için burada tekrar belirtilmesine gerek yoktur.
-}
-
-// Kullanıcının verdiği versiyon numarası
-version = 41
-
-// Bu modül için cloudstream uzantısını yapılandırın
-// configure<CloudstreamExtension> sarmalayıcısı hala kullanılıyor
-configure<CloudstreamExtension> { // Doğrudan import edilen isim kullanıldı
-    // Kullanıcının verdiği değerler
-    description = "The ultimate All-in-One home screen to access all of your extensions at one place (You need to select/deselect sections in Ultima's settings to load other extensions on home screen)"
-    authors = listOf("RowdyRushya")
-    status = 1
-    tvTypes = listOf("All")
-    requiresResources = true
-    language = "en"
-    iconUrl = "https://raw.githubusercontent.com/Rowdy-Avocado/Rowdycado-Extensions/master/logos/ultima.png"
-    internalName = "Ultima" // internalName, configure<CloudstreamExtension> bloğunun içinde
-}
+version = 3
 
 dependencies {
     // Tüm bağımlılıkları parantez () içine alın!
@@ -45,50 +12,69 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
 
-    // Kullanıcının verdiği material bağımlılığı
     implementation("com.google.android.material:material:1.12.0")
-
     implementation("androidx.fragment:fragment-ktx:1.7.1")
+
     implementation("androidx.annotation:annotation:1.8.0")
 
-    // Cloudstream core API'sine bağımlılık (Bu, birçok Cloudstream yardımcı fonksiyonunu sağlar)
-    implementation(project(":app"))
-
-    // Rhino JavaScript motoru bağımlılığı (mozilla ve Scriptable hataları için)
-    // Cloudstream'in kendi içinde bir JS motoru varsa bu gerekli olmayabilir,
-    // ancak hata devam ederse bu satırı eklemeyi deneyin.
-    implementation("org.mozilla:rhino:1.7.14") // En son stabil versiyonu kullanın
+    // Buraya projenizdeki diğer bağımlılıkları ekleyebilirsiniz
 }
 
-// Bu modül için android uzantısını yapılandırın
-configure<LibraryExtension> {
-    // Ultima eklentinizin doğru paket adı
-    // Eğer Ultima'daki Kotlin dosyalarınız 'package com.RowdyAvocado' ile başlıyorsa bu doğru.
-    namespace = "com.RowdyAvocado" 
+android {
+    // BU SATIRI EKLEYİN
+    namespace = "com.mooncrown" // Kotlin dosyalarınızdaki 'package com.mooncrown' ile eşleşmeli
 
-    compileSdk = 34 // Genellikle en son stabil versiyonu kullanın
+    compileSdk = 34 // Veya kullandığınız en yüksek SDK versiyonu
     defaultConfig {
-        minSdk = 21 // Cloudstream için minimum desteklenen SDK
-        // targetSdk = 34 // Deprecated uyarısı nedeniyle kaldırıldı. compileSdk yeterli olmalı.
+        minSdk = 21 // Minimum SDK
+        // ... diğer defaultConfig ayarları
 
-        // API anahtarlarını kaldırdık, bu yüzden properties nesnesine gerek kalmadı.
-        // Eğer başka buildConfigField'larınız varsa buraya ekleyebilirsiniz.
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17 // Kotlin 1.8.x ve Gradle 8+ için genellikle 17 idealdir
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+        // TMDB_SECRET_API'yi local.properties'ten veya ortam değişkenlerinden yüklemek için
+        // properties nesnesini burada tanımlayın ve yükleyin
+        val properties = Properties().apply {
+            val propertiesFile = project.rootProject.file("local.properties")
+            if (propertiesFile.exists()) {
+                propertiesFile.inputStream().use { this.load(it) }
+            } else {
+                // Eğer local.properties yoksa, GitHub Actions ortamında ortam değişkenlerini kullanabiliriz.
+                // Bu durumda, GitHub Actions workflow'unuzda TMDB_SECRET_API'yi ortam değişkeni olarak ayarladığınızdan emin olun.
+                // Örneğin: TMDB_SECRET_API: ${{ secrets.TMDB_SECRET_API_KEY }}
+                setProperty("TMDB_SECRET_API", System.getenv("TMDB_SECRET_API") ?: "")
+            }
+        }
+        
+        // buildConfigField'ı güncellendi: properties nesnesinden değeri alacak
+        buildConfigField("String", "TMDB_SECRET_API", "\"${properties.getProperty("TMDB_SECRET_API") ?: ""}\"")
     }
 
     buildFeatures {
-        buildConfig = true // BuildConfig sınıfı oluşturmayı etkinleştir (ancak içinde API anahtarları olmayacak)
+        buildConfig = true // Bu satırın olduğundan emin olun
     }
 
-    packaging { // packagingOptions yerine 'packaging' kullanıldı
-        resources.excludes.add("META-INF/*.md")
-        resources.excludes.add("META-INF/*.txt")
-    }
+    // defaultConfig içinde tanımlandığı için bu bloğa gerek kalmadı
+    // buildTypes {
+    //     debug {
+    //         buildConfigField("String", "TMDB_SECRET_API", "\"${properties.getProperty("TMDB_SECRET_API") ?: ""}\"")
+    //     }
+    //     release {
+    //         buildConfigField("String", "TMDB_SECRET_API", "\"${properties.getProperty("TMDB_SECRET_API") ?: ""}\"")
+    //     }
+    // }
+}
+
+cloudstream {
+    authors       = listOf("GitLatte", "patr0nq", "keyiflerolsun")
+    language      = "tr"
+    description = "powerboard`un sinema arşivi"
+
+    /**
+     * Durum int'i aşağıdaki gibidir:
+     * 0: Kapalı
+     * 1: Tamam
+     * 2: Yavaş
+     * 3: Sadece Beta
+     **/
+    status  = 1 // belirtilmezse 3 olur
+    tvTypes = listOf("Movie")
+    iconUrl = "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png"
 }
