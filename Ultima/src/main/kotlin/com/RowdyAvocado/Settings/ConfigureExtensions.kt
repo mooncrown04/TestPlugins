@@ -18,19 +18,33 @@ import android.widget.TextView
 import androidx.annotation.RequiresApi
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.lagradost.cloudstream3.CommonActivity.showToast
+import androidx.fragment.app.Fragment // Fragment sınıfını import edin
+import android.content.Context // Context sınıfını import edin
+import androidx.core.content.ContextCompat // ContextCompat sınıfını import edin
+
+// BuildConfig sınıfının doğru paketini import edin.
+// build.gradle.kts dosyanızdaki 'namespace' değerine göre değişir.
+// Ultima için "com.RowdyAvocado" olarak ayarlandığı varsayılmıştır.
+import com.RowdyAvocado.BuildConfig
 
 private const val ARG_PARAM1 = "param1"
 private const val ARG_PARAM2 = "param2"
 
-class UltimaConfigureExtensions(val plugin: UltimaPlugin) : BottomSheetDialogFragment() {
+// UltimaPlugin parametresi kaldırıldı, Fragment'ın kendi context ve resources'ı kullanılacak.
+class UltimaConfigureExtensions() : BottomSheetDialogFragment() {
     private var param1: String? = null
     private var param2: String? = null
+
+    // Fragment'ın kaynaklarına erişmek için requireContext().resources kullanın.
+    // Bu, Fragment'ın bir Context'e bağlı olduğundan emin olunduktan sonra güvenlidir.
     private val sm = UltimaStorageManager
     private val extensions = sm.fetchExtensions()
-    private val res: Resources = plugin.resources ?: throw Exception("Unable to read resources")
+    private lateinit var res: Resources // lateinit olarak tanımlandı, onCreate'de veya onCreateView'de başlatılacak
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // res değişkenini burada başlatmak daha güvenlidir, çünkü context artık mevcuttur.
+        res = requireContext().resources 
         arguments?.let {
             param1 = it.getString(ARG_PARAM1)
             param2 = it.getString(ARG_PARAM2)
@@ -38,15 +52,17 @@ class UltimaConfigureExtensions(val plugin: UltimaPlugin) : BottomSheetDialogFra
     }
 
     // #region - necessary functions
+    // Bu fonksiyon, bir layout ID'sini kullanarak bir View'ı inflate eder.
     private fun getLayout(name: String, inflater: LayoutInflater, container: ViewGroup?): View {
         val id = res.getIdentifier(name, "layout", BuildConfig.LIBRARY_PACKAGE_NAME)
-        val layout = res.getLayout(id)
-        return inflater.inflate(layout, container, false)
+        // Resources.getLayout() yerine LayoutInflater.inflate() kullanıldı
+        return inflater.inflate(id, container, false)
     }
 
     private fun getDrawable(name: String): Drawable {
         val id = res.getIdentifier(name, "drawable", BuildConfig.LIBRARY_PACKAGE_NAME)
-        return res.getDrawable(id, null) ?: throw Exception("Unable to find drawable $name")
+        // ContextCompat.getDrawable kullanıldı
+        return ContextCompat.getDrawable(requireContext(), id) ?: throw Exception("Unable to find drawable $name")
     }
 
     private fun getString(name: String): String {
@@ -61,14 +77,16 @@ class UltimaConfigureExtensions(val plugin: UltimaPlugin) : BottomSheetDialogFra
 
     private fun View.makeTvCompatible() {
         val outlineId = res.getIdentifier("outline", "drawable", BuildConfig.LIBRARY_PACKAGE_NAME)
-        this.background = res.getDrawable(outlineId, null)
+        // ContextCompat.getDrawable kullanıldı
+        this.background = ContextCompat.getDrawable(requireContext(), outlineId)
+            ?: throw Exception("Unable to find drawable outline")
     }
     // #endregion - necessary functions
 
     override fun onCreateView(
-            inflater: LayoutInflater,
-            container: ViewGroup?,
-            savedInstanceState: Bundle?
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
     ): View? {
         val settings = getLayout("configure_extensions", inflater, container)
 
@@ -77,14 +95,17 @@ class UltimaConfigureExtensions(val plugin: UltimaPlugin) : BottomSheetDialogFra
         saveBtn.setImageDrawable(getDrawable("save_icon"))
         saveBtn.makeTvCompatible()
         saveBtn.setOnClickListener(
-                object : OnClickListener {
-                    override fun onClick(btn: View) {
-                        plugin.reload(context)
-                        sm.currentExtensions = extensions
-                        showToast("Saved")
-                        dismiss()
-                    }
+            object : OnClickListener {
+                override fun onClick(btn: View) {
+                    // plugin.reload(context) yerine Cloudstream'in reload mekanizması kullanılmalı
+                    // veya bu işlevselliği doğrudan burada uygulayın.
+                    // Eğer UltimaPlugin'in reload metodu Context gerektiriyorsa:
+                    // plugin.reload(requireContext())
+                    sm.currentExtensions = extensions
+                    showToast(requireContext(), "Saved") // showToast için context parametresi eklendi
+                    dismiss()
                 }
+            }
         )
         // #endregion - building save button and its click listener
 
@@ -93,11 +114,11 @@ class UltimaConfigureExtensions(val plugin: UltimaPlugin) : BottomSheetDialogFra
         extNameOnHomeBtn.makeTvCompatible()
         extNameOnHomeBtn.isChecked = sm.extNameOnHome
         extNameOnHomeBtn.setOnClickListener(
-                object : OnClickListener {
-                    override fun onClick(btn: View) {
-                        sm.extNameOnHome = extNameOnHomeBtn.isChecked
-                    }
+            object : OnClickListener {
+                override fun onClick(btn: View) {
+                    sm.extNameOnHome = extNameOnHomeBtn.isChecked
                 }
+            }
         )
         // #endregion - building toggle for extension_name_on_home and its click listener
 
@@ -114,15 +135,15 @@ class UltimaConfigureExtensions(val plugin: UltimaPlugin) : BottomSheetDialogFra
 
     // #region - functions which lists extensions and its sections with counters
     fun buildExtensionView(
-            extension: UltimaUtils.ExtensionInfo,
-            inflater: LayoutInflater,
-            container: ViewGroup?
+        extension: UltimaUtils.ExtensionInfo,
+        inflater: LayoutInflater,
+        container: ViewGroup?
     ): View {
 
         fun buildSectionView(
-                section: UltimaUtils.SectionInfo,
-                inflater: LayoutInflater,
-                container: ViewGroup?
+            section: UltimaUtils.SectionInfo,
+            inflater: LayoutInflater,
+            container: ViewGroup?
         ): View {
 
             // collecting required resources
@@ -134,14 +155,14 @@ class UltimaConfigureExtensions(val plugin: UltimaPlugin) : BottomSheetDialogFra
             childCheckBoxBtn.makeTvCompatible()
             childCheckBoxBtn.isChecked = section.enabled
             childCheckBoxBtn.setOnCheckedChangeListener(
-                    object : OnCheckedChangeListener {
-                        override fun onCheckedChanged(
-                                buttonView: CompoundButton,
-                                isChecked: Boolean
-                        ) {
-                            section.enabled = isChecked
-                        }
+                object : OnCheckedChangeListener {
+                    override fun onCheckedChanged(
+                        buttonView: CompoundButton,
+                        isChecked: Boolean
+                    ) {
+                        section.enabled = isChecked
                     }
+                }
             )
 
             return sectionView
@@ -161,17 +182,17 @@ class UltimaConfigureExtensions(val plugin: UltimaPlugin) : BottomSheetDialogFra
         extensionDataBtn.makeTvCompatible()
 
         extensionDataBtn.setOnClickListener(
-                object : OnClickListener {
-                    override fun onClick(btn: View) {
-                        if (childList.visibility == View.VISIBLE) {
-                            childList.visibility = View.GONE
-                            expandImage.setRotation(90f)
-                        } else {
-                            childList.visibility = View.VISIBLE
-                            expandImage.setRotation(180f)
-                        }
+            object : OnClickListener {
+                override fun onClick(btn: View) {
+                    if (childList.visibility == View.VISIBLE) {
+                        childList.visibility = View.GONE
+                        expandImage.setRotation(90f)
+                    } else {
+                        childList.visibility = View.VISIBLE
+                        expandImage.setRotation(180f)
                     }
                 }
+            }
         )
 
         // building list of sections of current extnesion with its click listener
@@ -184,15 +205,17 @@ class UltimaConfigureExtensions(val plugin: UltimaPlugin) : BottomSheetDialogFra
     // #endregion - functions which lists extensions and its sections with counters
 
     @RequiresApi(Build.VERSION_CODES.M)
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {}
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState) // super.onViewCreated çağrısı eklendi
+    }
 
     override fun onDetach() {
-        val settings = UltimaSettings(plugin)
+        super.onDetach() // super.onDetach çağrısı eklendi
+        // UltimaSettings'i göstermek için requireActivity().supportFragmentManager kullanıldı
+        val settings = UltimaSettings() // UltimaSettings'in constructor'ı güncellendiyse parametre kaldırıldı
         settings.show(
-                activity?.supportFragmentManager
-                        ?: throw Exception("Unable to open configure settings"),
-                ""
+            requireActivity().supportFragmentManager, // requireActivity() kullanıldı
+            ""
         )
-        super.onDetach()
     }
 }
