@@ -14,7 +14,20 @@ plugins {
     // Kapt (Kotlin Annotation Processing Tool) kullanmak için, özellikle bazı kütüphaneler için gerekebilir
     id("kotlin-kapt")
 }
+pluginManagement {
+    repositories {
+        gradlePluginPortal() // Gradle'ın kendi plugin portalı
+        google()
+        mavenCentral()
+        maven("https://jitpack.io") // Cloudstream plugin'i için JitPack deposu
+        maven("https://maven.pkg.github.com/LagradOst/CloudStream-Releases/") // Cloudstream'in release deposu
+    }
+}
 
+// Mevcut settings.gradle.kts içeriğinizin geri kalanı buraya gelecek
+// Örneğin:
+// rootProject.name = "TestPlugins"
+// include(":dizi", ":ExampleProvider", ":Pornhub", ":Ultima")
 version = 3
 
 dependencies {
