@@ -3,7 +3,7 @@
 plugins {
     // Cloudstream eklenti API'sini kullanmak için gerekli plugin
     // Lütfen Cloudstream GitHub reposundan aldığınız güncel versiyonu buraya girin!
-    id("com.lagradost.cloudstream") version "GERÇEK_CLOUDSTREAM_PLUGIN_VERSİYONU" // <-- Burayı güncelleyin! Örnek: "1.2.3" veya "0.0.1"
+    id("com.lagradost.cloudstream") version "-SNAPSHOT" // <-- BURASI GÜNCELLENDİ!
 
     // Kotlin Android projeleri için gerekli
     id("org.jetbrains.kotlin.android")
