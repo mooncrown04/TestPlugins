@@ -5,7 +5,7 @@ import com.android.build.gradle.LibraryExtension
 import com.lagradost.cloudstream3.gradle.CloudstreamExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.gradle.api.JavaVersion
-import java.util.Properties // Bu satırı ekleyin
+// import java.util.Properties // Artık API anahtarlarını okumadığımız için bu import'a gerek kalmayabilir
 
 plugins {
     // Bu plugin'ler, settings.gradle.kts veya ana build.gradle.kts dosyasında global olarak uygulanmadıysa
@@ -68,24 +68,8 @@ configure<LibraryExtension> {
         minSdk = 21 // Cloudstream için minimum desteklenen SDK
         targetSdk = 34 // Hedeflenen SDK versiyonu
 
-        // TMDB_SECRET_API'yi local.properties'ten veya ortam değişkenlerinden yüklemek için
-        // properties nesnesini burada tanımlayın ve yükleyin
-        val properties = Properties().apply {
-            val propertiesFile = project.rootProject.file("local.properties")
-            if (propertiesFile.exists()) {
-                propertiesFile.inputStream().use { this.load(it) }
-            } else {
-                // Eğer local.properties yoksa, GitHub Actions ortamında ortam değişkenlerini kullanabiliriz.
-                // Bu durumda, GitHub Actions workflow'unuzda SIMKL_API ve MAL_API'yi ortam değişkeni olarak ayarladığınızdan emin olun.
-                // Örneğin: SIMKL_API: ${{ secrets.SIMKL_API_KEY }}
-                setProperty("SIMKL_API", System.getenv("SIMKL_API") ?: "")
-                setProperty("MAL_API", System.getenv("MAL_API") ?: "")
-            }
-        }
-        
-        // buildConfigField'ları güncellendi: properties nesnesinden değeri alacak
-        buildConfigField("String", "SIMKL_API", "\"${properties.getProperty("SIMKL_API") ?: ""}\"")
-        buildConfigField("String", "MAL_API", "\"${properties.getProperty("MAL_API") ?: ""}\"")
+        // API anahtarlarını kaldırdık, bu yüzden properties nesnesine gerek kalmadı.
+        // Eğer başka buildConfigField'larınız varsa buraya ekleyebilirsiniz.
     }
 
     compileOptions {
@@ -97,7 +81,7 @@ configure<LibraryExtension> {
     }
 
     buildFeatures {
-        buildConfig = true // BuildConfig sınıfı oluşturmayı etkinleştir
+        buildConfig = true // BuildConfig sınıfı oluşturmayı etkinleştir (ancak içinde API anahtarları olmayacak)
     }
 
     packaging { // packagingOptions yerine 'packaging' kullanıldı
