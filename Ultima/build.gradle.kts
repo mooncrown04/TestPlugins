@@ -1,4 +1,4 @@
-// TestPlugins/src/Ultima/build.gradle.kts
+/ TestPlugins/src/Ultima/build.gradle.kts
 
 // Gerekli uzantılar için importlar
 import com.android.build.gradle.LibraryExtension
@@ -10,6 +10,29 @@ import org.gradle.api.JavaVersion
 // bu modül seviyesindeki plugins bloğu kaldırılmıştır.
 
 version = 3
+
+// Cloudstream özel yapılandırma bloğu - dependencies bloğundan önceye taşındı
+cloudstream {
+    // Eklenti için genel bilgiler
+    authors = listOf("RowdyAvocado") // Eklentinin yazarları
+    language = "en" // Eklentinin desteklediği dil
+    description = "Ultima plugin for Cloudstream" // Eklentinin kısa açıklaması
+
+    /**
+     * Eklentinin durumu (0: Kapalı, 1: Tamam, 2: Yavaş, 3: Beta)
+     * Belirtilmezse varsayılan 3 (Beta) olur.
+     **/
+    status = 1 // Eklentinin durumu (örneğin, "Ok" yani çalışıyor)
+
+    // Eklentinin desteklediği içerik türleri (örneğin, TvSeries, Movie, Anime)
+    tvTypes = listOf("Movie", "TvSeries", "Anime")
+
+    // Eklentinin ana simgesinin URL'si
+    iconUrl = "https://raw.githubusercontent.com/RowdyAvocado/Ultima/master/Ultima.png"
+
+    // Eklentinin dahili adı (build output dosya adı için kullanılır)
+    internalName = "Ultima" // Bu isim, .cs3 dosyasının adı olacaktır (örn: Ultima.cs3)
+}
 
 dependencies {
     // Tüm bağımlılıkları parantez () içine alın!
@@ -42,7 +65,7 @@ android {
 
     defaultConfig {
         minSdk = 21 // Cloudstream için minimum desteklenen SDK
-        targetSdk = 34 // Hedeflenen SDK versiyonu
+        targetSdk = 34 // Hedeflenen SDK versiyonu (Gradle 9.0'da kaldırılacak, testOptions.targetSdk veya lint.targetSdk kullanılması önerilir)
 
         // BuildConfig alanları
         // API anahtarlarınızı BuildConfig'e eklemek için GitHub Secret'tan okunacak.
@@ -75,26 +98,4 @@ android {
         resources.excludes.add("META-INF/*.md")
         resources.excludes.add("META-INF/*.txt")
     }
-}
-
-cloudstream {
-    // Eklenti için genel bilgiler
-    authors = listOf("RowdyAvocado") // Eklentinin yazarları
-    language = "en" // Eklentinin desteklediği dil
-    description = "Ultima plugin for Cloudstream" // Eklentinin kısa açıklaması
-
-    /**
-     * Eklentinin durumu (0: Kapalı, 1: Tamam, 2: Yavaş, 3: Beta)
-     * Belirtilmezse varsayılan 3 (Beta) olur.
-     **/
-    status = 1 // Eklentinin durumu (örneğin, "Ok" yani çalışıyor)
-
-    // Eklentinin desteklediği içerik türleri (örneğin, TvSeries, Movie, Anime)
-    tvTypes = listOf("Movie", "TvSeries", "Anime")
-
-    // Eklentinin ana simgesinin URL'si
-    iconUrl = "https://raw.githubusercontent.com/RowdyAvocado/Ultima/master/Ultima.png"
-
-    // Eklentinin dahili adı (build output dosya adı için kullanılır)
-    internalName = "Ultima" // Bu isim, .cs3 dosyasının adı olacaktır (örn: Ultima.cs3)
 }
