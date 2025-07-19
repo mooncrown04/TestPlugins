@@ -17,6 +17,30 @@ plugins {
 
 version = 3
 
+// Cloudstream özel yapılandırma bloğu - Android bloğundan önceye taşındı
+cloudstream {
+    // Eklenti için genel bilgiler
+    authors = listOf("RowdyAvocado") // Eklentinin yazarları
+    language = "en" // Eklentinin desteklediği dil
+    description = "Ultima plugin for Cloudstream" // Eklentinin kısa açıklaması
+
+    /**
+     * Eklentinin durumu (0: Kapamalı, 1: Tamam, 2: Yavaş, 3: Beta)
+     * Belirtilmezse varsayılan 3 (Beta) olur.
+     **/
+    status = 1 // Eklentinin durumu (örneğin, "Ok" yani çalışıyor)
+
+    // Eklentinin desteklediği içerik türleri (örneğin, TvSeries, Movie, Anime)
+    tvTypes = listOf("Movie", "TvSeries", "Anime")
+
+    // Eklentinin ana simgesinin URL'si
+    iconUrl = "https://raw.githubusercontent.com/RowdyAvocado/Ultima/master/Ultima.png"
+
+    // Eklentinin dahili adı (build output dosya adı için kullanılır)
+    internalName = "Ultima" // Bu isim, .cs3 dosyasının adı olacaktır (örn: Ultima.cs3)
+}
+
+
 dependencies {
     // Tüm bağımlılıkları parantez () içine alın!
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
@@ -86,27 +110,4 @@ android {
         resources.excludes.add("META-INF/*.md")
         resources.excludes.add("META-INF/*.txt")
     }
-}
-
-// Cloudstream özel yapılandırma bloğu
-cloudstream {
-    // Eklenti için genel bilgiler
-    authors = listOf("RowdyAvocado") // Eklentinin yazarları
-    language = "en" // Eklentinin desteklediği dil
-    description = "Ultima plugin for Cloudstream" // Eklentinin kısa açıklaması
-
-    /**
-     * Eklentinin durumu (0: Kapamalı, 1: Tamam, 2: Yavaş, 3: Beta)
-     * Belirtilmezse varsayılan 3 (Beta) olur.
-     **/
-    status = 1 // Eklentinin durumu (örneğin, "Ok" yani çalışıyor)
-
-    // Eklentinin desteklediği içerik türleri (örneğin, TvSeries, Movie, Anime)
-    tvTypes = listOf("Movie", "TvSeries", "Anime")
-
-    // Eklentinin ana simgesinin URL'si
-    iconUrl = "https://raw.githubusercontent.com/RowdyAvocado/Ultima/master/Ultima.png"
-
-    // Eklentinin dahili adı (build output dosya adı için kullanılır)
-    internalName = "Ultima" // Bu isim, .cs3 dosyasının adı olacaktır (örn: Ultima.cs3)
 }
