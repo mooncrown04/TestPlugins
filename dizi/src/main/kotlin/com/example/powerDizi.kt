@@ -407,7 +407,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val currentShowEpisodes = allShows[currentShowCleanTitle]?.mapNotNull { kanal ->
             val (episodeCleanTitle, season, episode) = parseEpisodeInfo(kanal.title.toString())
             if (season != null && episode != null) {
-                Episode(
+                newEpisode(
                     episode = episode,
                     season = season,
                     name = episodeCleanTitle,  // Bölüm başlığını ekle
