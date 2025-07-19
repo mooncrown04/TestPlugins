@@ -1,47 +1,9 @@
 // TestPlugins/src/Ultima/build.gradle.kts
 
-// Gerekli uzantılar için importlar
-import com.android.build.gradle.LibraryExtension
-import com.lagradost.cloudstream3.gradle.CloudstreamExtension
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.gradle.api.JavaVersion
-
 // Plugin'ler ana build.gradle.kts dosyasındaki subprojects bloğu tarafından uygulandığı için
-// bu modül seviyesindeki plugins bloğu sadece bu modüle özgü plugin'leri içermelidir.
-plugins {
-    // 'com.android.library', 'kotlin-android' ve 'com.lagradost.cloudstream3.gradle'
-    // ana build.gradle.kts dosyasındaki subprojects bloğu tarafından zaten uygulanmaktadır.
-    // Bu nedenle, burada tekrar tanımlanmasına gerek yoktur.
-    // Sadece bu modüle özgü olanları burada bırakın:
-    id("kotlin-parcelize")
-    id("kotlin-kapt")
-}
+// bu modül seviyesindeki plugins bloğu ve uzantı importlarına gerek yoktur.
 
 version = 3
-
-// Cloudstream özel yapılandırma bloğu
-// configure<CloudstreamExtension> kullanarak uzantıyı açıkça yapılandırıyoruz.
-configure<CloudstreamExtension> {
-    // Eklenti için genel bilgiler
-    authors = listOf("RowdyAvocado") // Eklentinin yazarları
-    language = "en" // Eklentinin desteklediği dil
-    description = "Ultima plugin for Cloudstream" // Eklentinin kısa açıklaması
-
-    /**
-     * Eklentinin durumu (0: Kapalı, 1: Tamam, 2: Yavaş, 3: Beta)
-     * Belirtilmezse varsayılan 3 (Beta) olur.
-     **/
-    status = 1 // Eklentinin durumu (örneğin, "Ok" yani çalışıyor)
-
-    // Eklentinin desteklediği içerik türleri (örneğin, TvSeries, Movie, Anime)
-    tvTypes = listOf("Movie", "TvSeries", "Anime")
-
-    // Eklentinin ana simgesinin URL'si
-    iconUrl = "https://raw.githubusercontent.com/RowdyAvocado/Ultima/master/Ultima.png"
-
-    // Eklentinin dahili adı (build output dosya adı için kullanılır)
-    internalName = "Ultima" // Bu isim, .cs3 dosyasının adı olacaktır (örn: Ultima.cs3)
-}
 
 dependencies {
     // Tüm bağımlılıkları parantez () içine alın!
@@ -67,9 +29,7 @@ dependencies {
     // Diğer bağımlılıklar (eğer varsa)
 }
 
-// Android yapılandırma bloğu
-// configure<LibraryExtension> kullanarak uzantıyı açıkça yapılandırıyoruz.
-configure<LibraryExtension> {
+android {
     // Android SDK versiyonları ve derleme ayarları
     compileSdk = 34 // Genellikle en son stabil versiyonu kullanın
     namespace = "com.RowdyAvocado" // Ultima eklentinizin doğru paket adı
@@ -109,4 +69,26 @@ configure<LibraryExtension> {
         resources.excludes.add("META-INF/*.md")
         resources.excludes.add("META-INF/*.txt")
     }
+}
+
+cloudstream {
+    // Eklenti için genel bilgiler
+    authors = listOf("RowdyAvocado") // Eklentinin yazarları
+    language = "en" // Eklentinin desteklediği dil
+    description = "Ultima plugin for Cloudstream" // Eklentinin kısa açıklaması
+
+    /**
+     * Eklentinin durumu (0: Kapalı, 1: Tamam, 2: Yavaş, 3: Beta)
+     * Belirtilmezse varsayılan 3 (Beta) olur.
+     **/
+    status = 1 // Eklentinin durumu (örneğin, "Ok" yani çalışıyor)
+
+    // Eklentinin desteklediği içerik türleri (örneğin, TvSeries, Movie, Anime)
+    tvTypes = listOf("Movie", "TvSeries", "Anime")
+
+    // Eklentinin ana simgesinin URL'si
+    iconUrl = "https://raw.githubusercontent.com/RowdyAvocado/Ultima/master/Ultima.png"
+
+    // Eklentinin dahili adı (build output dosya adı için kullanılır)
+    internalName = "Ultima" // Bu isim, .cs3 dosyasının adı olacaktır (örn: Ultima.cs3)
 }
