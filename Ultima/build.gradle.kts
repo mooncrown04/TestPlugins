@@ -1,4 +1,4 @@
-/ TestPlugins/src/Ultima/build.gradle.kts
+// TestPlugins/src/Ultima/build.gradle.kts
 
 // Gerekli uzantılar için importlar
 import com.android.build.gradle.LibraryExtension
