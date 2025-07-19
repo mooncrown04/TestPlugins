@@ -407,20 +407,25 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val currentShowEpisodes = allShows[currentShowCleanTitle]?.mapNotNull { kanal ->
             val (episodeCleanTitle, season, episode) = parseEpisodeInfo(kanal.title.toString())
             if (season != null && episode != null) {
-                Episode(
-                    episode = episode,
-                    season = season,
-                    name = episodeCleanTitle,  // Bölüm başlığını ekle
-                    data = LoadData(
-                        kanal.url.toString(),
-                        episodeCleanTitle,
-                        kanal.attributes["tvg-logo"].toString(),
-                        kanal.attributes["group-title"].toString(),
-                        kanal.attributes["tvg-country"]?.toString() ?: "TR",
-                        season,
-                        episode
-                    ).toJson()
-                )
+                val episodeDataJson = LoadData(
+                    kanal.url.toString(),
+                    episodeCleanTitle,
+                    kanal.attributes["tvg-logo"].toString(),
+                    kanal.attributes["group-title"].toString(),
+                    kanal.attributes["tvg-country"]?.toString() ?: "TR",
+                    season,
+                    episode
+                ).toJson()
+
+                // BURAYI GÜNCELLEDİK!
+                newEpisode(episodeDataJson) { // URL/data parametresini ilk sıraya koyduk
+                    this.name = episodeCleanTitle
+                    this.season = season
+                    this.episode = episode
+                    this.posterUrl = kanal.attributes["tvg-logo"].toString()
+                    // Eğer 'runTime' özelliği varsa ve kullanmak isterseniz:
+                    // this.runTime = ...
+                }
             } else null
         }?.sortedWith(compareBy({ it.season }, { it.episode })) ?: emptyList()
 
@@ -523,13 +528,13 @@ data class Playlist(
 )
 
 data class PlaylistItem(
-    val title: String?              = null,
+    val title: String?            = null,
     val attributes: Map<String, String> = emptyMap(),
     val headers: Map<String, String>    = emptyMap(),
-    val url: String?                = null,
-    val userAgent: String?          = null,
-    val season: Int                 = 1,
-    val episode: Int                = 0
+    val url: String?              = null,
+    val userAgent: String?        = null,
+    val season: Int               = 1,
+    val episode: Int              = 0
 ) {
     companion object {
         const val EXT_M3U = "#EXTM3U"
@@ -601,8 +606,8 @@ class IptvPlaylistParser {
                     )
                 } else {
                     if (!line.startsWith("#")) {
-                        val item        = playlistItems[currentIndex]
-                        val url         = line.getUrl()
+                        val item      = playlistItems[currentIndex]
+                        val url       = line.getUrl()
                         val userAgent   = line.getUrlParameter("user-agent")
                         val referrer    = line.getUrlParameter("referer")
                         val urlHeaders = if (referrer != null) {item.headers + mapOf("referrer" to referrer)} else item.headers
@@ -734,7 +739,8 @@ val languageMap = mapOf(
     // Diğer
     "la" to "Latince",
     "xx" to "Belirsiz",
-    "mul" to "Çok Dilli"    
+    "mul" to "Çok Dilli" 
+
 )
 
 fun getTurkishLanguageName(code: String?): String? {
