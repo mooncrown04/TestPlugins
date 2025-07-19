@@ -16,7 +16,7 @@ import org.json.JSONObject
 class PornHubProvider : MainAPI() {
     private val globalTvType = TvType.NSFW
     override var mainUrl              = "https://www.pornhub.com"
-    override var name                 = "PornHub"
+    override var name                 = "P\ud83d\udd34rnHub"
     override val hasMainPage          = true
     override var lang                 = "en"
     override val hasQuickSearch       = false
