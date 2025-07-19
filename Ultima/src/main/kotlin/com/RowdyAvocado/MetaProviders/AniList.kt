@@ -21,6 +21,7 @@ import com.lagradost.cloudstream3.mainPageOf
 import com.lagradost.cloudstream3.mapper
 import com.lagradost.cloudstream3.newAnimeLoadResponse
 import com.lagradost.cloudstream3.newAnimeSearchResponse
+import com.lagradost.cloudstream3.newEpisode // newEpisode import edildi
 import com.lagradost.cloudstream3.newHomePageResponse
 import com.lagradost.cloudstream3.syncproviders.AccountManager
 import com.lagradost.cloudstream3.syncproviders.SyncIdName
@@ -34,7 +35,9 @@ import com.lagradost.cloudstream3.syncproviders.providers.AniListApi.Title
 import com.lagradost.cloudstream3.utils.AppUtils
 import com.lagradost.cloudstream3.utils.ExtractorLink
 
-class AniList(val plugin: UltimaPlugin) : MainAPI() {
+// UltimaPlugin'in doğrudan kullanılması yerine MainAPI'nin context/activity özelliklerini kullanmak daha iyidir.
+// Eğer UltimaPlugin sınıfı özel bir kullanım için gerekiyorsa, bu kısmı kendi yapınıza göre ayarlayabilirsiniz.
+class AniList() : MainAPI() { // UltimaPlugin parametresi kaldırıldı
     override var name = "AniList"
     override var mainUrl = "https://anilist.co"
     override var supportedTypes = setOf(TvType.Anime, TvType.AnimeMovie, TvType.OVA)
@@ -47,7 +50,7 @@ class AniList(val plugin: UltimaPlugin) : MainAPI() {
     private final val mediaLimit = 20
     private final val isAdult = false
     private val headerJSON =
-            mapOf("Accept" to "application/json", "Content-Type" to "application/json")
+        mapOf("Accept" to "application/json", "Content-Type" to "application/json")
 
     protected fun Any.toStringData(): String {
         return mapper.writeValueAsString(this)
@@ -57,8 +60,8 @@ class AniList(val plugin: UltimaPlugin) : MainAPI() {
         val data = mapOf("query" to query)
         val test = app.post(apiUrl, headers = headerJSON, data = data)
         val res =
-                test.parsedSafe<AnilistAPIResponse>()
-                        ?: throw Exception("Unable to fetch or parse Anilist api response")
+            test.parsedSafe<AnilistAPIResponse>()
+                ?: throw Exception("Unable to fetch or parse Anilist api response")
         return res
     }
 
@@ -70,34 +73,34 @@ class AniList(val plugin: UltimaPlugin) : MainAPI() {
     }
 
     private suspend fun MainPageRequest.toSearchResponseList(
-            page: Int
+        page: Int
     ): Pair<List<SearchResponse>, Boolean> {
         val res = anilistAPICall(this.data.replace("###", "$page"))
         val data =
-                res.data.page?.media?.map { it.toSearchResponse() }
-                        ?: throw Exception("Unable to read media data")
+            res.data.page?.media?.map { it.toSearchResponse() }
+                ?: throw Exception("Unable to read media data")
         val hasNextPage = res.data.page.pageInfo.hasNextPage ?: false
         return data to hasNextPage
     }
 
     override val mainPage =
-            mainPageOf(
-                    "query (\$page: Int = ###, \$sort: [MediaSort] = [TRENDING_DESC, POPULARITY_DESC], \$isAdult: Boolean = $isAdult) { Page(page: \$page, perPage: $mediaLimit) { pageInfo { total perPage currentPage lastPage hasNextPage } media(sort: \$sort, isAdult: \$isAdult, type: ANIME) { id idMal season seasonYear format episodes chapters title { english romaji } coverImage { extraLarge large medium } synonyms nextAiringEpisode { timeUntilAiring episode } } } }" to
-                            "Trending Now",
-                    "query (\$page: Int = ###, \$seasonYear: Int = 2024, \$sort: [MediaSort] = [TRENDING_DESC, POPULARITY_DESC], \$isAdult: Boolean = $isAdult) { Page(page: \$page, perPage: $mediaLimit) { pageInfo { total perPage currentPage lastPage hasNextPage } media(sort: \$sort, seasonYear: \$seasonYear, season: SPRING, isAdult: \$isAdult, type: ANIME) { id idMal season seasonYear format episodes chapters title { english romaji } coverImage { extraLarge large medium } synonyms nextAiringEpisode { timeUntilAiring episode } } } }" to
-                            "Popular This Season",
-                    "query (\$page: Int = ###, \$sort: [MediaSort] = [POPULARITY_DESC], \$isAdult: Boolean = $isAdult) { Page(page: \$page, perPage: $mediaLimit) { pageInfo { total perPage currentPage lastPage hasNextPage } media(sort: \$sort, isAdult: \$isAdult, type: ANIME) { id idMal season seasonYear format episodes chapters title { english romaji } coverImage { extraLarge large medium } synonyms nextAiringEpisode { timeUntilAiring episode } } } }" to
-                            "All Time Popular",
-                    "query (\$page: Int = ###, \$sort: [MediaSort] = [SCORE_DESC], \$isAdult: Boolean = $isAdult) { Page(page: \$page, perPage: $mediaLimit) { pageInfo { total perPage currentPage lastPage hasNextPage } media(sort: \$sort, isAdult: \$isAdult, type: ANIME) { id idMal season seasonYear format episodes chapters title { english romaji } coverImage { extraLarge large medium } synonyms nextAiringEpisode { timeUntilAiring episode } } } }" to
-                            "Top 100 Anime",
-                    "Personal" to "Personal"
-            )
+        mainPageOf(
+            "query (\$page: Int = ###, \$sort: [MediaSort] = [TRENDING_DESC, POPULARITY_DESC], \$isAdult: Boolean = $isAdult) { Page(page: \$page, perPage: $mediaLimit) { pageInfo { total perPage currentPage lastPage hasNextPage } media(sort: \$sort, isAdult: \$isAdult, type: ANIME) { id idMal season seasonYear format episodes chapters title { english romaji } coverImage { extraLarge large medium } synonyms nextAiringEpisode { timeUntilAiring episode } } } }" to
+                    "Trending Now",
+            "query (\$page: Int = ###, \$seasonYear: Int = 2024, \$sort: [MediaSort] = [TRENDING_DESC, POPULARITY_DESC], \$isAdult: Boolean = $isAdult) { Page(page: \$page, perPage: $mediaLimit) { pageInfo { total perPage currentPage lastPage hasNextPage } media(sort: \$sort, seasonYear: \$seasonYear, season: SPRING, isAdult: \$isAdult, type: ANIME) { id idMal season seasonYear format episodes chapters title { english romaji } coverImage { extraLarge large medium } synonyms nextAiringEpisode { timeUntilAiring episode } } } }" to
+                    "Popular This Season",
+            "query (\$page: Int = ###, \$sort: [MediaSort] = [POPULARITY_DESC], \$isAdult: Boolean = $isAdult) { Page(page: \$page, perPage: $mediaLimit) { pageInfo { total perPage currentPage lastPage hasNextPage } media(sort: \$sort, isAdult: \$isAdult, type: ANIME) { id idMal season seasonYear format episodes chapters title { english romaji } coverImage { extraLarge large medium } synonyms nextAiringEpisode { timeUntilAiring episode } } } }" to
+                    "All Time Popular",
+            "query (\$page: Int = ###, \$sort: [MediaSort] = [SCORE_DESC], \$isAdult: Boolean = $isAdult) { Page(page: \$page, perPage: $mediaLimit) { pageInfo { total perPage currentPage lastPage hasNextPage } media(sort: \$sort, isAdult: \$isAdult, type: ANIME) { id idMal season seasonYear format episodes chapters title { english romaji } coverImage { extraLarge large medium } synonyms nextAiringEpisode { timeUntilAiring episode } } } }" to
+                    "Top 100 Anime",
+            "Personal" to "Personal"
+        )
 
     override suspend fun search(query: String): List<SearchResponse>? {
         val res =
-                anilistAPICall(
-                        "query (\$search: String = \"$query\") { Page(page: 1, perPage: $mediaLimit) { pageInfo { total perPage currentPage lastPage hasNextPage } media(search: \$search, isAdult: $isAdult, type: ANIME) { id idMal season seasonYear format episodes chapters title { english romaji } coverImage { extraLarge large medium } synonyms nextAiringEpisode { timeUntilAiring episode } } } }"
-                )
+            anilistAPICall(
+                "query (\$search: String = \"$query\") { Page(page: 1, perPage: $mediaLimit) { pageInfo { total perPage currentPage lastPage hasNextPage } media(search: \$search, isAdult: $isAdult, type: ANIME) { id idMal season seasonYear format episodes chapters title { english romaji } coverImage { extraLarge large medium } synonyms nextAiringEpisode { timeUntilAiring episode } } } }"
+            )
         return res.data.page?.media?.map { it.toSearchResponse() }
     }
 
@@ -105,18 +108,20 @@ class AniList(val plugin: UltimaPlugin) : MainAPI() {
         if (request.name.contains("Personal")) {
             // Reading and manipulating personal library
             api.loginInfo()
-                    ?: return newHomePageResponse(
-                            "Login required for personal content.",
-                            emptyList<SearchResponse>(),
-                            false
-                    )
+                ?: return newHomePageResponse(
+                    "Login required for personal content.",
+                    emptyList<SearchResponse>(),
+                    false
+                )
             var homePageList =
-                    api.getPersonalLibrary().allLibraryLists.mapNotNull {
-                        if (it.items.isEmpty()) return@mapNotNull null
-                        val libraryName =
-                                it.name.asString(plugin.activity ?: return@mapNotNull null)
-                        HomePageList("${request.name}: $libraryName", it.items)
-                    }
+                api.getPersonalLibrary().allLibraryLists.mapNotNull {
+                    if (it.items.isEmpty()) return@mapNotNull null
+                    val libraryName =
+                        // currentActivity kullanıldı, çünkü MainAPI'nin bir özelliğidir.
+                        // Eğer bu hala sorun yaratırsa, Cloudstream'in Activity'ye erişim yöntemini kontrol edin.
+                        it.name.asString(currentActivity ?: return@mapNotNull null)
+                    HomePageList("${request.name}: $libraryName", it.items)
+                }
             return newHomePageResponse(homePageList, false)
         } else {
             // Other new sections will be generated if toSearchResponseList() is
@@ -129,25 +134,26 @@ class AniList(val plugin: UltimaPlugin) : MainAPI() {
     override suspend fun load(url: String): LoadResponse {
         val id = url.removeSuffix("/").substringAfterLast("/")
         val data =
-                anilistAPICall(
-                                "query (\$id: Int = $id) {  Media (id: \$id, type: ANIME) { id title { romaji english } startDate { year } genres description averageScore bannerImage coverImage { extraLarge large medium } bannerImage episodes nextAiringEpisode { episode } recommendations { edges { node { id mediaRecommendation { id title { romaji english } coverImage { extraLarge large medium } } } } } } }"
-                        )
-                        .data
-                        .media
-                        ?: throw Exception("Unable to fetch media details")
+            anilistAPICall(
+                "query (\$id: Int = $id) {  Media (id: \$id, type: ANIME) { id title { romaji english } startDate { year } genres description averageScore bannerImage coverImage { extraLarge large medium } bannerImage episodes nextAiringEpisode { episode } recommendations { edges { node { id mediaRecommendation { id title { romaji english } coverImage { extraLarge large medium } } } } } } }"
+            )
+                .data
+                .media
+                ?: throw Exception("Unable to fetch media details")
         val episodes =
-                (1..data.totalEpisodes()).map { i ->
-                    val linkData =
-                            LinkData(
-                                            title = data.getTitle(),
-                                            year = data.startDate.year,
-                                            season = 1,
-                                            episode = i,
-                                            isAnime = true
-                                    )
-                                    .toStringData()
-                    Episode(linkData, season = 1, episode = i)
-                }
+            (1..data.totalEpisodes()).map { i ->
+                val linkData =
+                    LinkData(
+                        title = data.getTitle(),
+                        year = data.startDate.year,
+                        season = 1,
+                        episode = i,
+                        isAnime = true
+                    )
+                        .toStringData()
+                // Deprecated Episode constructor yerine newEpisode kullanıldı
+                newEpisode(linkData, season = 1, episode = i)
+            }
         return newAnimeLoadResponse(data.getTitle(), url, TvType.Anime) {
             addAniListId(id.toInt())
             addEpisodes(DubStatus.Subbed, episodes)
@@ -157,27 +163,27 @@ class AniList(val plugin: UltimaPlugin) : MainAPI() {
             this.posterUrl = data.getCoverImage()
             this.tags = data.genres
             this.recommendations =
-                    data.recommendations?.edges?.map {
-                        val recommendation = it.node.mediaRecommendation
-                        val title =
-                                recommendation.title?.english
-                                        ?: recommendation.title?.romaji
-                                                ?: throw Exception(
-                                                "Unable to load name of recommendation"
-                                        )
-                        val recommendationUrl = "$mainUrl/anime/${recommendation.id}"
-                        newAnimeSearchResponse(title, recommendationUrl, TvType.Anime) {
-                            this.posterUrl = recommendation.coverImage?.large
-                        }
+                data.recommendations?.edges?.map {
+                    val recommendation = it.node.mediaRecommendation
+                    val title =
+                        recommendation.title?.english
+                            ?: recommendation.title?.romaji
+                            ?: throw Exception(
+                                "Unable to load name of recommendation"
+                            )
+                    val recommendationUrl = "$mainUrl/anime/${recommendation.id}"
+                    newAnimeSearchResponse(title, recommendationUrl, TvType.Anime) {
+                        this.posterUrl = recommendation.coverImage?.large
                     }
+                }
         }
     }
 
     override suspend fun loadLinks(
-            data: String,
-            isCasting: Boolean,
-            subtitleCallback: (SubtitleFile) -> Unit,
-            callback: (ExtractorLink) -> Unit
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
     ): Boolean {
         val mediaData = AppUtils.parseJson<LinkData>(data)
         invokeExtractors(Category.ANIME, mediaData, subtitleCallback, callback)
@@ -185,40 +191,40 @@ class AniList(val plugin: UltimaPlugin) : MainAPI() {
     }
 
     data class AnilistAPIResponse(
-            @JsonProperty("data") val data: AnilistData,
+        @JsonProperty("data") val data: AnilistData,
     ) {
         data class AnilistData(
-                @JsonProperty("Page") val page: AnilistPage?,
-                @JsonProperty("Media") val media: anilistMedia?,
+            @JsonProperty("Page") val page: AnilistPage?,
+            @JsonProperty("Media") val media: anilistMedia?,
         ) {
             data class AnilistPage(
-                    @JsonProperty("pageInfo") val pageInfo: LikePageInfo,
-                    @JsonProperty("media") val media: List<Media>,
+                @JsonProperty("pageInfo") val pageInfo: LikePageInfo,
+                @JsonProperty("media") val media: List<Media>,
             )
         }
 
         data class anilistMedia(
-                @JsonProperty("id") val id: Int,
-                @JsonProperty("startDate") val startDate: StartDate,
-                @JsonProperty("episodes") val episodes: Int?,
-                @JsonProperty("title") val title: Title,
-                @JsonProperty("genres") val genres: List<String>,
-                @JsonProperty("description") val description: String?,
-                @JsonProperty("coverImage") val coverImage: CoverImage,
-                @JsonProperty("bannerImage") val bannerImage: String?,
-                @JsonProperty("nextAiringEpisode") val nextAiringEpisode: SeasonNextAiringEpisode?,
-                @JsonProperty("recommendations") val recommendations: RecommendationConnection?,
+            @JsonProperty("id") val id: Int,
+            @JsonProperty("startDate") val startDate: StartDate,
+            @JsonProperty("episodes") val episodes: Int?,
+            @JsonProperty("title") val title: Title,
+            @JsonProperty("genres") val genres: List<String>,
+            @JsonProperty("description") val description: String?,
+            @JsonProperty("coverImage") val coverImage: CoverImage,
+            @JsonProperty("bannerImage") val bannerImage: String?,
+            @JsonProperty("nextAiringEpisode") val nextAiringEpisode: SeasonNextAiringEpisode?,
+            @JsonProperty("recommendations") val recommendations: RecommendationConnection?,
         ) {
             data class StartDate(@JsonProperty("year") val year: Int)
 
             fun totalEpisodes(): Int {
                 return nextAiringEpisode?.episode?.minus(1)
-                        ?: episodes ?: throw Exception("Unable to calculate total episodes")
+                    ?: episodes ?: throw Exception("Unable to calculate total episodes")
             }
 
             fun getTitle(): String {
                 return title.english
-                        ?: title.romaji ?: throw Exception("Unable to calculate total episodes")
+                    ?: title.romaji ?: throw Exception("Unable to calculate total episodes")
             }
 
             fun getCoverImage(): String? {
