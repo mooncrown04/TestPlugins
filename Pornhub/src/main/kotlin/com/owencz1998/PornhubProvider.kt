@@ -155,12 +155,11 @@ class PornHubProvider : MainAPI() {
         }
         
         // Önerilen kısım: recommendations listesi için MovieSearchResponse düzeltildi
-        val recommendations = soup.select("ul#recommendedVideos li.pcVideoListItem").map {
-            val rTitle = it.selectFirst("div.phimage a")?.attr("title") ?: ""
+        val recommendations = soup.select("ul#recommendedVideos li.pcVideoListItem").mapNotNull {
+            val rTitle = it.selectFirst("div.phimage a")?.attr("title") ?: return@mapNotNull null
             val rUrl = fixUrl(it.selectFirst("div.phimage a")?.attr("href").toString())
-            val rPoster = fixUrl(
-                it.selectFirst("div.phimage img.js-videoThumb")?.attr("src").toString()
-            )
+            // Poster URL'sini fetchImgUrl ile çek
+            val rPoster = fetchImgUrl(it.selectFirst("div.phimage img.js-videoThumb"))
             newMovieSearchResponse( // newMovieSearchResponse kullanıldı
                 name = rTitle,
                 url = rUrl,
@@ -171,12 +170,11 @@ class PornHubProvider : MainAPI() {
         }
 
         // Önerilen kısım: relatedVideo listesi için MovieSearchResponse düzeltildi
-        val relatedVideo = soup.select("ul#relatedVideosCenter li.pcVideoListItem").map {
-            val rTitle = it.selectFirst("div.phimage a")?.attr("title") ?: ""
+        val relatedVideo = soup.select("ul#relatedVideosCenter li.pcVideoListItem").mapNotNull {
+            val rTitle = it.selectFirst("div.phimage a")?.attr("title") ?: return@mapNotNull null
             val rUrl = fixUrl(it.selectFirst("div.phimage a")?.attr("href").toString())
-            val rPoster = fixUrl(
-                it.selectFirst("div.phimage img.js-videoThumb")?.attr("src").toString()
-            )
+            // Poster URL'sini fetchImgUrl ile çek
+            val rPoster = fetchImgUrl(it.selectFirst("div.phimage img.js-videoThumb"))
             newMovieSearchResponse( // newMovieSearchResponse kullanıldı
                 name = rTitle,
                 url = rUrl,
