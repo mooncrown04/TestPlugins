@@ -1,63 +1,70 @@
 package com.RowdyAvocado
 
 import android.content.Context
-import android.os.Handler
 import androidx.appcompat.app.AppCompatActivity
-import com.lagradost.cloudstream3.MainActivity.Companion.afterPluginsLoadedEvent
-import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
+import com.lagradost.cloudstream3.AcraApplication
 import com.lagradost.cloudstream3.plugins.Plugin
-import com.lagradost.cloudstream3.plugins.PluginManager
+import com.lagradost.cloudstream3.mvvm.logError
+import com.RowdyAvocado.MetaProviders.AniList
+import com.RowdyAvocado.MetaProviders.MyAnimeList
+import com.RowdyAvocado.MetaProviders.Simkl
+import com.RowdyAvocado.Settings.ConfigureExtensions
+import com.RowdyAvocado.Settings.ConfigureWatchSync
+import com.lagradost.cloudstream3.R // R sınıfınızın doğru paketini kontrol edin
 
-@CloudstreamPlugin
 class UltimaPlugin : Plugin() {
-    var activity: AppCompatActivity? = null
+    override fun load() {
+        // 'app' referansı genellikle AcraApplication.context'ten gelir.
+        // Eğer bu bir Plugin sınıfı ise, doğrudan context'e erişiminiz olmayabilir.
+        // Bu durumda, AcraApplication.context'i kullanmak en güvenli yoldur.
+        // Eğer Simkl, AniList, MyAnimeList constructor'ları artık parametre almıyorsa:
+        registerMainAPI(Simkl())
+        registerMainAPI(AniList())
+        registerMainAPI(MyAnimeList())
 
-    companion object {
-        inline fun Handler.postFunction(crossinline function: () -> Unit) {
-            this.post(
-                    object : Runnable {
-                        override fun run() {
-                            function()
-                        }
-                    }
-            )
-        }
-    }
-
-    override fun load(context: Context) {
-        activity = context as AppCompatActivity
-        // All providers should be added in this manner
-        registerMainAPI(Ultima(this))
-
-        UltimaStorageManager.currentMetaProviders.forEach { metaProvider ->
-            when (metaProvider.first) {
-                "Simkl" -> if (metaProvider.second) registerMainAPI(Simkl(this))
-                "AniList" -> if (metaProvider.second) registerMainAPI(AniList(this))
-                "MyAnimeList" -> if (metaProvider.second) registerMainAPI(MyAnimeList(this))
-                "TMDB" -> if (metaProvider.second) registerMainAPI(Tmdb(this))
-                "Trakt" -> if (metaProvider.second) registerMainAPI(Trakt(this))
-                else -> {}
+        // Ayarlar menüsüne yeni anahtar ekleme
+        addKey(R.string.ultima_settings_key) {
+            // Context'i güvenli bir şekilde alıyoruz
+            val ctx = AcraApplication.context
+            if (ctx is AppCompatActivity) {
+                // ConfigureExtensions bir BottomSheetDialogFragment ise,
+                // show metodu FragmentManager gerektirir.
+                ConfigureExtensions.show(ctx.supportFragmentManager)
+            } else {
+                logError(IllegalStateException("UltimaPlugin: Context AppCompatActivity değil, ayarlar gösterilemiyor."))
             }
         }
 
-        openSettings = {
-            val frag = UltimaSettings(this)
-            frag.show(
-                    activity?.supportFragmentManager ?: throw Exception("Unable to open settings"),
-                    ""
-            )
+        // İzleme senkronizasyonu ayarları menüsüne yeni anahtar ekleme
+        addKey(R.string.ultima_watchsync_key) {
+            val ctx = AcraApplication.context
+            if (ctx is AppCompatActivity) {
+                ConfigureWatchSync.show(ctx.supportFragmentManager)
+            } else {
+                logError(IllegalStateException("UltimaPlugin: Context AppCompatActivity değil, izleme senkronizasyonu ayarları gösterilemiyor."))
+            }
         }
-    }
 
-    fun reload(context: Context?) {
-        val pluginData =
-                PluginManager.getPluginsOnline().find { it.internalName.contains("Ultima") }
-        if (pluginData == null) {
-            PluginManager.hotReloadAllLocalPlugins(context as AppCompatActivity)
-        } else {
-            PluginManager.unloadPlugin(pluginData.filePath)
-            PluginManager.loadAllOnlinePlugins(context ?: throw Exception("Unable to load plugins"))
-            afterPluginsLoadedEvent.invoke(true)
+        // Yerel eklentileri yeniden yükleme anahtarı
+        addKey(R.string.ultima_reload_local_plugins_key) {
+            val ctx = AcraApplication.context
+            if (ctx is AppCompatActivity) {
+                // hotReloadAllLocalPlugins genellikle AcraApplication.Companion'da bulunur
+                AcraApplication.hotReloadAllLocalPlugins(ctx)
+            } else {
+                logError(IllegalStateException("UltimaPlugin: Context AppCompatActivity değil, yerel eklentiler yeniden yüklenemiyor."))
+            }
+        }
+
+        // Çevrimiçi eklentileri yükleme anahtarı
+        addKey(R.string.ultima_reload_online_plugins_key) {
+            val ctx = AcraApplication.context
+            if (ctx is AppCompatActivity) {
+                // loadAllOnlinePlugins genellikle AcraApplication.Companion'da bulunur
+                AcraApplication.loadAllOnlinePlugins(ctx)
+            } else {
+                logError(IllegalStateException("UltimaPlugin: Context AppCompatActivity değil, çevrimiçi eklentiler yüklenemiyor."))
+            }
         }
     }
 }
