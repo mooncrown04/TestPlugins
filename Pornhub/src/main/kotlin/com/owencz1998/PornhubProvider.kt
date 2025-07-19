@@ -159,7 +159,7 @@ class PornHubProvider : MainAPI() {
             val rTitle = it.selectFirst("div.phimage a")?.attr("title") ?: return@mapNotNull null
             val rUrl = fixUrl(it.selectFirst("div.phimage a")?.attr("href").toString())
             // Poster URL'sini fetchImgUrl ile çek
-            val rPoster = fetchImgUrl(it.selectFirst("div.phimage img.js-videoThumb"))
+            val rPoster = fetchImgUrl(it.selectFirst("img")) // Düzeltildi: img.js-videoThumb yerine doğrudan img
             newMovieSearchResponse( // newMovieSearchResponse kullanıldı
                 name = rTitle,
                 url = rUrl,
@@ -174,7 +174,7 @@ class PornHubProvider : MainAPI() {
             val rTitle = it.selectFirst("div.phimage a")?.attr("title") ?: return@mapNotNull null
             val rUrl = fixUrl(it.selectFirst("div.phimage a")?.attr("href").toString())
             // Poster URL'sini fetchImgUrl ile çek
-            val rPoster = fetchImgUrl(it.selectFirst("div.phimage img.js-videoThumb"))
+            val rPoster = fetchImgUrl(it.selectFirst("img")) // Düzeltildi: img.js-videoThumb yerine doğrudan img
             newMovieSearchResponse( // newMovieSearchResponse kullanıldı
                 name = rTitle,
                 url = rUrl,
