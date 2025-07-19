@@ -34,11 +34,12 @@ cloudstream {
 }
 
 android {
-    defaultConfig {
-        val properties = Properties()
-        properties.load(project.rootProject.file("local.properties").inputStream())
+    buildFeatures {
+        buildConfig = true
+    }
 
-        buildConfigField("String", "SIMKL_API", "\"${properties.getProperty("SIMKL_API")}\"")
-        buildConfigField("String", "MAL_API", "\"${properties.getProperty("MAL_API")}\"")
+    defaultConfig {
+        val apiKey = project.findProperty("tmdbApiKey")?.toString() ?: ""
+        buildConfigField("String", "TMDB_SECRET_API", "\"$apiKey\"")
     }
 }
