@@ -15,50 +15,65 @@ import java.net.URL
 import java.net.URLEncoder
 
 class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
-    override var mainUrl              = "https://raw.githubusercontent.com/Zerk1903/zerkfilm/refs/heads/main/Diziler.m3u"
-    override var name                 = "powerboard Dizi 🎬"
-    override val hasMainPage          = true
-    override var lang                 = "tr"
-    override val hasQuickSearch       = true
-    override val hasDownloadSupport   = true
-    override val supportedTypes       = setOf(TvType.TvSeries)
+    override var mainUrl             = "https://raw.githubusercontent.com/Zerk1903/zerkfilm/refs/heads/main/Diziler.m3u"
+    override var name                = "powerboard Dizi 🎬"
+    override val hasMainPage         = true
+    override var lang                = "tr"
+    override val hasQuickSearch      = true
+    override val hasDownloadSupport  = true
+    override val supportedTypes      = setOf(TvType.TvSeries)
+
+    // İki farklı formatı işleyebilen yardımcı fonksiyon
+    private fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
+        // Birinci format için regex: "Dizi Adı-Sezon. Sezon Bölüm. Bölüm(Ek Bilgi)"
+        val format1Regex = Regex("""(.*?)[^\w\d]+(\d+)\.\s*Sezon\s*(\d+)\.\s*Bölüm.*""")
+
+        // İkinci format için regex: "Dizi Adı sXXeYY"
+        val format2Regex = Regex("""(.*?)\s*s(\d+)e(\d+)""")
+
+        // İlk formatı deneme
+        val matchResult1 = format1Regex.find(text)
+        if (matchResult1 != null) {
+            val (title, seasonStr, episodeStr) = matchResult1.destructured
+            val season = seasonStr.toIntOrNull()
+            val episode = episodeStr.toIntOrNull()
+            Log.d("EpisodeParser", "Format 1 Eşleşme: Başlık=$title, Sezon=$season, Bölüm=$episode")
+            return Triple(title.trim(), season, episode)
+        }
+
+        // İlk format eşleşmezse, ikinci formatı deneme
+        val matchResult2 = format2Regex.find(text)
+        if (matchResult2 != null) {
+            val (title, seasonStr, episodeStr) = matchResult2.destructured
+            val season = seasonStr.toIntOrNull()
+            val episode = episodeStr.toIntOrNull()
+            Log.d("EpisodeParser", "Format 2 Eşleşme: Başlık=$title, Sezon=$season, Bölüm=$episode")
+            return Triple(title.trim(), season, episode)
+        }
+
+        // Her iki format da eşleşmezse, orijinal başlığı ve null değerleri döndür
+        Log.d("EpisodeParser", "Eşleşme bulunamadı, orijinal başlık kullanılıyor: $text")
+        return Triple(text.trim(), null, null) // Orijinal başlığı döndürüyoruz
+    }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
 
-        // Parse episode information from titles
-       // val episodeRegex = Regex("""(.*?)[^\w\d]+(\d+)\.\s*Sezon\s*(\d+)\.\s*Bölüm.*""")
-        val episodeRegex = Regex("""(.*?)\s*s(\d+)e(\d+)""")
         val processedItems = kanallar.items.map { item ->
             val title = item.title.toString()
-            val match = episodeRegex.find(title)
-            val cleanTitle = if (match != null) {
-                val (showName, _, _) = match.destructured
-                showName.trim()
-            } else {
-                title.trim()
-            }
+            val (cleanTitle, season, episode) = parseEpisodeInfo(title) // parseEpisodeInfo'yu çağırıyoruz
 
-            if (match != null) {
-                val (_, season, episode) = match.destructured
-                item.copy(
-                    title = cleanTitle,
-                    season = season.toInt(),
-                    episode = episode.toInt(),
-                    attributes = item.attributes.toMutableMap().apply {
-                        if (!containsKey("tvg-country")) { put("tvg-country", "TR/Altyazılı") }
-                        if (!containsKey("tvg-language")) { put("tvg-language", "TR;EN") }
-                    }
-                )
-            } else {
-                item.copy(
-                    title = cleanTitle,
-                    attributes = item.attributes.toMutableMap().apply {
-                        if (!containsKey("tvg-country")) { put("tvg-country", "TR") }
-                        if (!containsKey("tvg-language")) { put("tvg-language", "TR;EN") }
-                    }
-                )
-            }
+            // PlaylistItem'ı güncellenmiş bilgilerle kopyala
+            item.copy(
+                title = cleanTitle,
+                season = season ?: item.season, // Eğer ayrıştırılamazsa orijinal değeri kullan
+                episode = episode ?: item.episode, // Eğer ayrıştırılamazsa orijinal değeri kullan
+                attributes = item.attributes.toMutableMap().apply {
+                    // Ülke ve dil niteliklerini sadece mevcut değilse ekle
+                    if (!containsKey("tvg-country")) { put("tvg-country", "TR/Altyazılı") }
+                    if (!containsKey("tvg-language")) { put("tvg-language", "TR;EN") }
+                }
+            )
         }
 
         // Dizileri alfabetik olarak gruplandır
@@ -149,8 +164,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
-        val episodeRegex = Regex("""(.*?)[^\w\d]+(\d+)\.\s*Sezon\s*(\d+)\.\s*Bölüm.*""")
-
+        
         return kanallar.items.filter { it.title.toString().lowercase().contains(query.lowercase()) }.map { kanal ->
             val streamurl   = kanal.url.toString()
             val channelname = kanal.title.toString()
@@ -158,24 +172,25 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val chGroup     = kanal.attributes["group-title"].toString()
             val nation      = kanal.attributes["tvg-country"].toString()
 
+            // parseEpisodeInfo'yu kullanarak sezon ve bölüm bilgilerini çek
+            val (cleanTitle, season, episode) = parseEpisodeInfo(channelname)
+
             newLiveSearchResponse(
-                channelname,
-                LoadData(streamurl, channelname, posterurl, chGroup, nation, 
-                    episodeRegex.find(channelname)?.let { match ->
-                        val (_, season, episode) = match.destructured
-                        season.toInt() to episode.toInt()
-                    }?.first ?: 1,
-                    episodeRegex.find(channelname)?.let { match ->
-                        val (_, season, episode) = match.destructured
-                        season.toInt() to episode.toInt()
-                    }?.second ?: 0
+                cleanTitle, // Temizlenmiş başlığı kullan
+                LoadData(
+                    streamurl,
+                    cleanTitle, // LoadData için de temizlenmiş başlığı kullan
+                    posterurl,
+                    chGroup,
+                    nation,
+                    season ?: 1, // Eğer null ise varsayılan değer kullan
+                    episode ?: 0 // Eğer null ise varsayılan değer kullan
                 ).toJson(),
                 type = TvType.TvSeries
             ) {
                 this.posterUrl = posterurl
                 this.lang = nation
             }
-
         }
     }
 
@@ -253,8 +268,9 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val loadData = fetchDataFromUrlOrJson(url)
         
         // Dizi adını temizle - hem "Dizi-1.Sezon" hem de "Dizi 1. Sezon" formatlarını destekler
-        val cleanTitle = loadData.title.replace(Regex("""[-\s]*\d+\.?\s*Sezon\s*\d+\.?\s*Bölüm.*"""), "").trim()
-        val (seriesData, episodeData) = fetchTMDBData(cleanTitle, loadData.season, loadData.episode)
+        // TMDB araması için parseEpisodeInfo'dan gelen temiz başlığı kullan
+        val (tmdbCleanTitle, tmdbSeason, tmdbEpisode) = parseEpisodeInfo(loadData.title)
+        val (seriesData, episodeData) = fetchTMDBData(tmdbCleanTitle, tmdbSeason ?: loadData.season, tmdbEpisode ?: loadData.episode)
         
         val plot = buildString {
             // Her zaman önce dizi bilgilerini göster
@@ -377,46 +393,38 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         }
 
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
-        val episodeRegex = Regex("""(.*?)[^\w\d]+(\d+)\.\s*Sezon\s*(\d+)\.\s*Bölüm.*""")
+        // load fonksiyonundaki regex'i de parseEpisodeInfo ile değiştirelim
+        val (currentShowCleanTitle, _, _) = parseEpisodeInfo(loadData.title)
         
         // Önce tüm dizileri grupla
         val allShows = kanallar.items.groupBy { item ->
-            val title = item.title.toString()
-            val match = episodeRegex.find(title)
-            if (match != null) {
-                val (showName, _, _) = match.destructured
-                showName.trim()
-            } else {
-                title.trim()
-            }
+            val (itemCleanTitle, _, _) = parseEpisodeInfo(item.title.toString())
+            itemCleanTitle
         }
 
         // Mevcut diziyi bul ve bölümlerini topla
-        val currentShowTitle = loadData.title.replace(Regex("""\s*\d+\.\s*Sezon\s*\d+\.\s*Bölüm.*"""), "").trim()
-        val currentShowEpisodes = allShows[currentShowTitle]?.mapNotNull { kanal ->
-            val title = kanal.title.toString()
-            val match = episodeRegex.find(title)
-            if (match != null) {
-                val (_, season, episode) = match.destructured
+        val currentShowEpisodes = allShows[currentShowCleanTitle]?.mapNotNull { kanal ->
+            val (episodeCleanTitle, season, episode) = parseEpisodeInfo(kanal.title.toString())
+            if (season != null && episode != null) {
                 Episode(
-                    episode = episode.toInt(),
-                    season = season.toInt(),
-                    name = title,  // Bölüm başlığını ekle
+                    episode = episode,
+                    season = season,
+                    name = episodeCleanTitle,  // Bölüm başlığını ekle
                     data = LoadData(
                         kanal.url.toString(),
-                        title,
+                        episodeCleanTitle,
                         kanal.attributes["tvg-logo"].toString(),
                         kanal.attributes["group-title"].toString(),
                         kanal.attributes["tvg-country"]?.toString() ?: "TR",
-                        season.toInt(),
-                        episode.toInt()
+                        season,
+                        episode
                     ).toJson()
                 )
             } else null
         }?.sortedWith(compareBy({ it.season }, { it.episode })) ?: emptyList()
 
         return newTvSeriesLoadResponse(
-            currentShowTitle,
+            currentShowCleanTitle, // Temizlenmiş dizi başlığını kullan
             url,
             TvType.TvSeries,
             currentShowEpisodes.map { episode ->
@@ -493,7 +501,18 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val chGroup     = kanal.attributes["group-title"].toString()
             val nation      = kanal.attributes["tvg-country"].toString()
 
-            return LoadData(streamurl, channelname, posterurl, chGroup, nation)
+            // fetchDataFromUrlOrJson içinde de sezon ve bölüm bilgilerini ayrıştır
+            val (cleanTitle, season, episode) = parseEpisodeInfo(channelname)
+
+            return LoadData(
+                streamurl,
+                cleanTitle, // Temizlenmiş başlığı kullan
+                posterurl,
+                chGroup,
+                nation,
+                season ?: 1, // Eğer null ise varsayılan değer kullan
+                episode ?: 0 // Eğer null ise varsayılan değer kullan
+            )
         }
     }
 }
@@ -503,13 +522,13 @@ data class Playlist(
 )
 
 data class PlaylistItem(
-    val title: String?                  = null,
+    val title: String?              = null,
     val attributes: Map<String, String> = emptyMap(),
     val headers: Map<String, String>    = emptyMap(),
-    val url: String?                    = null,
-    val userAgent: String?              = null,
-    val season: Int                     = 1,
-    val episode: Int                    = 0
+    val url: String?                = null,
+    val userAgent: String?          = null,
+    val season: Int                 = 1,
+    val episode: Int                = 0
 ) {
     companion object {
         const val EXT_M3U = "#EXTM3U"
@@ -556,7 +575,7 @@ class IptvPlaylistParser {
         while (line != null) {
             if (line.isNotEmpty()) {
                 if (line.startsWith(EXT_INF)) {
-                    val title      = line.getTitle()
+                    val title    = line.getTitle()
                     val attributes = line.getAttributes()
 
                     playlistItems.add(PlaylistItem(title, attributes))
@@ -581,10 +600,10 @@ class IptvPlaylistParser {
                     )
                 } else {
                     if (!line.startsWith("#")) {
-                        val item       = playlistItems[currentIndex]
-                        val url        = line.getUrl()
-                        val userAgent  = line.getUrlParameter("user-agent")
-                        val referrer   = line.getUrlParameter("referer")
+                        val item        = playlistItems[currentIndex]
+                        val url         = line.getUrl()
+                        val userAgent   = line.getUrlParameter("user-agent")
+                        val referrer    = line.getUrlParameter("referer")
                         val urlHeaders = if (referrer != null) {item.headers + mapOf("referrer" to referrer)} else item.headers
 
                         playlistItems[currentIndex] = item.copy(
@@ -652,15 +671,11 @@ class IptvPlaylistParser {
         if (!attributes.containsKey("tvg-language")) {
             attributes["tvg-language"] = "TR/Altyazılı"
         }
+        // Bu kısım artık parseEpisodeInfo tarafından hallediliyor, ancak group-title'ı hala set edebiliriz
         if (!attributes.containsKey("group-title")) {
-            val episodeRegex = Regex("""(.*?)[^\w\d]+(\d+)\.\s*Sezon\s*(\d+)\.\s*Bölüm.*""")
-            val match = episodeRegex.find(titleAndAttributes.last())
-            if (match != null) {
-                val (showName, _, _) = match.destructured
-                attributes["group-title"] = showName.trim()
-            } else {
-                attributes["group-title"] = "Diğer"
-            }
+            val titleFromAttributes = titleAndAttributes.last()
+            val (cleanTitle, _, _) = (powerDizi(null)).parseEpisodeInfo(titleFromAttributes) // Geçici olarak null sharedPref ile çağırıyoruz
+            attributes["group-title"] = cleanTitle
         }
 
         return attributes
@@ -718,8 +733,7 @@ val languageMap = mapOf(
     // Diğer
     "la" to "Latince",
     "xx" to "Belirsiz",
-    "mul" to "Çok Dilli" 
-
+    "mul" to "Çok Dilli"    
 )
 
 fun getTurkishLanguageName(code: String?): String? {
