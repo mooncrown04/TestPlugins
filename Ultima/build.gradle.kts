@@ -7,14 +7,20 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget // For jvmTarget in kotlinOptio
 import org.gradle.api.JavaVersion // For JavaVersion in compileOptions
 
 plugins {
-    // These plugins are applied locally if not applied globally in settings.gradle.kts or root build.gradle.kts.
-    // 'com.android.library' and 'kotlin-android' are already applied in root's subprojects.
-    // 'com.lagradost.cloudstream3.gradle' is also applied in root's subprojects.
-    // So, only keep plugins that are specific to this module and not globally applied.
-    // Assuming kotlin-parcelize and kotlin-kapt are not global:
+    // Cloudstream eklenti API'sini burada açıkça tekrar uyguluyoruz.
+    // Bu, önceki "Unresolved reference" hatalarını çözmelidir.
+    // Ana build.gradle.kts dosyasında zaten uygulansa bile, bu modülün kendi bağlamında
+    // uzantıyı doğru bir şekilde tanımasını sağlamak için burada tekrar belirtiyoruz.
+    id("com.lagradost.cloudstream3.gradle") version "-SNAPSHOT" // <-- BURASI TEKRAR EKLENDİ VE GÜNCELLENDİ!
+
+    // Kotlin Android projeleri için gerekli
+    id("org.jetbrains.kotlin.android")
+
+    // Parcelize anotasyonunu kullanmak için
     id("kotlin-parcelize")
+
+    // Kapt (Kotlin Annotation Processing Tool) kullanmak için, özellikle bazı kütüphaneler için gerekebilir
     id("kotlin-kapt")
-    // id("org.jetbrains.kotlin.android") // This is already applied by root subprojects, no need to apply again
 }
 
 version = 3
@@ -72,6 +78,7 @@ configure<LibraryExtension> {
 
     defaultConfig {
         minSdk = 21
+        // targetSdk kullanımı güncellendi
         targetSdk = 34 // Bu, root'taki targetSdk = 35 ile çakışabilir, ancak şimdilik bırakıldı.
 
         // BuildConfig alanları
@@ -102,7 +109,8 @@ configure<LibraryExtension> {
         buildConfig = true
     }
 
-    packagingOptions {
+    // packagingOptions kullanımı güncellendi
+    packaging { // packagingOptions yerine 'packaging' kullanıldı
         resources.excludes.add("META-INF/*.md")
         resources.excludes.add("META-INF/*.txt")
     }
