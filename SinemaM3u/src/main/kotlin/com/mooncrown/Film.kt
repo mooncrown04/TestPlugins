@@ -7,7 +7,7 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import java.io.InputStream
-import com.film.BuildConfig
+import com.mooncrown.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
