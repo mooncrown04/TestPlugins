@@ -1,8 +1,8 @@
-// TestPlugins/src/Ultima/build.gradle.kts
+/ TestPlugins/src/Ultima/build.gradle.kts
 
 // Yapılandırma blokları için gerekli uzantıları import edin
 import com.android.build.gradle.LibraryExtension
-import com.lagradost.cloudstream3.gradle.CloudstreamExtension // CloudstreamExtension import'u geri getirildi ve kullanılacak
+// import com.lagradost.cloudstream3.gradle.CloudstreamExtension // Bu import kaldırıldı
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.gradle.api.JavaVersion
 // import java.util.Properties // Artık API anahtarlarını okumadığımız için bu import'a gerek kalmayabilir
@@ -12,21 +12,16 @@ plugins {
     // yerel olarak uygulanır. 'com.android.library' ve 'kotlin-android' zaten root'taki subprojects tarafından uygulanmıştır.
     // 'com.lagradost.cloudstream3.gradle' da root'taki subprojects tarafından uygulanmıştır.
     // Bu nedenle, sadece bu modüle özgü ve global olarak uygulanmayan plugin'leri tutun.
-    // kotlin-parcelize ve kotlin-kapt'ın global olmadığını varsayarak:
     id("kotlin-parcelize")
     id("kotlin-kapt")
-    // id("org.jetbrains.kotlin.android") // Bu zaten root subprojects tarafından uygulanmıştır, tekrar uygulamaya gerek yok
-    id("com.android.library") // Android kütüphane modülü için gerekli
-    id("com.lagradost.cloudstream3.gradle") // Cloudstream plugin'i
-    id("org.jetbrains.kotlin.android") // Kotlin Android plugin'i
 }
 
 // Kullanıcının verdiği versiyon numarası
 version = 41
 
 // Bu modül için cloudstream uzantısını yapılandırın
-// configure<CloudstreamExtension> sarmalayıcısı geri getirildi
-configure<CloudstreamExtension> {
+// configure<CloudstreamExtension> sarmalayıcısı hala kullanılıyor, ancak CloudstreamExtension import'u kaldırıldı
+configure<com.lagradost.cloudstream3.gradle.CloudstreamExtension> { // Tam nitelikli isim kullanıldı
     // Kullanıcının verdiği değerler
     description = "The ultimate All-in-One home screen to access all of your extensions at one place (You need to select/deselect sections in Ultima's settings to load other extensions on home screen)"
     authors = listOf("RowdyRushya")
