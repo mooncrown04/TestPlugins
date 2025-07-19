@@ -1,9 +1,9 @@
-// TestPlugins/src/Ultima/build.gradle.kts
+/ TestPlugins/src/Ultima/build.gradle.kts
 
 plugins {
     // Cloudstream eklenti API'sini kullanmak için gerekli plugin
     // Lütfen Cloudstream GitHub reposundan aldığınız güncel versiyonu buraya girin!
-    id("com.lagradost.cloudstream") version "LATEST_CLOUDSTREAM_PLUGIN_VERSION" // <-- Burayı güncelleyin
+    id("com.lagradost.cloudstream") version "GERÇEK_CLOUDSTREAM_PLUGIN_VERSİYONU" // <-- Burayı güncelleyin! Örnek: "1.2.3" veya "0.0.1"
 
     // Kotlin Android projeleri için gerekli
     id("org.jetbrains.kotlin.android")
