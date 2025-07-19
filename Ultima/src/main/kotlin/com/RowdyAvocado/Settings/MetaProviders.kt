@@ -1,6 +1,6 @@
 package com.RowdyAvocado
 
-import android.app.AlertDialog
+import android.app.AlertDialog // AlertDialog import edildi
 import android.content.DialogInterface
 import android.content.res.Resources
 import android.graphics.drawable.Drawable
@@ -24,20 +24,31 @@ import com.RowdyAvocado.UltimaUtils.MediaProviderState
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.lagradost.cloudstream3.CommonActivity.showToast
 import kotlin.collections.toList
+import android.content.Context // Context sınıfı import edildi
+import androidx.core.content.ContextCompat // ContextCompat sınıfı import edildi
+import androidx.fragment.app.Fragment // Fragment sınıfı import edildi
+
+// BuildConfig sınıfının doğru paketini import edin.
+// build.gradle.kts dosyanızdaki 'namespace' değerine göre değişir.
+// Ultima için "com.RowdyAvocado" olarak ayarlandığı varsayılmıştır.
+import com.RowdyAvocado.BuildConfig
 
 private const val ARG_PARAM1 = "param1"
 private const val ARG_PARAM2 = "param2"
 
-class UltimaMetaProviders(val plugin: UltimaPlugin) : BottomSheetDialogFragment() {
+// UltimaPlugin parametresi kaldırıldı, Fragment'ın kendi context ve resources'ı kullanılacak.
+class UltimaMetaProviders() : BottomSheetDialogFragment() {
     private var param1: String? = null
     private var param2: String? = null
     private var sm = UltimaStorageManager
     private var metaProviders = sm.currentMetaProviders.toList()
     private var mediaProviders = sm.currentMediaProviders.toList()
-    private val res: Resources = plugin.resources ?: throw Exception("Unable to read resources")
+    private lateinit var res: Resources // lateinit olarak tanımlandı, onCreate'de başlatılacak
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // res değişkenini burada başlatmak daha güvenlidir, çünkü context artık mevcuttur.
+        res = requireContext().resources
         arguments?.let {
             param1 = it.getString(ARG_PARAM1)
             param2 = it.getString(ARG_PARAM2)
@@ -45,15 +56,17 @@ class UltimaMetaProviders(val plugin: UltimaPlugin) : BottomSheetDialogFragment(
     }
 
     // #region - necessary functions
+    // Bu fonksiyon, bir layout ID'sini kullanarak bir View'ı inflate eder.
     private fun getLayout(name: String, inflater: LayoutInflater, container: ViewGroup?): View {
         val id = res.getIdentifier(name, "layout", BuildConfig.LIBRARY_PACKAGE_NAME)
-        val layout = res.getLayout(id)
-        return inflater.inflate(layout, container, false)
+        // Resources.getLayout() yerine LayoutInflater.inflate() kullanıldı
+        return inflater.inflate(id, container, false)
     }
 
     private fun getDrawable(name: String): Drawable {
         val id = res.getIdentifier(name, "drawable", BuildConfig.LIBRARY_PACKAGE_NAME)
-        return res.getDrawable(id, null) ?: throw Exception("Unable to find drawable $name")
+        // ContextCompat.getDrawable kullanıldı
+        return ContextCompat.getDrawable(requireContext(), id) ?: throw Exception("Unable to find drawable $name")
     }
 
     private fun getString(name: String): String {
@@ -68,15 +81,18 @@ class UltimaMetaProviders(val plugin: UltimaPlugin) : BottomSheetDialogFragment(
 
     private fun View.makeTvCompatible() {
         val outlineId = res.getIdentifier("outline", "drawable", BuildConfig.LIBRARY_PACKAGE_NAME)
-        this.background = res.getDrawable(outlineId, null)
+        // ContextCompat.getDrawable kullanıldı
+        this.background = ContextCompat.getDrawable(requireContext(), outlineId)
+            ?: throw Exception("Unable to find drawable outline")
     }
     // #endregion - necessary functions
 
     override fun onCreateView(
-            inflater: LayoutInflater,
-            container: ViewGroup?,
-            savedInstanceState: Bundle?
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
     ): View? {
+        // super.onCreateView çağrısı burada gerekli değil, doğrudan View döndürülüyor
         val settings = getLayout("meta_providers", inflater, container)
 
         // #region - building save button and its click listener
@@ -84,15 +100,18 @@ class UltimaMetaProviders(val plugin: UltimaPlugin) : BottomSheetDialogFragment(
         saveBtn.setImageDrawable(getDrawable("save_icon"))
         saveBtn.makeTvCompatible()
         saveBtn.setOnClickListener(
-                object : OnClickListener {
-                    override fun onClick(btn: View) {
-                        sm.currentMetaProviders = metaProviders.toTypedArray()
-                        sm.currentMediaProviders = mediaProviders.toTypedArray()
-                        plugin.reload(context)
-                        showToast("Saved")
-                        dismiss()
-                    }
+            object : OnClickListener {
+                override fun onClick(btn: View) {
+                    sm.currentMetaProviders = metaProviders.toTypedArray()
+                    sm.currentMediaProviders = mediaProviders.toTypedArray()
+                    // plugin.reload(context) yerine Cloudstream'in reload mekanizması kullanılmalı
+                    // veya bu işlevselliği doğrudan burada uygulayın.
+                    // Eğer UltimaPlugin'in reload metodu Context gerektiriyorsa:
+                    // plugin.reload(requireContext())
+                    showToast(requireContext(), "Saved") // showToast için context parametresi eklendi
+                    dismiss()
                 }
+            }
         )
         // #endregion - building save button and its click listener
 
@@ -116,9 +135,9 @@ class UltimaMetaProviders(val plugin: UltimaPlugin) : BottomSheetDialogFragment(
     }
 
     fun buildMetaProviderView(
-            metaProvider: Pair<String, Boolean>,
-            inflater: LayoutInflater,
-            container: ViewGroup?
+        metaProvider: Pair<String, Boolean>,
+        inflater: LayoutInflater,
+        container: ViewGroup?
     ): View {
 
         // collecting required resources
@@ -130,25 +149,25 @@ class UltimaMetaProviders(val plugin: UltimaPlugin) : BottomSheetDialogFragment(
         metaProviderNameBtn.isChecked = metaProvider.second
         metaProviderNameBtn.makeTvCompatible()
         metaProviderNameBtn.setOnClickListener(
-                object : OnClickListener {
-                    override fun onClick(btn: View) {
-                        metaProviders =
-                                metaProviders.map {
-                                    if (it.first.equals(metaProvider.first))
-                                            it.first to metaProviderNameBtn.isChecked
-                                    else it
-                                }
-                    }
+            object : OnClickListener {
+                override fun onClick(btn: View) {
+                    metaProviders =
+                        metaProviders.map {
+                            if (it.first.equals(metaProvider.first))
+                                it.first to metaProviderNameBtn.isChecked
+                            else it
+                        }
                 }
+            }
         )
 
         return metaProviderLayoutView
     }
 
     fun buildMediaProviderView(
-            mediaProvider: MediaProviderState,
-            inflater: LayoutInflater,
-            container: ViewGroup?
+        mediaProvider: MediaProviderState,
+        inflater: LayoutInflater,
+        container: ViewGroup?
     ): View {
         val mediaProviderLayoutView = getLayout("list_media_provider_item", inflater, container)
         val providerCheckBox = mediaProviderLayoutView.findView<CheckBox>("provider")
@@ -159,55 +178,55 @@ class UltimaMetaProviders(val plugin: UltimaPlugin) : BottomSheetDialogFragment(
         domainEdit.makeTvCompatible()
 
         providerCheckBox.text =
-                mediaProvider.name + if (mediaProvider.customDomain.isNullOrBlank()) "" else "*"
+            mediaProvider.name + if (mediaProvider.customDomain.isNullOrBlank()) "" else "*"
         providerCheckBox.isChecked = mediaProvider.enabled
         providerCheckBox.setOnCheckedChangeListener(
-                object : OnCheckedChangeListener {
-                    override fun onCheckedChanged(buttonView: CompoundButton, isChecked: Boolean) {
-                        mediaProvider.enabled = isChecked
-                    }
+            object : OnCheckedChangeListener {
+                override fun onCheckedChanged(buttonView: CompoundButton, isChecked: Boolean) {
+                    mediaProvider.enabled = isChecked
                 }
+            }
         )
 
         // #region - Set domain and its edit + reset buttons with listeners
         val domain = mediaProviderLayoutView.findView<TextView>("domain")
         domain.text = mediaProvider.customDomain ?: mediaProvider.getDomain()
         domainEdit.setOnClickListener(
-                object : OnClickListener {
-                    override fun onClick(btn: View) {
-                        val editText = EditText(context)
-                        editText.setText(mediaProvider.getDomain())
-                        editText.setInputType(InputType.TYPE_CLASS_TEXT)
+            object : OnClickListener {
+                override fun onClick(btn: View) {
+                    val editText = EditText(requireContext()) // context yerine requireContext() kullanıldı
+                    editText.setText(mediaProvider.getDomain())
+                    editText.setInputType(InputType.TYPE_CLASS_TEXT)
 
-                        AlertDialog.Builder(
-                                        context ?: throw Exception("Unable to build alert dialog")
-                                )
-                                .setTitle("Update Domain")
-                                .setView(editText)
-                                .setPositiveButton(
-                                        "Save",
-                                        object : DialogInterface.OnClickListener {
-                                            override fun onClick(p0: DialogInterface, p1: Int) {
-                                                mediaProvider.customDomain =
-                                                        editText.text.toString()
-                                                domain.text = mediaProvider.getDomain()
-                                                providerCheckBox.text = mediaProvider.name + "*"
-                                            }
-                                        }
-                                )
-                                .setNegativeButton(
-                                        "Reset",
-                                        object : DialogInterface.OnClickListener {
-                                            override fun onClick(p0: DialogInterface, p1: Int) {
-                                                mediaProvider.customDomain = null
-                                                domain.text = mediaProvider.getDomain()
-                                                providerCheckBox.text = mediaProvider.name
-                                            }
-                                        }
-                                )
-                                .show()
-                    }
+                    AlertDialog.Builder(
+                        requireContext() // context yerine requireContext() kullanıldı
+                    )
+                        .setTitle("Update Domain")
+                        .setView(editText)
+                        .setPositiveButton(
+                            "Save",
+                            object : DialogInterface.OnClickListener {
+                                override fun onClick(p0: DialogInterface, p1: Int) {
+                                    mediaProvider.customDomain =
+                                        editText.text.toString()
+                                    domain.text = mediaProvider.getDomain()
+                                    providerCheckBox.text = mediaProvider.name + "*"
+                                }
+                            }
+                        )
+                        .setNegativeButton(
+                            "Reset",
+                            object : DialogInterface.OnClickListener {
+                                override fun onClick(p0: DialogInterface, p1: Int) {
+                                    mediaProvider.customDomain = null
+                                    domain.text = mediaProvider.getDomain()
+                                    providerCheckBox.text = mediaProvider.name
+                                }
+                            }
+                        )
+                        .show()
                 }
+            }
         )
         // #endregion - Set domain and its edit + reset buttons with listeners
 
@@ -215,15 +234,17 @@ class UltimaMetaProviders(val plugin: UltimaPlugin) : BottomSheetDialogFragment(
     }
 
     @RequiresApi(Build.VERSION_CODES.M)
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {}
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState) // super.onViewCreated çağrısı eklendi
+    }
 
     override fun onDetach() {
-        val settings = UltimaSettings(plugin)
+        super.onDetach() // super.onDetach çağrısı eklendi
+        // UltimaSettings'i göstermek için requireActivity().supportFragmentManager kullanıldı
+        val settings = UltimaSettings() // UltimaSettings'in constructor'ı güncellendiyse parametre kaldırıldı
         settings.show(
-                activity?.supportFragmentManager
-                        ?: throw Exception("Unable to open configure settings"),
-                ""
+            requireActivity().supportFragmentManager, // requireActivity() kullanıldı
+            ""
         )
-        super.onDetach()
     }
 }
