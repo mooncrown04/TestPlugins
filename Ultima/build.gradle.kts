@@ -3,7 +3,8 @@
 plugins {
     // Cloudstream eklenti API'sini kullanmak için gerekli plugin
     // Lütfen Cloudstream GitHub reposundan aldığınız güncel versiyonu buraya girin!
-    id("com.lagradost.cloudstream") version "-SNAPSHOT" // <-- BURASI GÜNCELLENDİ!
+    // id("com.lagradost.cloudstream") version "-SNAPSHOT" // <-- Bu satır kaldırıldı veya yorum satırı yapıldı
+    id("com.lagradost.cloudstream3.gradle") version "-SNAPSHOT" // <-- BURASI GÜNCELLENDİ! Doğru plugin ID'si ve versiyonu
 
     // Kotlin Android projeleri için gerekli
     id("org.jetbrains.kotlin.android")
@@ -14,20 +15,7 @@ plugins {
     // Kapt (Kotlin Annotation Processing Tool) kullanmak için, özellikle bazı kütüphaneler için gerekebilir
     id("kotlin-kapt")
 }
-pluginManagement {
-    repositories {
-        gradlePluginPortal() // Gradle'ın kendi plugin portalı
-        google()
-        mavenCentral()
-        maven("https://jitpack.io") // Cloudstream plugin'i için JitPack deposu
-        maven("https://maven.pkg.github.com/LagradOst/CloudStream-Releases/") // Cloudstream'in release deposu
-    }
-}
 
-// Mevcut settings.gradle.kts içeriğinizin geri kalanı buraya gelecek
-// Örneğin:
-// rootProject.name = "TestPlugins"
-// include(":dizi", ":ExampleProvider", ":Pornhub", ":Ultima")
 version = 3
 
 dependencies {
@@ -109,7 +97,7 @@ cloudstream {
     description = "Ultima plugin for Cloudstream" // Eklentinin kısa açıklaması
 
     /**
-     * Eklentinin durumu (0: Kapalı, 1: Tamam, 2: Yavaş, 3: Beta)
+     * Eklentinin durumu (0: Kapamalı, 1: Tamam, 2: Yavaş, 3: Beta)
      * Belirtilmezse varsayılan 3 (Beta) olur.
      **/
     status = 1 // Eklentinin durumu (örneğin, "Ok" yani çalışıyor)
