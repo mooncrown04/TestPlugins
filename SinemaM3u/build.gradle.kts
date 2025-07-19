@@ -22,10 +22,20 @@ android {
     buildFeatures {
         buildConfig = true
     }
-
-    defaultConfig {
-        val apiKey = project.findProperty("tmdbApiKey")?.toString() ?: ""
-        buildConfigField("String", "TMDB_SECRET_API", "\"$apiKey\"")
+  val properties = Properties().apply {
+        val propertiesFile = project.rootProject.file("local.properties")
+        if (propertiesFile.exists()) {
+            propertiesFile.inputStream().use { load(it) }
+        }
+    }
+    buildTypes {
+        debug {
+            // TMDB_SECRET_API'yi BuildConfig'e ekleyin
+            buildConfigField("String", "TMDB_SECRET_API", "\"${properties.getProperty("TMDB_SECRET_API") ?: ""}\"")
+        }
+        release {
+            buildConfigField("String", "TMDB_SECRET_API", "\"${properties.getProperty("TMDB_SECRET_API") ?: ""}\"")
+        }
     }
 }
 
