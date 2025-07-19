@@ -1,5 +1,6 @@
 package com.mooncrown
 
+import com.mooncrown.BuildConfig
 import android.util.Log
 import android.content.SharedPreferences
 import com.lagradost.cloudstream3.*
@@ -7,7 +8,6 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import java.io.InputStream
-import com.mooncrown.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
