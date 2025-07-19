@@ -2,7 +2,7 @@
 
 // Yapılandırma blokları için gerekli uzantıları import edin
 import com.android.build.gradle.LibraryExtension
-// import com.lagradost.cloudstream3.gradle.CloudstreamExtension // Bu import kaldırıldı, tam nitelikli isim kullanılacak
+import com.lagradost.cloudstream3.gradle.CloudstreamExtension // Bu import geri getirildi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.gradle.api.JavaVersion
 // import java.util.Properties // Artık API anahtarlarını okumadığımız için bu import'a gerek kalmayabilir
@@ -14,18 +14,16 @@ plugins {
     // Bu nedenle, sadece bu modüle özgü ve global olarak uygulanmayan plugin'leri tutun.
     id("kotlin-parcelize")
     id("kotlin-kapt")
-    // Cloudstream eklentisinin uzantılarını tanımak için bu plugin'leri açıkça ekliyoruz
-    id("com.android.library") // Android kütüphane modülü için gerekli
-    id("com.lagradost.cloudstream3.gradle") // Cloudstream plugin'i
-    id("org.jetbrains.kotlin.android") // Kotlin Android plugin'i
+    // 'com.android.library', 'com.lagradost.cloudstream3.gradle' ve 'org.jetbrains.kotlin.android'
+    // plugin'leri, muhtemelen global olarak uygulandıkları için buradan kaldırıldı.
 }
 
 // Kullanıcının verdiği versiyon numarası
 version = 41
 
 // Bu modül için cloudstream uzantısını yapılandırın
-// configure<CloudstreamExtension> sarmalayıcısı hala kullanılıyor, ancak CloudstreamExtension import'u kaldırıldı
-configure<com.lagradost.cloudstream3.gradle.CloudstreamExtension> { // Tam nitelikli isim kullanıldı
+// configure<CloudstreamExtension> sarmalayıcısı hala kullanılıyor
+configure<CloudstreamExtension> { // Doğrudan import edilen isim kullanıldı
     // Kullanıcının verdiği değerler
     description = "The ultimate All-in-One home screen to access all of your extensions at one place (You need to select/deselect sections in Ultima's settings to load other extensions on home screen)"
     authors = listOf("RowdyRushya")
