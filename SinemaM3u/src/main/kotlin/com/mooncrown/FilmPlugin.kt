@@ -1,10 +1,10 @@
 package com.mooncrown
 
-
+import com.mooncrown.Film
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
 import android.content.Context
-import com.film.Film
+
 @CloudstreamPlugin
 class FilmPlugin : Plugin() {
     override fun load(context: Context) {
