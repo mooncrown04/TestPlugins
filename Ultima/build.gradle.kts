@@ -1,6 +1,4 @@
-@file:Suppress("UnstableApiUsage")
 
-import org.jetbrains.kotlin.konan.properties.Properties
 
 dependencies {
     implementation("com.google.android.material:material:1.12.0")
@@ -35,9 +33,7 @@ cloudstream {
 
 android {
     defaultConfig {
-        val properties = Properties()
-        properties.load(project.rootProject.file("local.properties").inputStream())
-
+   
         buildConfigField("String", "SIMKL_API", "\"${properties.getProperty("SIMKL_API")}\"")
         buildConfigField("String", "MAL_API", "\"${properties.getProperty("MAL_API")}\"")
     }
