@@ -155,32 +155,12 @@ class PornHubProvider : MainAPI() {
         }
         
         // Önerilen kısım: recommendations listesi için MovieSearchResponse düzeltildi
-        val recommendations = soup.select("ul#recommendedVideos li.pcVideoListItem").mapNotNull {
-            val rTitle = it.selectFirst("div.phimage a")?.attr("title") ?: return@mapNotNull null
-            val rUrl = fixUrl(it.selectFirst("div.phimage a")?.attr("href").toString())
-            // Poster URL'sini fetchImgUrl ile çek
-            val rPoster = fetchImgUrl(it.selectFirst("img")) // Düzeltildi: img.js-videoThumb yerine doğrudan img
-            newMovieSearchResponse( // newMovieSearchResponse kullanıldı
-                name = rTitle,
-                url = rUrl,
-                type = globalTvType // TvType.Movie yerine globalTvType kullanıldı
-            ) {
-                this.posterUrl = rPoster
-            }
-        }
-
-        // Önerilen kısım: relatedVideo listesi için MovieSearchResponse düzeltildi
-        val relatedVideo = soup.select("ul#relatedVideosCenter li.pcVideoListItem").mapNotNull {
-            val rTitle = it.selectFirst("div.phimage a")?.attr("title") ?: return@mapNotNull null
-            val rUrl = fixUrl(it.selectFirst("div.phimage a")?.attr("href").toString())
-            // Poster URL'sini fetchImgUrl ile çek
-            val rPoster = fetchImgUrl(it.selectFirst("img")) // Düzeltildi: img.js-videoThumb yerine doğrudan img
-            newMovieSearchResponse( // newMovieSearchResponse kullanıldı
-                name = rTitle,
-                url = rUrl,
-                type = globalTvType // TvType.Movie yerine globalTvType kullanıldı
-            ) {
-                this.posterUrl = rPoster
+       val recommendations = soup.selectXpath("//a[contains(@class, 'img')]").mapNotNull {
+            val recName      = it.attr("title").trim()
+            val recHref      = fixUrlNull(it.attr("href")) ?: return@mapNotNull null
+            val recPosterUrl = fixUrlNull(it.selectFirst("img")?.attr("src"))
+            newMovieSearchResponse(recName, recHref, TvType.NSFW) {
+                this.posterUrl = recPosterUrl
             }
         }
 
@@ -192,7 +172,7 @@ class PornHubProvider : MainAPI() {
             this.rating = rating
             this.duration = duration
             addActors(actors)
-            this.recommendations = recommendations + relatedVideo // İki liste birleştiriliyor
+            this.recommendations = recommendations 
         }
     }
 
