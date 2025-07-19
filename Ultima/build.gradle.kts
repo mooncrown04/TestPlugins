@@ -8,22 +8,20 @@ import org.gradle.api.JavaVersion
 // import java.util.Properties // Artık API anahtarlarını okumadığımız için bu import'a gerek kalmayabilir
 
 plugins {
-    // Bu plugin'ler, settings.gradle.kts veya ana build.gradle.kts dosyasında global olarak uygulanmadıysa
-    // yerel olarak uygulanır. 'com.android.library' ve 'kotlin-android' zaten root'taki subprojects tarafından uygulanmıştır.
-    // 'com.lagradost.cloudstream3.gradle' da root'taki subprojects tarafından uygulanmıştır.
-    // Bu nedenle, sadece bu modüle özgü ve global olarak uygulanmayan plugin'leri tutun.
+    // Cloudstream eklentisinin uzantılarını tanımak için bu plugin'leri açıkça ekliyoruz
+    id("com.android.library") // Android kütüphane modülü için gerekli
+    id("com.lagradost.cloudstream3.gradle") // Cloudstream plugin'i
+    id("org.jetbrains.kotlin.android") // Kotlin Android plugin'i
     id("kotlin-parcelize")
     id("kotlin-kapt")
-    // 'com.android.library' ve 'com.lagradost.cloudstream3.gradle' plugin'leri,
-    // muhtemelen global olarak uygulandıkları için buradan kaldırıldı.
 }
 
 // Kullanıcının verdiği versiyon numarası
 version = 41
 
 // Bu modül için cloudstream uzantısını yapılandırın
-// configure<CloudstreamExtension> sarmalayıcısı hala kullanılıyor
-configure<CloudstreamExtension> { // Doğrudan import edilen isim kullanıldı
+// configure<CloudstreamExtension> sarmalayıcısı kaldırıldı, doğrudan 'cloudstream' bloğu kullanıldı
+cloudstream { // Doğrudan 'cloudstream' bloğu kullanıldı
     // Kullanıcının verdiği değerler
     description = "The ultimate All-in-One home screen to access all of your extensions at one place (You need to select/deselect sections in Ultima's settings to load other extensions on home screen)"
     authors = listOf("RowdyRushya")
@@ -32,7 +30,7 @@ configure<CloudstreamExtension> { // Doğrudan import edilen isim kullanıldı
     requiresResources = true
     language = "en"
     iconUrl = "https://raw.githubusercontent.com/Rowdy-Avocado/Rowdycado-Extensions/master/logos/ultima.png"
-    internalName = "Ultima" // internalName, configure<CloudstreamExtension> bloğunun içinde
+    internalName = "Ultima" // internalName, cloudstream bloğunun içinde
 }
 
 dependencies {
