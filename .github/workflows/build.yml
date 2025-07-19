@@ -1,4 +1,4 @@
-name: Build  k
+name: Build k
 
 # https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#concurrency
 concurrency:
@@ -19,13 +19,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15 # Buraya eklendi: İş akışının tamamlanması için 15 dakika süre tanır
     steps:
-      - name: Checkout
-        uses: actions/checkout@master
+      - name: Checkout src
+        uses: actions/checkout@v4 # v4'e güncellendi
         with:
           path: "src"
 
       - name: Checkout builds
-        uses: actions/checkout@master
+        uses: actions/checkout@v4 # v4'e güncellendi
         with:
           ref: "builds"
           path: "builds"
@@ -34,20 +34,21 @@ jobs:
         run: rm $GITHUB_WORKSPACE/builds/*.cs3 || true # Hata vermemesi için || true eklendi
 
       - name: Setup JDK 17
-        uses: actions/setup-java@v4 # v1'den v4'e güncellendi
+        uses: actions/setup-java@v4
         with:
           java-version: 17
-          distribution: 'temurin' # Genellikle önerilen dağıtım
-          cache: 'gradle' # Gradle önbelleğini etkinleştirir
+          distribution: 'temurin'
+          cache: 'gradle'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v2
+        uses: android-actions/setup-android@v2 # Bu eylem ANDROID_HOME ve ANDROID_SDK_ROOT'u ayarlar
 
       - name: Build Plugins
         run: |
           cd $GITHUB_WORKSPACE/src
           chmod +x gradlew
-          ./gradlew make makePluginsJson
+          # Gradle'ı daha detaylı loglama ile çalıştırıyoruz
+          ./gradlew make makePluginsJson --stacktrace --info
           cp **/build/*.cs3 $GITHUB_WORKSPACE/builds
           cp build/plugins.json $GITHUB_WORKSPACE/builds
 
