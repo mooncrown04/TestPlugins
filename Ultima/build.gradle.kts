@@ -1,34 +1,26 @@
+// TestPlugins/src/Ultima/build.gradle.kts
 
-import com.android.build.gradle.BaseExtension // BaseExtension import edildi
-import com.lagradost.cloudstream3.gradle.CloudstreamExtension // CloudstreamExtension import edildi
-import org.gradle.api.Project // Project import edildi
-
-// Cloudstream extension için yardımcı fonksiyon eklendi
-fun Project.cloudstream(configuration: CloudstreamExtension.() -> Unit) = extensions.getByName<CloudstreamExtension>("cloudstream").configuration()
-// Android extension için yardımcı fonksiyon eklendi (eğer android { ... } bloğu kullanılıyorsa)
-fun Project.android(configuration: BaseExtension.() -> Unit) = extensions.getByName<BaseExtension>("android").configuration()
-
+// Import necessary extensions for configuration blocks
+import com.android.build.gradle.LibraryExtension // For android {} block configuration
+import com.lagradost.cloudstream3.gradle.CloudstreamExtension // For cloudstream {} block configuration
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget // For jvmTarget in kotlinOptions
+import org.gradle.api.JavaVersion // For JavaVersion in compileOptions
 
 plugins {
-    // Cloudstream eklenti API'si zaten ana build.gradle.kts tarafından tüm alt projelere uygulanmaktadır.
-    // Bu nedenle, burada tekrar tanımlanmasına gerek yoktur.
-    // id("com.lagradost.cloudstream3.gradle") version "-SNAPSHOT" // <-- BU SATIR KALDIRILDI!
-
-    // Kotlin Android projeleri için gerekli
-    id("org.jetbrains.kotlin.android")
-
-    // Parcelize anotasyonunu kullanmak için
+    // These plugins are applied locally if not applied globally in settings.gradle.kts or root build.gradle.kts.
+    // 'com.android.library' and 'kotlin-android' are already applied in root's subprojects.
+    // 'com.lagradost.cloudstream3.gradle' is also applied in root's subprojects.
+    // So, only keep plugins that are specific to this module and not globally applied.
+    // Assuming kotlin-parcelize and kotlin-kapt are not global:
     id("kotlin-parcelize")
-
-    // Kapt (Kotlin Annotation Processing Tool) kullanmak için, özellikle bazı kütüphaneler için gerekebilir
     id("kotlin-kapt")
+    // id("org.jetbrains.kotlin.android") // This is already applied by root subprojects, no need to apply again
 }
 
 version = 3
 
-// Cloudstream özel yapılandırma bloğu - Android bloğundan önceye taşındı
-cloudstream {
-    // Eklenti için genel bilgiler
+// Configure the cloudstream extension for this specific module
+configure<CloudstreamExtension> {
     authors = listOf("RowdyAvocado") // Eklentinin yazarları
     language = "en" // Eklentinin desteklediği dil
     description = "Ultima plugin for Cloudstream" // Eklentinin kısa açıklaması
@@ -48,7 +40,6 @@ cloudstream {
     // Eklentinin dahili adı (build output dosya adı için kullanılır)
     internalName = "Ultima" // Bu isim, .cs3 dosyasının adı olacaktır (örn: Ultima.cs3)
 }
-
 
 dependencies {
     // Tüm bağımlılıkları parantez () içine alın!
@@ -74,16 +65,14 @@ dependencies {
     // Diğer bağımlılıklar (eğer varsa)
 }
 
-android {
-    // Android SDK versiyonları ve derleme ayarları
-    compileSdk = 34 // Genellikle en son stabil versiyonu kullanın
-
-    // Namespace'i burada tanımlayın, AndroidManifest.xml'den kaldırıldı
-    namespace = "com.RowdyAvocado" // Ultima eklentinizin doğru paket adı
+// Configure the android extension for this specific module
+configure<LibraryExtension> {
+    compileSdk = 34 // Bu, root'taki compileSdkVersion(35) ile çakışabilir, ancak şimdilik bırakıldı.
+    namespace = "com.RowdyAvocado" // Root'taki "com.example" namespace'ini geçersiz kılar
 
     defaultConfig {
-        minSdk = 21 // Cloudstream için minimum desteklenen SDK
-        targetSdk = 34 // Hedeflenen SDK versiyonu
+        minSdk = 21
+        targetSdk = 34 // Bu, root'taki targetSdk = 35 ile çakışabilir, ancak şimdilik bırakıldı.
 
         // BuildConfig alanları
         // API anahtarlarınızı BuildConfig'e eklemek için GitHub Secret'tan okunacak.
@@ -100,21 +89,19 @@ android {
         buildConfigField("String", "MDL_API_KEY", "\"$mdlApiKey\"")
     }
 
-    // JVM uyumluluğu
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17 // Kotlin 1.8.x ve Gradle 8+ için genellikle 17 idealdir
+        sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
+
+    kotlinOptions { // kotlinOptions artık doğru bağlamda
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
-    // Derleme özellikleri (build features)
-    buildFeatures {
-        buildConfig = true // BuildConfig sınıfı oluşturmayı etkinleştir
+    buildFeatures { // buildFeatures artık doğru bağlamda
+        buildConfig = true
     }
 
-    // Android kaynak birleştirme stratejisi, çakışmaları önlemek için
     packagingOptions {
         resources.excludes.add("META-INF/*.md")
         resources.excludes.add("META-INF/*.txt")
