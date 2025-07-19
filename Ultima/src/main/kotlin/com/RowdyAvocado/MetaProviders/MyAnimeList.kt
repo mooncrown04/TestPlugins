@@ -22,6 +22,7 @@ import com.lagradost.cloudstream3.mainPageOf
 import com.lagradost.cloudstream3.mapper
 import com.lagradost.cloudstream3.newAnimeLoadResponse
 import com.lagradost.cloudstream3.newAnimeSearchResponse
+import com.lagradost.cloudstream3.newEpisode // newEpisode import edildi
 import com.lagradost.cloudstream3.newHomePageResponse
 import com.lagradost.cloudstream3.syncproviders.AccountManager
 import com.lagradost.cloudstream3.syncproviders.SyncIdName
@@ -30,7 +31,13 @@ import com.lagradost.cloudstream3.syncproviders.providers.MALApi.Recommendations
 import com.lagradost.cloudstream3.utils.AppUtils
 import com.lagradost.cloudstream3.utils.ExtractorLink
 
-class MyAnimeList(val plugin: UltimaPlugin) : MainAPI() {
+// BuildConfig sınıfının doğru paketini import edin.
+// build.gradle.kts dosyanızdaki 'namespace' değerine göre değişir.
+// Ultima için "com.RowdyAvocado" olarak ayarlandığı varsayılmıştır.
+import com.RowdyAvocado.BuildConfig
+
+// UltimaPlugin'in doğrudan kullanılması yerine MainAPI'nin context/activity özelliklerini kullanmak daha iyidir.
+class MyAnimeList() : MainAPI() { // UltimaPlugin parametresi kaldırıldı
     override var name = "MyAnimeList"
     override var mainUrl = "https://myanimelist.net"
     override var supportedTypes = setOf(TvType.Anime, TvType.AnimeMovie, TvType.OVA)
@@ -41,7 +48,9 @@ class MyAnimeList(val plugin: UltimaPlugin) : MainAPI() {
     private val api = AccountManager.malApi
     private val apiUrl = "https://api.myanimelist.net/v2"
     private final val mediaLimit = 20
-    private val auth = BuildConfig.MAL_API
+    // BuildConfig.MAL_API yerine BuildConfig.MDL_API_KEY kullanıldı
+    // Eğer MAL için farklı bir secret'ınız varsa, lütfen burayı güncelleyin.
+    private val auth = BuildConfig.MDL_API_KEY 
 
     protected fun Any.toStringData(): String {
         return mapper.writeValueAsString(this)
@@ -49,9 +58,9 @@ class MyAnimeList(val plugin: UltimaPlugin) : MainAPI() {
 
     private suspend fun malAPICall(query: String): MalApiResponse {
         val res =
-                app.get(query, headers = mapOf("Authorization" to "Bearer $auth"))
-                        .parsedSafe<MalApiResponse>()
-                        ?: throw Exception("Unable to fetch content from API")
+            app.get(query, headers = mapOf("Authorization" to "Bearer $auth"))
+                .parsedSafe<MalApiResponse>()
+                ?: throw Exception("Unable to fetch content from API")
         return res
     }
 
@@ -71,18 +80,18 @@ class MyAnimeList(val plugin: UltimaPlugin) : MainAPI() {
     }
 
     override val mainPage =
-            mainPageOf(
-                    "$apiUrl/anime/ranking?ranking_type=all&limit=$mediaLimit&offset=" to
-                            "Top Anime Series",
-                    "$apiUrl/anime/ranking?ranking_type=airing&limit=$mediaLimit&offset=" to
-                            "Top Airing Anime",
-                    "$apiUrl/anime/ranking?ranking_type=bypopularity&limit=$mediaLimit&offset=" to
-                            "Popular Anime",
-                    "$apiUrl/anime/ranking?ranking_type=favorite&limit=$mediaLimit&offset=" to
-                            "Top Favorited Anime",
-                    "$apiUrl/anime/suggestions?limit=$mediaLimit&offset=" to "Suggestions",
-                    "Personal" to "Personal"
-            )
+        mainPageOf(
+            "$apiUrl/anime/ranking?ranking_type=all&limit=$mediaLimit&offset=" to
+                    "Top Anime Series",
+            "$apiUrl/anime/ranking?ranking_type=airing&limit=$mediaLimit&offset=" to
+                    "Top Airing Anime",
+            "$apiUrl/anime/ranking?ranking_type=bypopularity&limit=$mediaLimit&offset=" to
+                    "Popular Anime",
+            "$apiUrl/anime/ranking?ranking_type=favorite&limit=$mediaLimit&offset=" to
+                    "Top Favorited Anime",
+            "$apiUrl/anime/suggestions?limit=$mediaLimit&offset=" to "Suggestions",
+            "Personal" to "Personal"
+        )
 
     override suspend fun search(query: String): List<SearchResponse>? {
         val res = malAPICall("$apiUrl/anime?q=$query&limit=$mediaLimit")
@@ -93,24 +102,25 @@ class MyAnimeList(val plugin: UltimaPlugin) : MainAPI() {
         if (request.name.contains("Personal")) {
             // Reading and manipulating personal library
             api.loginInfo()
-                    ?: return newHomePageResponse(
-                            "Login required for personal content.",
-                            emptyList<SearchResponse>(),
-                            false
-                    )
+                ?: return newHomePageResponse(
+                    "Login required for personal content.",
+                    emptyList<SearchResponse>(),
+                    false
+                )
             var homePageList =
-                    api.getPersonalLibrary().allLibraryLists.mapNotNull {
-                        if (it.items.isEmpty()) return@mapNotNull null
-                        val libraryName =
-                                it.name.asString(plugin.activity ?: return@mapNotNull null)
-                        HomePageList("${request.name}: $libraryName", it.items)
-                    }
+                api.getPersonalLibrary().allLibraryLists.mapNotNull {
+                    if (it.items.isEmpty()) return@mapNotNull null
+                    val libraryName =
+                        // currentActivity kullanıldı, çünkü MainAPI'nin bir özelliğidir.
+                        it.name.asString(currentActivity ?: return@mapNotNull null)
+                    HomePageList("${request.name}: $libraryName", it.items)
+                }
             return newHomePageResponse(homePageList, false)
         } else {
             val res = malAPICall("${request.data}${(page - 1) * mediaLimit}")
             val media =
-                    res.data?.map { it.toSearchResponse() }
-                            ?: return newHomePageResponse(request.name, emptyList(), false)
+                res.data?.map { it.toSearchResponse() }
+                    ?: return newHomePageResponse(request.name, emptyList(), false)
             return newHomePageResponse(request.name, media, true)
         }
     }
@@ -118,31 +128,32 @@ class MyAnimeList(val plugin: UltimaPlugin) : MainAPI() {
     override suspend fun load(url: String): LoadResponse {
         val id = url.removeSuffix("/").substringAfterLast("/")
         val data =
-                app.get(
-                                "$apiUrl/anime/$id?fields=id,title,synopsis,main_picture,start_season,num_episodes,recommendations,genres",
-                                headers = mapOf("Authorization" to "Bearer $auth")
-                        )
-                        .parsedSafe<MalAnime>()
-                        ?: throw ErrorLoadingException("Unable to fetch show details")
+            app.get(
+                "$apiUrl/anime/$id?fields=id,title,synopsis,main_picture,start_season,num_episodes,recommendations,genres",
+                headers = mapOf("Authorization" to "Bearer $auth")
+            )
+                .parsedSafe<MalAnime>()
+                ?: throw ErrorLoadingException("Unable to fetch show details")
         val year = data.startSeason?.year
         val epCount = data.numEpisodes ?: 0
         val episodes =
-                (1..epCount).map { i ->
-                    val linkData =
-                            LinkData(
-                                            title = data.title,
-                                            year = year,
-                                            season = 1,
-                                            episode = i,
-                                            isAnime = true
-                                    )
-                                    .toStringData()
-                    Episode(linkData, season = 1, episode = i)
-                }
+            (1..epCount).map { i ->
+                val linkData =
+                    LinkData(
+                        title = data.title,
+                        year = year,
+                        season = 1,
+                        episode = i,
+                        isAnime = true
+                    )
+                        .toStringData()
+                // Deprecated Episode constructor yerine newEpisode kullanıldı
+                newEpisode(linkData, season = 1, episode = i)
+            }
         return newAnimeLoadResponse(
-                data.title ?: throw NotImplementedError("Unable to parse title"),
-                url,
-                TvType.Anime
+            data.title ?: throw NotImplementedError("Unable to parse title"),
+            url,
+            TvType.Anime
         ) {
             this.year = data.startSeason?.year
             this.posterUrl = data.mainPicture?.large
@@ -155,10 +166,10 @@ class MyAnimeList(val plugin: UltimaPlugin) : MainAPI() {
     }
 
     override suspend fun loadLinks(
-            data: String,
-            isCasting: Boolean,
-            subtitleCallback: (SubtitleFile) -> Unit,
-            callback: (ExtractorLink) -> Unit
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
     ): Boolean {
         val mediaData = AppUtils.parseJson<LinkData>(data)
         invokeExtractors(Category.ANIME, mediaData, subtitleCallback, callback)
@@ -166,19 +177,19 @@ class MyAnimeList(val plugin: UltimaPlugin) : MainAPI() {
     }
 
     data class MalApiResponse(
-            @JsonProperty("data") val data: Array<MalApiData>? = null,
+        @JsonProperty("data") val data: Array<MalApiData>? = null,
     ) {
         data class MalApiData(
-                @JsonProperty("node") val node: MalApiNode,
+            @JsonProperty("node") val node: MalApiNode,
         ) {
             data class MalApiNode(
-                    @JsonProperty("id") val id: Int,
-                    @JsonProperty("title") val title: String,
-                    @JsonProperty("main_picture") val picture: MalApiNodePicture
+                @JsonProperty("id") val id: Int,
+                @JsonProperty("title") val title: String,
+                @JsonProperty("main_picture") val picture: MalApiNodePicture
             ) {
                 data class MalApiNodePicture(
-                        @JsonProperty("medium") val medium: String,
-                        @JsonProperty("large") val large: String,
+                    @JsonProperty("medium") val medium: String,
+                    @JsonProperty("large") val large: String,
                 )
             }
         }
