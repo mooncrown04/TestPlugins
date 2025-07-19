@@ -1,4 +1,13 @@
-// TestPlugins/src/Ultima/build.gradle.kts
+
+import com.android.build.gradle.BaseExtension // BaseExtension import edildi
+import com.lagradost.cloudstream3.gradle.CloudstreamExtension // CloudstreamExtension import edildi
+import org.gradle.api.Project // Project import edildi
+
+// Cloudstream extension için yardımcı fonksiyon eklendi
+fun Project.cloudstream(configuration: CloudstreamExtension.() -> Unit) = extensions.getByName<CloudstreamExtension>("cloudstream").configuration()
+// Android extension için yardımcı fonksiyon eklendi (eğer android { ... } bloğu kullanılıyorsa)
+fun Project.android(configuration: BaseExtension.() -> Unit) = extensions.getByName<BaseExtension>("android").configuration()
+
 
 plugins {
     // Cloudstream eklenti API'si zaten ana build.gradle.kts tarafından tüm alt projelere uygulanmaktadır.
