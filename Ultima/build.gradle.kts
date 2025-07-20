@@ -1,98 +1,33 @@
-// TestPlugins/src/Ultima/build.gradle.kts
-
-// Yapılandırma blokları için gerekli uzantıları import edin
-import com.android.build.gradle.LibraryExtension
-import com.lagradost.cloudstream3.gradle.CloudstreamExtension // Bu import geri getirildi
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.gradle.api.JavaVersion
-// import java.util.Properties // Artık API anahtarlarını okumadığımız için bu import'a gerek kalmayabilir
-
-plugins {
-    // Bu plugin'ler, settings.gradle.kts veya ana build.gradle.kts dosyasında global olarak uygulanmadıysa
-    // yerel olarak uygulanır. 'com.android.library' ve 'kotlin-android' zaten root'taki subprojects tarafından uygulanmıştır.
-    // 'com.lagradost.cloudstream3.gradle' da root'taki subprojects tarafından uygulanmıştır.
-    // Bu nedenle, sadece bu modüle özgü ve global olarak uygulanmayan plugin'leri tutun.
-     id("cloudstream-plugin")
-     id("kotlin-parcelize")
-    id("kotlin-kapt")
-    // 'com.android.library', 'com.lagradost.cloudstream3.gradle' ve 'org.jetbrains.kotlin.android'
-    // plugin'leri, muhtemelen global olarak uygulandıkları için buradan kaldırıldı.
-}
-cloudstream {
-    language.set("tr")
-    description.set("Ultima eklentisi")
-    authors.set(listOf("senin_adin"))
-    internalName.set("Ultima")
-}
-// Kullanıcının verdiği versiyon numarası
-version = 41
-
-// Bu modül için cloudstream uzantısını yapılandırın
-// extensions.configure<CloudstreamExtension> yapısı kullanıldı
-extensions.configure<CloudstreamExtension> {
-    // Kullanıcının verdiği değerler
-    description = "The ultimate All-in-One home screen to access all of your extensions at one place (You need to select/deselect sections in Ultima's settings to load other extensions on home screen)"
-    authors = listOf("RowdyRushya")
-    status = 1
-    tvTypes = listOf("All")
-    requiresResources = true
-    language = "en"
-    iconUrl = "https://raw.githubusercontent.com/Rowdy-Avocado/Rowdycado-Extensions/master/logos/ultima.png"
-    internalName = "Ultima" // internalName, extensions.configure<CloudstreamExtension> bloğunun içinde
-}
+version = 3
 
 dependencies {
-    // Tüm bağımlılıkları parantez () içine alın!
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-
-    // AndroidX UI ve yardımcı kütüphaneler
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.appcompat:appcompat:1.7.0")
-
-    // Kullanıcının verdiği material bağımlılığı
-    implementation("com.google.android.material:material:1.12.0")
-
-    implementation("androidx.fragment:fragment-ktx:1.7.1")
-    implementation("androidx.annotation:annotation:1.8.0")
-
-    // Cloudstream core API'sine bağımlılık (Bu, birçok Cloudstream yardımcı fonksiyonunu sağlar)
-    implementation(project(":app"))
-
-    // Rhino JavaScript motoru bağımlılığı (mozilla ve Scriptable hataları için)
-    // Cloudstream'in kendi içinde bir JS motoru varsa bu gerekli olmayabilir,
-    // ancak hata devam ederse bu satırı eklemeyi deneyin.
-    implementation("org.mozilla:rhino:1.7.14") // En son stabil versiyonu kullanın
 }
 
-// Bu modül için android uzantısını yapılandırın
-configure<LibraryExtension> {
-    // Ultima eklentinizin doğru paket adı
-    // Eğer Ultima'daki Kotlin dosyalarınız 'package com.RowdyAvocado' ile başlıyorsa bu doğru.
-    namespace = "com.RowdyAvocado" 
-
-    compileSdk = 34 // Genellikle en son stabil versiyonu kullanın
-    defaultConfig {
-        minSdk = 21 // Cloudstream için minimum desteklenen SDK
-        // targetSdk = 34 // Deprecated uyarısı nedeniyle kaldırıldı. compileSdk yeterli olmalı.
-
-        // API anahtarlarını kaldırdık, bu yüzden properties nesnesine gerek kalmadı.
-        // Eğer başka buildConfigField'larınız varsa buraya ekleyebilirsiniz.
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17 // Kotlin 1.8.x ve Gradle 8+ için genellikle 17 idealdir
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
-    }
-
+android {
     buildFeatures {
-        buildConfig = true // BuildConfig sınıfı oluşturmayı etkinleştir (ancak içinde API anahtarları olmayacak)
+        buildConfig = true
     }
 
-    packaging { // packagingOptions yerine 'packaging' kullanıldı
-        resources.excludes.add("META-INF/*.md")
-        resources.excludes.add("META-INF/*.txt")
+    defaultConfig {
+        val apiKey = project.findProperty("tmdbApiKey")?.toString() ?: ""
+        buildConfigField("String", "TMDB_SECRET_API", "\"$apiKey\"")
     }
+}
+
+cloudstream {
+    authors     = listOf("GitLatte", "patr0nq", "keyiflerolsun")
+    language    = "tr"
+    description = "powerboard`un yabancı dizi arşivi"
+
+    /**
+     * Status int as the following:
+     * 0: Down
+     * 1: Ok
+     * 2: Slow
+     * 3: Beta only
+    **/
+    status  = 1 // will be 3 if unspecified
+    tvTypes = listOf("TvSeries")
+    iconUrl = "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powerdizi/powerdizi.png"
 }
