@@ -35,6 +35,11 @@ configure<CloudstreamExtension> {
                                // Genellikle plugin id'sinden veya modül adından otomatik olarak türetilir.
 }
 
+// JVM Toolchain'i Kotlin derlemesi için ayarla
+kotlin {
+    jvmToolchain(17) // Tüm Kotlin görevleri için Java 17 kullanılmasını sağlar
+}
+
 dependencies {
     // Tüm bağımlılıkları parantez () içine alın!
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
