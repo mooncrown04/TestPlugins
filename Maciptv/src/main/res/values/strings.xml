@@ -1,5 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Portal API Ayarları için anahtar -->
     <string name="portal_api_settings_key">Portal API Ayarları</string>
+
+    <!-- Portal API Ayarları Dialog Başlıkları ve İpuçları -->
+    <string name="portal_api_settings_title">Portal API Ayarları</string>
+    <string name="portal_url_hint">Portal URL (örn: http://example.com:8080)</string>
+    <string name="mac_address_hint">MAC Adresi (örn: 00:1A:79:XX:YY:ZZ)</string>
+    <string name="save_button_text">Kaydet</string>
+    <string name="cancel_button_text">İptal</string>
+    <string name="settings_saved_toast">Ayarlar kaydedildi.</string>
+    <string name="portal_mac_not_set_error">Portal URL veya MAC Adresi ayarlanmamış. Lütfen ayarlardan girin.</string>
+
+    <!-- Hata Mesajları -->
+    <string name="http_error">HTTP Hatası: %1$d - %2$s</string>
+    <string name="request_error">İstek Hatası: %1$s</string>
+    <string name="list_blocked_vpn_needed">La lista e\' stata bloccata dalla magistratura. Prova ad usare una VPN</string>
+    <string name="no_results_found">Sonuç bulunamadı.</string>
+
+    <!-- Oyuncu Mesajları (Eğer eklenti içinde özel oyuncu mesajları varsa) -->
+    <string name="player_prev_channel_loading">Önceki kanal yükleniyor...</string>
+    <string name="player_next_channel_loading">Sonraki kanal yükleniyor...</string>
+
+    <!-- Genel Kullanıcı Arayüzü Metinleri -->
+    <string name="unknown_channel">Bilinmeyen Kanal</string>
+    <string name="live_tv_stream">Canlı TV yayını: %1$s</string>
+
+    <!-- Eklenti Bilgileri (Eğer Plugin sınıfında displayName kullanmıyorsanız veya ek bilgi gerekiyorsa) -->
+    <string name="plugin_description">Portal API tabanlı IPTV hizmetleri için bir Cloudstream3 eklentisi.</string>
+    <string name="plugin_author">moncrown</string>
+
     <!-- Buraya eklentiniz için başka string'ler de ekleyebilirsiniz -->
 </resources>
