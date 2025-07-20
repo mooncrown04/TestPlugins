@@ -2,7 +2,7 @@
 
 // Configure the android extension for this specific module
 import com.android.build.gradle.LibraryExtension
-import com.lagradost.cloudstream3.gradle.CloudstreamExtension // Bu import hala gerekli
+import com.lagradost.cloudstream3.gradle.CloudstreamExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.gradle.api.JavaVersion
 
@@ -21,8 +21,8 @@ plugins {
 version = 3
 
 // Cloudstream uzantısını bu modül için yapılandırın
-// configure<CloudstreamExtension> { ... } yerine doğrudan 'cloudstream { ... }' bloğu kullanıldı
-cloudstream {
+// configure<CloudstreamExtension> { ... } yapısı geri getirildi
+configure<CloudstreamExtension> {
     authors = listOf("mooncrown") // Eklentinin yazarları güncellendi
     language = "en" // Eklentinin desteklediği dil
     description = "A Cloudstream3 plugin for Portal API based IPTV services." // Eklentinin kısa açıklaması
