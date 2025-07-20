@@ -1,43 +1,42 @@
 // TestPlugins/src/Maciptv/build.gradle.kts
 
-// Configure the android extension for this specific module
+// Yapılandırma blokları için gerekli uzantıları import edin
 import com.android.build.gradle.LibraryExtension
 import com.lagradost.cloudstream3.gradle.CloudstreamExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.gradle.api.JavaVersion
+import java.util.Properties // Bu satırı ekleyin
 
 plugins {
-    // These plugins are applied locally if not applied globally in settings.gradle.kts or root build.gradle.kts.
-    // 'com.android.library' and 'kotlin-android' are already applied in root's subprojects.
-    // 'com.lagradost.cloudstream3.gradle' is also applied in root's subprojects.
-    // So, only keep plugins that are specific to this module and not globally applied.
-    // Assuming kotlin-parcelize and kotlin-kapt are not global:
+    // Bu plugin'ler, settings.gradle.kts veya ana build.gradle.kts dosyasında global olarak uygulanmadıysa
+    // yerel olarak uygulanır. 'com.android.library' ve 'kotlin-android' zaten root'taki subprojects tarafından uygulanmıştır.
+    // 'com.lagradost.cloudstream3.gradle' da root'taki subprojects tarafından uygulanmıştır.
+    // Bu nedenle, sadece bu modüle özgü ve global olarak uygulanmayan plugin'leri tutun.
+    // kotlin-parcelize ve kotlin-kapt'ın global olmadığını varsayarak:
     id("kotlin-parcelize")
     id("kotlin-kapt")
-    id("com.lagradost.cloudstream3.gradle") // <-- Bu satır eklendi
-    // id("org.jetbrains.kotlin.android") // This is already applied by root subprojects, no need to apply again
+    // id("org.jetbrains.kotlin.android") // Bu zaten root subprojects tarafından uygulanmıştır, tekrar uygulamaya gerek yok
 }
 
 version = 3
 
-// Cloudstream uzantısını bu modül için yapılandırın
-// project.extensions.configure<CloudstreamExtension>("cloudstream") yapısı yerine doğrudan 'cloudstream { ... }' bloğu kullanıldı
-cloudstream {
-    authors = listOf("mooncrown") // Eklentinin yazarları güncellendi
-    language = "en" // Eklentinin desteklediği dil
-    description = "A Cloudstream3 plugin for Portal API based IPTV services." // Eklentinin kısa açıklaması
+// Bu modül için cloudstream uzantısını yapılandırın
+configure<CloudstreamExtension> {
+    authors = listOf("GitLatte", "patr0nq", "keyiflerolsun") // Yazar listesini güncelleyin
+    language = "tr" // Dil
+    description = "Maciptv için Cloudstream eklentisi" // Eklentinin açıklaması
 
     /**
-     * Status int as the following:
-     * 0: Down
-     * 1: Ok
-     * 2: Slow
-     * 3: Beta only
+     * Durum int'i aşağıdaki gibidir:
+     * 0: Kapalı
+     * 1: Tamam
+     * 2: Yavaş
+     * 3: Sadece Beta
      **/
-    status = 1 // will be 3 if unspecified
-    tvTypes = listOf("Live", "Movie") // Canlı TV ve Film türlerini destekler
-    iconUrl = "https://raw.githubusercontent.com/YourUsername/YourRepo/master/icon.png" // Kendi ikon URL'nizi buraya ekleyin
-    internalName = "Maciptv" // Dahili adı, .cs3 dosyasının adı olacaktır
+    status = 1 // belirtilmezse 3 olur
+    tvTypes = listOf("Live", "Movie") // Desteklenen TV türleri
+    iconUrl = "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/maciptv/maciptv.png" // Eklenti simgesi URL'si
+    internalName = "Maciptv" // internalName'i buraya taşıdık
 }
 
 dependencies {
@@ -49,39 +48,40 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
 
     implementation("com.google.android.material:material:1.12.0")
-    implementation("androidx.fragment:fragment-ktx:1.7.1")
+    implementation("androidx.fragment:fragment-ktx:1.17.1") // Fragment-ktx versiyonunu 1.7.1 olarak güncelledik
 
     implementation("androidx.annotation:annotation:1.8.0")
 
     // Cloudstream core API'sine bağımlılık (Bu, birçok Cloudstream yardımcı fonksiyonunu sağlar)
     implementation(project(":app"))
-
-    // OkHttp3 için bağımlılıklar (API istekleri için kullanılır)
-    implementation("com.squareup.okhttp3:okhttp:4.12.0") // En son stabil versiyonu kullanın
-    implementation("com.squareup.okhttp3:okhttp-urlconnection:4.12.0") // Opsiyonel, URLConnection ile uyumluluk için
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0") // Opsiyonel, ağ isteklerini loglamak için
-
-    // JSON ayrıştırma için (JSONObject kullanıldığı için)
-    implementation("org.json:json:20231013") // En son stabil versiyonu kullanın
-
-    // Eğer PortalApiProvider içinde WebViewResolver kullanılıyorsa bu bağımlılık gerekli olabilir:
-    // implementation("com.lagradost.cloudstream3:webview:LATEST_CLOUDSTREAM_VERSION")
-    // Lütfen Cloudstream'in WebView modülünün doğru versiyonunu ve bağımlılık yolunu kontrol edin.
 }
 
-// Configure the android extension for this specific module
+// Bu modül için android uzantısını yapılandırın
 configure<LibraryExtension> {
-    compileSdk = 34 // Genellikle en son stabil versiyonu kullanın
-    namespace = "com.mooncrown" // Maciptv'nin doğru paket adı
+    // Kotlin dosyalarınızdaki 'package com.mooncrown' ile eşleşmeli
+    namespace = "com.mooncrown" 
 
+    compileSdk = 34 // Veya kullandığınız en yüksek SDK versiyonu
     defaultConfig {
-        minSdk = 21 // Cloudstream için minimum desteklenen SDK
+        minSdk = 21 // Minimum SDK
         targetSdk = 34 // Hedeflenen SDK versiyonu
 
-        // BuildConfig alanları (eğer API anahtarları veya benzeri kullanılıyorsa)
-        // Örneğin, eğer PortalApiProvider içinde TMDB_SECRET_API gibi bir şey kullanacaksanız:
-        // val tmdbApiKey = System.getenv("TMDB_API_KEY") ?: ""
-        // buildConfigField("String", "TMDB_SECRET_API", "\"$tmdbApiKey\"")
+        // TMDB_SECRET_API'yi local.properties'ten veya ortam değişkenlerinden yüklemek için
+        // properties nesnesini burada tanımlayın ve yükleyin
+        val properties = Properties().apply {
+            val propertiesFile = project.rootProject.file("local.properties")
+            if (propertiesFile.exists()) {
+                propertiesFile.inputStream().use { this.load(it) }
+            } else {
+                // Eğer local.properties yoksa, GitHub Actions ortamında ortam değişkenlerini kullanabiliriz.
+                // Bu durumda, GitHub Actions workflow'unuzda TMDB_SECRET_API'yi ortam değişkeni olarak ayarladığınızdan emin olun.
+                // Örneğin: TMDB_SECRET_API: ${{ secrets.TMDB_SECRET_API_KEY }}
+                setProperty("TMDB_SECRET_API", System.getenv("TMDB_SECRET_API") ?: "")
+            }
+        }
+        
+        // buildConfigField'ı güncellendi: properties nesnesinden değeri alacak
+        buildConfigField("String", "TMDB_SECRET_API", "\"${properties.getProperty("TMDB_SECRET_API") ?: ""}\"")
     }
 
     compileOptions {
@@ -93,7 +93,7 @@ configure<LibraryExtension> {
     }
 
     buildFeatures {
-        buildConfig = true // BuildConfig sınıfı oluşturmayı etkinleştir
+        buildConfig = true // Bu satırın olduğundan emin olun
     }
 
     packaging { // packagingOptions yerine 'packaging' kullanıldı
