@@ -23,8 +23,6 @@ class Ultima(val plugin: UltimaPlugin) : MainAPI() {
     override var lang = "en"
     override val hasMainPage = true
     override val hasQuickSearch = false
-    private val sm = UltimaStorageManager
-    private val deviceSyncData = sm.deviceSyncCreds
 
     val mapper = jacksonObjectMapper()
     var sectionNamesList: List<String> = emptyList()
