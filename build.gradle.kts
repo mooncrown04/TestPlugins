@@ -1,109 +1,76 @@
 // build.gradle.kts (Projenizin kök dizininde)
 
-// Tüm alt projelere uygulanacak genel yapılandırmalar
-subprojects {
+// Gradle'ın kendisi için gerekli plugin'lerin ve bağımlılıkların tanımlandığı blok.
+// Bu, "Unresolved reference: import" ve "Expecting an element" hatalarını çözecektir.
+buildscript {
     repositories {
         google()
         mavenCentral()
         maven("https://jitpack.io") // Cloudstream plugin'i için JitPack deposu
         maven("https://maven.pkg.github.com/LagradOst/CloudStream-Releases/") // Cloudstream'in release deposu
     }
-
-    // Tüm alt projelere uygulanacak plugin'ler
-    // Cloudstream plugin'i, Android kütüphane ve Kotlin Android plugin'i
-    apply(plugin = "com.android.library")
-    apply(plugin = "com.lagradost.cloudstream3.gradle")
-    apply(plugin = "org.jetbrains.kotlin.android")
-}
-
-import com.android.build.gradle.BaseExtension
-import com.lagradost.cloudstream3.gradle.CloudstreamExtension
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
-
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-        // Shitpack repo which contains our tools and dependencies
-        maven("https://jitpack.io")
-    }
-
     dependencies {
-        classpath("com.android.tools.build:gradle:8.7.3")
-        // Cloudstream gradle plugin which makes everything work and builds plugins
-        classpath("com.github.recloudstream:gradle:-SNAPSHOT")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.0")
+        // Android Gradle Plugin (AGP) - Kendi Gradle versiyonunuza uygun olanı kullanın
+        classpath("com.android.tools.build:gradle:8.1.0") // Örnek: Gradle 8.1.0 için
+        // Kotlin Gradle Plugin - Kendi Kotlin versiyonunuza uygun olanı kullanın
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.0") // Örnek: Kotlin 1.8.0 için
+        // Cloudstream Gradle Plugin - Kendi Cloudstream plugin versiyonunuza uygun olanı kullanın
+        classpath("com.lagradost.cloudstream3:gradle-plugin:1.0.0") // Örnek: Cloudstream plugin versiyonu
     }
 }
 
+// Kök projeye uygulanacak plugin'ler. Eğer kök proje bir Android uygulaması ise bu gereklidir.
+plugins {
+    id("com.android.application") // Eğer kök proje bir Android uygulaması ise
+    id("org.jetbrains.kotlin.android") // Eğer kök proje Kotlin kullanıyorsa
+    // Eğer kök proje Cloudstream özelliklerini doğrudan kullanıyorsa, buraya da eklenebilir:
+    // id("com.lagradost.cloudstream3.gradle")
+}
+
+// Tüm projeler (kök ve alt projeler) için ortak yapılandırmalar
 allprojects {
     repositories {
         google()
         mavenCentral()
-        maven("https://jitpack.io")
+        maven("https://jitpack.io") // Cloudstream plugin'i için JitPack deposu
+        maven("https://maven.pkg.github.com/LagradOst/CloudStream-Releases/") // Cloudstream'in release deposu
     }
 }
 
-fun Project.cloudstream(configuration: CloudstreamExtension.() -> Unit) = extensions.getByName<CloudstreamExtension>("cloudstream").configuration()
+// Kök projenin Android yapılandırması (eğer kök proje bir Android uygulaması ise)
+android {
+    namespace = "com.mooncrown04.cloudstream" // Kök projenizin paket adı
+    compileSdk = 34 // Genellikle en son stabil versiyonu kullanın
 
-fun Project.android(configuration: BaseExtension.() -> Unit) = extensions.getByName<BaseExtension>("android").configuration()
-
-subprojects {
-    apply(plugin = "com.android.library")
-    apply(plugin = "kotlin-android")
-    apply(plugin = "com.lagradost.cloudstream3.gradle")
-
-    cloudstream {
-        // when running through github workflow, GITHUB_REPOSITORY should contain current repository name
-        setRepo(System.getenv("GITHUB_REPOSITORY") ?: "mooncrown04/TestPlugins")
+    defaultConfig {
+        minSdk = 21 // Cloudstream için minimum desteklenen SDK
+        targetSdk = 34 // Hedeflenen SDK versiyonu
+        versionCode = 1 // Uygulamanızın versiyon kodu
+        versionName = "1.0" // Uygulamanızın versiyon adı
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner" // Test runner
     }
 
-    android {
-        namespace = "com.example"
-
-        defaultConfig {
-            minSdk = 21
-            compileSdkVersion(35)
-            targetSdk = 35
-        }
-
-        compileOptions {
-            sourceCompatibility = JavaVersion.VERSION_1_8
-            targetCompatibility = JavaVersion.VERSION_1_8
-        }
-
-        tasks.withType<KotlinJvmCompile> {
-            compilerOptions {
-                jvmTarget.set(JvmTarget.JVM_1_8) // Required
-                freeCompilerArgs.addAll(
-                    "-Xno-call-assertions",
-                    "-Xno-param-assertions",
-                    "-Xno-receiver-assertions"
-                )
-            }
-        }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17 // Kotlin 1.8.x ve Gradle 8+ için genellikle 17 idealdir
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
-    dependencies {
-        val cloudstream by configurations
-        val implementation by configurations
+    buildFeatures {
+        buildConfig = true // BuildConfig sınıfı oluşturmayı etkinleştir
+    }
 
-        // Stubs for all cloudstream classes
-        cloudstream("com.lagradost:cloudstream3:pre-release")
-
-        // These dependencies can include any of those which are added by the app,
-        // but you don't need to include any of them if you don't need them.
-        // https://github.com/recloudstream/cloudstream/blob/master/app/build.gradle.kts
-        implementation(kotlin("stdlib")) // Adds Standard Kotlin Features
-        implementation("com.github.Blatzar:NiceHttp:0.4.11") // HTTP Lib
-        implementation("org.jsoup:jsoup:1.18.3") // HTML Parser
-        // IMPORTANT: Do not bump Jackson above 2.13.1, as newer versions will
-        // break compatibility on older Android devices.
-        implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.1") // JSON Parser
+    packaging {
+        resources.excludes.add("META-INF/*.md")
+        resources.excludes.add("META-INF/*.txt")
     }
 }
 
-task<Delete>("clean") {
-    delete(rootProject.layout.buildDirectory)
+// Kotlin derleme görevleri için JVM hedefi ayarı
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17.toString()
+    }
 }
