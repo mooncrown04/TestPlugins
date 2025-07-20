@@ -1,44 +1,8 @@
-// src/Maciptv/build.gradle.kts
+// TestPlugins/src/SinemaM3u/build.gradle.kts
 
-// Yapılandırma blokları için gerekli uzantıları import edin
-import com.android.build.gradle.LibraryExtension
-import com.lagradost.cloudstream3.gradle.CloudstreamExtension
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.gradle.api.JavaVersion
 import java.util.Properties // Bu satırı ekleyin
 
-plugins {
-    // Android kütüphane modülü için gerekli temel plugin
-    id("com.android.library")
-    // Kotlin Android projeleri için gerekli
-    id("org.jetbrains.kotlin.android")
-    // Cloudstream eklenti API'sini kullanmak için gerekli plugin
-    id("com.lagradost.cloudstream3.gradle")
-    id("kotlin-parcelize")
-    id("kotlin-kapt")
-}
-
 version = 3
-
-// Bu modül için cloudstream uzantısını yapılandırın
-// configure<CloudstreamExtension> yerine the<CloudstreamExtension>().apply kullanıldı
-the<CloudstreamExtension>().apply {
-    authors = listOf("GitLatte", "patr0nq", "keyiflerolsun") // Yazar listesini güncelleyin
-    language = "tr" // Dil
-    description = "Maciptv için Cloudstream eklentisi" // Eklentinin açıklaması
-
-    /**
-     * Durum int'i aşağıdaki gibidir:
-     * 0: Kapalı
-     * 1: Tamam
-     * 2: Yavaş
-     * 3: Sadece Beta
-     **/
-    status = 1 // belirtilmezse 3 olur
-    tvTypes = listOf("Live", "Movie") // Desteklenen TV türleri
-    iconUrl = "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/maciptv/maciptv.png" // Eklenti simgesi URL'si
-    internalName = "Maciptv" // internalName'i buraya taşıdık
-}
 
 dependencies {
     // Tüm bağımlılıkları parantez () içine alın!
@@ -49,23 +13,21 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
 
     implementation("com.google.android.material:material:1.12.0")
-    implementation("androidx.fragment:fragment-ktx:1.17.1") // Fragment-ktx versiyonunu 1.7.1 olarak güncelledik
+    implementation("androidx.fragment:fragment-ktx:1.7.1")
 
     implementation("androidx.annotation:annotation:1.8.0")
 
-    // Cloudstream core API'sine bağımlılık (Bu, birçok Cloudstream yardımcı fonksiyonunu sağlar)
-    implementation(project(":app"))
+    // Buraya projenizdeki diğer bağımlılıkları ekleyebilirsiniz
 }
 
-// Bu modül için android uzantısını yapılandırın
-configure<LibraryExtension> {
-    // Kotlin dosyalarınızdaki 'package com.mooncrown' ile eşleşmeli
-    namespace = "com.mooncrown" 
+android {
+    // BU SATIRI EKLEYİN
+    namespace = "com.mooncrown" // Kotlin dosyalarınızdaki 'package com.mooncrown' ile eşleşmeli
 
     compileSdk = 34 // Veya kullandığınız en yüksek SDK versiyonu
     defaultConfig {
         minSdk = 21 // Minimum SDK
-        targetSdk = 34 // Hedeflenen SDK versiyonu
+        // ... diğer defaultConfig ayarları
 
         // TMDB_SECRET_API'yi local.properties'ten veya ortam değişkenlerinden yüklemek için
         // properties nesnesini burada tanımlayın ve yükleyin
@@ -85,20 +47,34 @@ configure<LibraryExtension> {
         buildConfigField("String", "TMDB_SECRET_API", "\"${properties.getProperty("TMDB_SECRET_API") ?: ""}\"")
     }
 
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17 // Kotlin 1.8.x ve Gradle 8+ için genellikle 17 idealdir
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
-    }
-
     buildFeatures {
         buildConfig = true // Bu satırın olduğundan emin olun
     }
 
-    packaging { // packagingOptions yerine 'packaging' kullanıldı
-        resources.excludes.add("META-INF/*.md")
-        resources.excludes.add("META-INF/*.txt")
-    }
+    // defaultConfig içinde tanımlandığı için bu bloğa gerek kalmadı
+    // buildTypes {
+    //     debug {
+    //         buildConfigField("String", "TMDB_SECRET_API", "\"${properties.getProperty("TMDB_SECRET_API") ?: ""}\"")
+    //     }
+    //     release {
+    //         buildConfigField("String", "TMDB_SECRET_API", "\"${properties.getProperty("TMDB_SECRET_API") ?: ""}\"")
+    //     }
+    // }
+}
+
+cloudstream {
+    authors       = listOf("GitLatte", "patr0nq", "keyiflerolsun")
+    language      = "tr"
+    description = "powerboard`un sinema arşivi"
+
+    /**
+     * Durum int'i aşağıdaki gibidir:
+     * 0: Kapalı
+     * 1: Tamam
+     * 2: Yavaş
+     * 3: Sadece Beta
+     **/
+    status  = 1 // belirtilmezse 3 olur
+    tvTypes = listOf("Movie")
+    iconUrl = "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png"
 }
