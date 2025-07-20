@@ -8,22 +8,22 @@ import org.gradle.api.JavaVersion
 // import java.util.Properties // Artık API anahtarlarını okumadığımız için bu import'a gerek kalmayabilir
 
 plugins {
-    // Bu plugin'ler, settings.gradle.kts veya ana build.gradle.kts dosyasında global olarak uygulanmadıysa
-    // yerel olarak uygulanır. 'com.android.library' ve 'kotlin-android' zaten root'taki subprojects tarafından uygulanmıştır.
-    // 'com.lagradost.cloudstream3.gradle' da root'taki subprojects tarafından uygulanmıştır.
-    // Bu nedenle, sadece bu modüle özgü ve global olarak uygulanmayan plugin'leri tutun.
+    // Cloudstream eklentisinin uzantılarını tanımak için bu plugin'leri açıkça ekliyoruz
+    // Bu plugin'ler genellikle root build.gradle.kts veya settings.gradle.kts'de global olarak uygulanır.
+    // Ancak, "Unresolved reference: internalName" hatasını çözmek için burada açıkça belirtiyoruz.
+    id("com.android.library") // Android kütüphane modülü için gerekli
+    id("com.lagradost.cloudstream3.gradle") // Cloudstream plugin'i
+    id("org.jetbrains.kotlin.android") // Kotlin Android plugin'i
     id("kotlin-parcelize")
     id("kotlin-kapt")
-    // 'com.android.library', 'com.lagradost.cloudstream3.gradle' ve 'org.jetbrains.kotlin.android'
-    // plugin'leri, muhtemelen global olarak uygulandıkları için buradan kaldırıldı.
 }
 
 // Kullanıcının verdiği versiyon numarası
 version = 41
 
 // Bu modül için cloudstream uzantısını yapılandırın
-// configure<CloudstreamExtension> sarmalayıcısı yerine extensions.configure kullanıldı
-extensions.configure<CloudstreamExtension> { // extensions.configure<CloudstreamExtension> yapısı kullanıldı
+// extensions.configure<CloudstreamExtension> yapısı kullanıldı
+extensions.configure<CloudstreamExtension> {
     // Kullanıcının verdiği değerler
     description = "The ultimate All-in-One home screen to access all of your extensions at one place (You need to select/deselect sections in Ultima's settings to load other extensions on home screen)"
     authors = listOf("RowdyRushya")
