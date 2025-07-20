@@ -14,6 +14,7 @@ plugins {
     // Assuming kotlin-parcelize and kotlin-kapt are not global:
     id("kotlin-parcelize")
     id("kotlin-kapt")
+    id("com.lagradost.cloudstream3.gradle") // <-- Bu satır eklendi
     // id("org.jetbrains.kotlin.android") // This is already applied by root subprojects, no need to apply again
 }
 
@@ -21,7 +22,7 @@ version = 3
 
 // Configure the cloudstream extension for this specific module
 configure<CloudstreamExtension> {
-    authors = listOf("moncrown") // Eklentinin yazarları
+    authors = listOf("mooncrown") // Eklentinin yazarları güncellendi
     language = "en" // Eklentinin desteklediği dil
     description = "A Cloudstream3 plugin for Portal API based IPTV services." // Eklentinin kısa açıklaması
 
