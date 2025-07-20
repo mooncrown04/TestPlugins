@@ -1,4 +1,4 @@
-package com.mooncrown // Kendi paket adınızı buraya yazın
+package com.moncrown // Yeni paket adınız buraya yazıldı
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.ExtractorApi
@@ -14,6 +14,16 @@ import java.net.URLEncoder
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
+import org.json.JSONObject // JSONObject import edildi
+import java.net.URL // URL import edildi
+import android.content.Context // Context import edildi
+import android.widget.EditText // EditText import edildi
+import android.widget.LinearLayout // LinearLayout import edildi
+import androidx.appcompat.app.AlertDialog // AlertDialog import edildi
+import androidx.core.content.edit // androidx.core.content.edit import edildi
+import com.lagradost.cloudstream3.CommonActivity.showToast // showToast import edildi
+import com.lagradost.cloudstream3.CommonActivity.currentActivity // currentActivity import edildi
+import com.lagradost.cloudstream3.R // R sınıfı import edildi
 
 // Cloudstream3 uzantısının ana sınıfı
 class PortalApiProvider : MainAPI() {
@@ -40,13 +50,12 @@ class PortalApiProvider : MainAPI() {
         macAddress = preferences.getString("mac_address", "") ?: ""
 
         // Ayarlar menüsüne ekleme
-        add  settings(context)
+        addSettings(context) // 'add settings' yerine 'addSettings' olarak düzeltildi
     }
 
     // Ayarlar menüsünü oluşturur
     private fun addSettings(context: Context) {
         addKey(R.string.portal_api_settings_key) { // R.string.portal_api_settings_key, strings.xml'de tanımlanmalı
-            val dialog = com.lagradost.cloudstream3.ui.settings.SettingsFragment.create
             // Dialog içinde ayar seçeneklerini oluşturun
             val builder = AlertDialog.Builder(context)
             builder.setTitle("Portal API Ayarları")
