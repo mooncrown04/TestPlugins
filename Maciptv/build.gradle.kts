@@ -10,6 +10,7 @@ import java.util.Properties
 plugins {
     id("kotlin-parcelize")
     id("kotlin-kapt")
+    id("org.jetbrains.kotlin.android") // Bu satır eklendi
 }
 
 version = 3
