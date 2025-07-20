@@ -100,9 +100,10 @@ configure<LibraryExtension> {
         sourceCompatibility = JavaVersion.VERSION_17 // Kotlin 1.8.x ve Gradle 8+ için genellikle 17 idealdir
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
-    }
+    // kotlinOptions bloğu buradan kaldırıldı
+    // kotlinOptions {
+    //     jvmTarget = JavaVersion.VERSION_17.toString()
+    // }
 
     packaging { // packagingOptions yerine 'packaging' kullanıldı
         resources.excludes.add("META-INF/*.md")
