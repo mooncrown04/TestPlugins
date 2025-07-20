@@ -5,17 +5,11 @@ import com.android.build.gradle.LibraryExtension
 import com.lagradost.cloudstream3.gradle.CloudstreamExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.gradle.api.JavaVersion
-import java.util.Properties // Bu satır zaten vardı, korunuyor
+import java.util.Properties
 
 plugins {
-    // Bu plugin'ler, settings.gradle.kts veya ana build.gradle.kts dosyasında global olarak uygulanmadıysa
-    // yerel olarak uygulanır. 'com.android.library' ve 'kotlin-android' zaten root'taki subprojects tarafından uygulanmıştır.
-    // 'com.lagradost.cloudstream3.gradle' da root'taki subprojects tarafından uygulanmıştır.
-    // Bu nedenle, sadece bu modüle özgü ve global olarak uygulanmayan plugin'leri tutun.
-    // kotlin-parcelize ve kotlin-kapt'ın global olmadığını varsayarak:
     id("kotlin-parcelize")
     id("kotlin-kapt")
-    // id("org.jetbrains.kotlin.android") // Bu zaten root subprojects tarafından uygulanmıştır, tekrar uygulamaya gerek yok
 }
 
 version = 3
@@ -36,7 +30,8 @@ configure<CloudstreamExtension> {
     status = 1 // belirtilmezse 3 olur
     tvTypes = listOf("Live", "Movie") // Desteklenen TV türleri güncellendi
     iconUrl = "https://raw.githubusercontent.com/Zerk1903/zerkfilm/refs/heads/main/Maciptv.png" // İkon URL'si güncellendi
-    internalName = "Maciptv" // internalName'i buraya taşıdık
+    // internalName = "Maciptv" // Bu satır kaldırıldı, çünkü "Unresolved reference" hatasına neden oluyordu.
+                               // Genellikle plugin id'sinden veya modül adından otomatik olarak türetilir.
 }
 
 dependencies {
