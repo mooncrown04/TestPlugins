@@ -12,12 +12,18 @@ plugins {
     // yerel olarak uygulanır. 'com.android.library' ve 'kotlin-android' zaten root'taki subprojects tarafından uygulanmıştır.
     // 'com.lagradost.cloudstream3.gradle' da root'taki subprojects tarafından uygulanmıştır.
     // Bu nedenle, sadece bu modüle özgü ve global olarak uygulanmayan plugin'leri tutun.
-    id("kotlin-parcelize")
+     id("cloudstream-plugin")
+     id("kotlin-parcelize")
     id("kotlin-kapt")
     // 'com.android.library', 'com.lagradost.cloudstream3.gradle' ve 'org.jetbrains.kotlin.android'
     // plugin'leri, muhtemelen global olarak uygulandıkları için buradan kaldırıldı.
 }
-
+cloudstream {
+    language.set("tr")
+    description.set("Ultima eklentisi")
+    authors.set(listOf("senin_adin"))
+    internalName.set("Ultima")
+}
 // Kullanıcının verdiği versiyon numarası
 version = 41
 
