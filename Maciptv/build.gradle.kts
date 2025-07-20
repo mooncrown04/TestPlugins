@@ -11,7 +11,7 @@ plugins {
     // Android kütüphane modülü için gerekli temel plugin
     id("com.android.library")
     // Kotlin Android projeleri için gerekli
-    id("org.jetbrains.kotlin.android") // BU SATIR EKLENDİ!
+    id("org.jetbrains.kotlin.android")
     // Cloudstream eklenti API'sini kullanmak için gerekli plugin
     id("com.lagradost.cloudstream3.gradle")
     id("kotlin-parcelize")
@@ -21,7 +21,8 @@ plugins {
 version = 3
 
 // Bu modül için cloudstream uzantısını yapılandırın
-configure<CloudstreamExtension> {
+// configure<CloudstreamExtension> yerine the<CloudstreamExtension>().apply kullanıldı
+the<CloudstreamExtension>().apply {
     authors = listOf("GitLatte", "patr0nq", "keyiflerolsun") // Yazar listesini güncelleyin
     language = "tr" // Dil
     description = "Maciptv için Cloudstream eklentisi" // Eklentinin açıklaması
