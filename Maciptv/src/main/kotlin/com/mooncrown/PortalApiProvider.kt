@@ -1,4 +1,4 @@
-package com.moncrown // Yeni paket adınız buraya yazıldı
+package com.mooncrown // Yeni paket adınız buraya yazıldı
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.ExtractorApi
