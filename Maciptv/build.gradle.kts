@@ -8,11 +8,8 @@ import org.gradle.api.JavaVersion
 import java.util.Properties // Bu satırı ekleyin
 
 plugins {
-    // Bu plugin'ler, settings.gradle.kts veya ana build.gradle.kts dosyasında global olarak uygulanmadıysa
-    // yerel olarak uygulanır. 'com.android.library' ve 'kotlin-android' zaten root'taki subprojects tarafından uygulanmıştır.
-    // 'com.lagradost.cloudstream3.gradle' da root'taki subprojects tarafından uygulanmıştır.
-    // Bu nedenle, sadece bu modüle özgü ve global olarak uygulanmayan plugin'leri tutun.
-    // kotlin-parcelize ve kotlin-kapt'ın global olmadığını varsayarak:
+    // Cloudstream eklenti API'sini kullanmak için gerekli plugin
+    id("com.lagradost.cloudstream3.gradle") // BU SATIR EKLENDİ!
     id("kotlin-parcelize")
     id("kotlin-kapt")
     // id("org.jetbrains.kotlin.android") // Bu zaten root subprojects tarafından uygulanmıştır, tekrar uygulamaya gerek yok
