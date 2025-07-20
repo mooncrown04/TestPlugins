@@ -21,8 +21,8 @@ plugins {
 version = 3
 
 // Cloudstream uzantısını bu modül için yapılandırın
-// configure<CloudstreamExtension> { ... } yapısı geri getirildi
-configure<CloudstreamExtension> {
+// project.extensions.configure<CloudstreamExtension>("cloudstream") yapısı kullanıldı
+project.extensions.configure<CloudstreamExtension>("cloudstream") {
     authors = listOf("mooncrown") // Eklentinin yazarları güncellendi
     language = "en" // Eklentinin desteklediği dil
     description = "A Cloudstream3 plugin for Portal API based IPTV services." // Eklentinin kısa açıklaması
