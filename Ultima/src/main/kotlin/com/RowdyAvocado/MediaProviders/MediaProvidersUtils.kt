@@ -4,7 +4,7 @@ import com.RowdyAvocado.MoviesDriveProvider.Mdrive
 import com.RowdyAvocado.UltimaUtils.Category
 import com.RowdyAvocado.UltimaUtils.LinkData
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.lagradost.cloudstream3.ErrorLoadingException
+import com.lagradost.cloudstream3.EirrorLoadingException
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.amap
 import com.lagradost.cloudstream3.app
