@@ -29,14 +29,7 @@ class UltimaPlugin : Plugin() {
         // All providers should be added in this manner
         registerMainAPI(Ultima(this))
 
-        UltimaStorageManager.currentMetaProviders.forEach { metaProvider ->
-            when (metaProvider.first) {                
-                "AniList" -> if (metaProvider.second) registerMainAPI(AniList(this))     
-                "TMDB" -> if (metaProvider.second) registerMainAPI(Tmdb(this))
-                "Trakt" -> if (metaProvider.second) registerMainAPI(Trakt(this))
-                else -> {}
-            }
-        }
+  
 
         openSettings = {
             val frag = UltimaSettings(this)
