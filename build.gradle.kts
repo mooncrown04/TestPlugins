@@ -1,3 +1,21 @@
+// build.gradle.kts (Projenizin kök dizininde)
+
+// Tüm alt projelere uygulanacak genel yapılandırmalar
+subprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven("https://jitpack.io") // Cloudstream plugin'i için JitPack deposu
+        maven("https://maven.pkg.github.com/LagradOst/CloudStream-Releases/") // Cloudstream'in release deposu
+    }
+
+    // Tüm alt projelere uygulanacak plugin'ler
+    // Cloudstream plugin'i, Android kütüphane ve Kotlin Android plugin'i
+    apply(plugin = "com.android.library")
+    apply(plugin = "com.lagradost.cloudstream3.gradle")
+    apply(plugin = "org.jetbrains.kotlin.android")
+}
+
 import com.android.build.gradle.BaseExtension
 import com.lagradost.cloudstream3.gradle.CloudstreamExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
