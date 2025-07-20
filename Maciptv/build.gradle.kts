@@ -1,4 +1,4 @@
-// TestPlugins/src/Maciptv/build.gradle.kts
+// src/Maciptv/build.gradle.kts
 
 // Yapılandırma blokları için gerekli uzantıları import edin
 import com.android.build.gradle.LibraryExtension
