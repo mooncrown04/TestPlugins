@@ -1,6 +1,6 @@
 package com.RowdyAvocado
 
-import com.RowdyAvocado.UltimaUtils.SectionInfo
+
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.lagradost.cloudstream3.APIHolder.allProviders
 import com.lagradost.cloudstream3.ErrorLoadingException
