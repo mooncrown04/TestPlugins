@@ -8,18 +8,18 @@ import org.gradle.api.JavaVersion
 import java.util.Properties
 
 plugins {
+    id("org.jetbrains.kotlin.android") // Bu satır en üste taşındı
     id("kotlin-parcelize")
     id("kotlin-kapt")
-    id("org.jetbrains.kotlin.android") // Bu satır eklendi
 }
 
 version = 3
 
 // Bu modül için cloudstream uzantısını yapılandırın
 configure<CloudstreamExtension> {
-    authors = listOf("mooncrown04", "GitLatte", "patr0nq", "keyiflerolsun") // Yazar bilgileri güncellendi
+    authors = listOf("mooncrown04", "GitLatte", "patr0nq", "keyiflerolsun")
     language = "tr"
-    description = "powerboard`un Maciptv arşivi" // Açıklama güncellendi
+    description = "powerboard`un Maciptv arşivi"
 
     /**
      * Durum int'i aşağıdaki gibidir:
@@ -29,8 +29,8 @@ configure<CloudstreamExtension> {
      * 3: Sadece Beta
      **/
     status = 1 // belirtilmezse 3 olur
-    tvTypes = listOf("Live", "Movie") // Desteklenen TV türleri güncellendi
-    iconUrl = "https://raw.githubusercontent.com/Zerk1903/zerkfilm/refs/heads/main/Maciptv.png" // İkon URL'si güncellendi
+    tvTypes = listOf("Live", "Movie")
+    iconUrl = "https://raw.githubusercontent.com/Zerk1903/zerkfilm/refs/heads/main/Maciptv.png"
     // internalName = "Maciptv" // Bu satır kaldırıldı, çünkü "Unresolved reference" hatasına neden oluyordu.
                                // Genellikle plugin id'sinden veya modül adından otomatik olarak türetilir.
 }
@@ -38,6 +38,14 @@ configure<CloudstreamExtension> {
 // JVM Toolchain'i Kotlin derlemesi için ayarla
 kotlin {
     jvmToolchain(17) // Tüm Kotlin görevleri için Java 17 kullanılmasını sağlar
+}
+
+// KAPT için özel JVM hedefi ayarı
+kapt {
+    // KAPT'ın Java 17'yi kullanmasını sağlamak için jvmTarget'ı açıkça ayarla
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17.toString()
+    }
 }
 
 dependencies {
