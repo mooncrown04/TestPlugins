@@ -2,7 +2,7 @@
 
 // Configure the android extension for this specific module
 import com.android.build.gradle.LibraryExtension
-import com.lagradost.cloudstream3.gradle.CloudstreamExtension
+import com.lagradost.cloudstream3.gradle.CloudstreamExtension // Bu import hala gerekli
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.gradle.api.JavaVersion
 
@@ -20,8 +20,9 @@ plugins {
 
 version = 3
 
-// Configure the cloudstream extension for this specific module
-configure<CloudstreamExtension> {
+// Cloudstream uzantısını bu modül için yapılandırın
+// configure<CloudstreamExtension> { ... } yerine doğrudan 'cloudstream { ... }' bloğu kullanıldı
+cloudstream {
     authors = listOf("mooncrown") // Eklentinin yazarları güncellendi
     language = "en" // Eklentinin desteklediği dil
     description = "A Cloudstream3 plugin for Portal API based IPTV services." // Eklentinin kısa açıklaması
@@ -71,7 +72,7 @@ dependencies {
 // Configure the android extension for this specific module
 configure<LibraryExtension> {
     compileSdk = 34 // Genellikle en son stabil versiyonu kullanın
-    namespace = "com.moncrown" // Maciptv'nin doğru paket adı
+    namespace = "com.mooncrown" // Maciptv'nin doğru paket adı
 
     defaultConfig {
         minSdk = 21 // Cloudstream için minimum desteklenen SDK
