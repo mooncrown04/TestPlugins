@@ -22,8 +22,8 @@ plugins {
 version = 41
 
 // Bu modül için cloudstream uzantısını yapılandırın
-// configure<CloudstreamExtension> sarmalayıcısı geri getirildi
-configure<CloudstreamExtension> { // configure<CloudstreamExtension> yapısı kullanıldı
+// configure<CloudstreamExtension> sarmalayıcısı yerine extensions.configure kullanıldı
+extensions.configure<CloudstreamExtension> { // extensions.configure<CloudstreamExtension> yapısı kullanıldı
     // Kullanıcının verdiği değerler
     description = "The ultimate All-in-One home screen to access all of your extensions at one place (You need to select/deselect sections in Ultima's settings to load other extensions on home screen)"
     authors = listOf("RowdyRushya")
@@ -32,7 +32,7 @@ configure<CloudstreamExtension> { // configure<CloudstreamExtension> yapısı ku
     requiresResources = true
     language = "en"
     iconUrl = "https://raw.githubusercontent.com/Rowdy-Avocado/Rowdycado-Extensions/master/logos/ultima.png"
-    internalName = "Ultima" // internalName, configure<CloudstreamExtension> bloğunun içinde
+    internalName = "Ultima" // internalName, extensions.configure<CloudstreamExtension> bloğunun içinde
 }
 
 dependencies {
