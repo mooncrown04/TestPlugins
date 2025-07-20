@@ -16,6 +16,10 @@ rootProject.name = "CloudstreamPlugins"
 // Bu dosya, hangi projelerin dahil edildiğini ayarlar.
 // Tüm yeni projeler, "disabled" değişkeninde belirtilmedikçe otomatik olarak dahil edilmelidir.
 
+// Otomatik dahil etme bloğunu yorumladık, çünkü manuel include kullanılıyor.
+// Eğer otomatik dahil etmeyi kullanmak isterseniz, aşağıdaki yorumları kaldırın
+// ve manuel include satırını yorumlayın.
+/*
 val disabled = listOf<String>()
 
 File(rootDir, ".").eachDir { dir ->
@@ -27,6 +31,8 @@ File(rootDir, ".").eachDir { dir ->
 fun File.eachDir(block: (File) -> Unit) {
     listFiles()?.filter { it.isDirectory }?.forEach { block(it) }
 }
+*/
 
 // Yalnızca tek bir projeyi dahil etmek için, önceki satırları (ilk hariç) yorumlayın ve eklentinizi şöyle dahil edin:
-include(":Maciptv",":dizi",":Pornhub",":Sinema")
+// Modüllerin src klasörü altında olduğunu belirterek yolları güncelledik.
+include(":src:Maciptv",":src:dizi",":src:Pornhub",":src:Sinema")
