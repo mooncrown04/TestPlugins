@@ -8,14 +8,14 @@ import org.gradle.api.JavaVersion
 // import java.util.Properties // Artık API anahtarlarını okumadığımız için bu import'a gerek kalmayabilir
 
 plugins {
-    // Bu plugin'ler, settings.gradle.kts veya ana build.gradle.kts dosyasında global olarak uygulanmadıysa
-    // yerel olarak uygulanır. 'com.android.library' ve 'kotlin-android' zaten root'taki subprojects tarafından uygulanmıştır.
-    // 'com.lagradost.cloudstream3.gradle' da root'taki subprojects tarafından uygulanmıştır.
-    // Bu nedenle, sadece bu modüle özgü ve global olarak uygulanmayan plugin'leri tutun.
+    // Cloudstream eklentisinin uzantılarını tanımak için bu plugin'leri açıkça ekliyoruz
+    // Bu plugin'ler genellikle root build.gradle.kts veya settings.gradle.kts'de global olarak uygulanır.
+    // Ancak, Ultima modülünüzde "Unresolved reference: internalName" hatasını çözmek için burada açıkça belirtiyoruz.
+    id("com.android.library") // Android kütüphane modülü için gerekli
+    id("com.lagradost.cloudstream3.gradle") // Cloudstream plugin'i
+    id("org.jetbrains.kotlin.android") // Kotlin Android plugin'i
     id("kotlin-parcelize")
     id("kotlin-kapt")
-    // 'com.android.library', 'com.lagradost.cloudstream3.gradle' ve 'org.jetbrains.kotlin.android'
-    // plugin'leri, muhtemelen global olarak uygulandıkları için buradan kaldırıldı.
 }
 
 // Kullanıcının verdiği versiyon numarası
