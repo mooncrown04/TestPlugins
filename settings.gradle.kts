@@ -34,6 +34,4 @@ fun File.eachDir(block: (File) -> Unit) {
 */
 
 // Yalnızca tek bir projeyi dahil etmek için, önceki satırları (ilk hariç) yorumlayın ve eklentinizi şöyle dahil edin:
-// Modüllerin src klasörü altında olduğunu belirten öneki kaldırdık, çünkü settings.gradle.kts zaten src klasörünün içinde.
-include(":app")
-include(":Maciptv",":dizi",":Pornhub",":Sinema")
+//include(":Maciptv",":dizi",":Pornhub",":Sinema")
