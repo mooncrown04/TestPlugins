@@ -1,15 +1,4 @@
-// settings.gradle.kts
 
-pluginManagement {
-    repositories {
-        gradlePluginPortal() // Gradle'ın kendi plugin portalı
-        mavenCentral()       // Yaygın Maven deposu
-        google()             // Google'ın Android için deposu
-        maven("https://jitpack.io") // JitPack, Cloudstream'in bazı bağımlılıklarını barındırabilir
-        // Cloudstream'in kendi plugin deposu: BU ÇOK ÖNEMLİ!
-        maven("https://maven.pkg.github.com/LagradOst/CloudStream-Releases/")
-    }
-}
 
 rootProject.name = "CloudstreamPlugins"
 
