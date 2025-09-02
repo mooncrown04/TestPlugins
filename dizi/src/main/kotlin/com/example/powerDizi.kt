@@ -16,7 +16,7 @@ import java.net.URLEncoder
 
 class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl             = "https://raw.githubusercontent.com/emrcxcx/test/refs/heads/main/dizifun.m3u"
-    override var name                = "A Dizi 🎬"
+    override var name                = "A Dizi "
     override val hasMainPage         = true
     override var lang                = "tr"
     override val hasQuickSearch      = true
