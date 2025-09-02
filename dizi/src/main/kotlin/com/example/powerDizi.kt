@@ -15,7 +15,7 @@ import java.net.URL
 import java.net.URLEncoder
 
 class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
-    override var mainUrl             = "https://raw.githubusercontent.com/Zerk1903/zerkfilm/refs/heads/main/Diziler.m3u"
+    override var mainUrl             = "https://raw.githubusercontent.com/emrcxcx/test/refs/heads/main/dizifun.m3u"
     override var name                = "powerboard Dizi 🎬"
     override val hasMainPage         = true
     override var lang                = "tr"
