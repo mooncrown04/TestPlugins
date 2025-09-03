@@ -114,7 +114,7 @@ public fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
                     LoadData(streamurl, channelname, posterurl, "#", nation, kanal.season, kanal.episode).toJson(),
                     type = TvType.TvSeries
                 ) {
-                    this.posterUrl = posterurl
+                    this.posterUrl = loadData.poster
                     this.lang = nation
                 }
             }
