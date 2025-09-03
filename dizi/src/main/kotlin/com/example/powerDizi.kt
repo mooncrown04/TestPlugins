@@ -1,4 +1,4 @@
-package com.sinetech.latte
+package com.example
 
 import android.content.SharedPreferences
 import android.util.Log
