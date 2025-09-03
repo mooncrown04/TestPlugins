@@ -223,6 +223,13 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         // Dizi adını temizle - hem "Dizi-1.Sezon" hem de "Dizi 1. Sezon" formatlarını destekler
         val (cleanTitle, loadDataSeason, loadDataEpisode) = parseEpisodeInfo(loadData.title)
         val (seriesData, episodeData) = fetchTMDBData(cleanTitle, loadData.season, loadData.episode)
+
+        val tmdbPosterPath = seriesData?.optString("poster_path", "")
+        val tmdbPosterUrl = if (tmdbPosterPath?.isNotEmpty() == true) {
+            "https://image.tmdb.org/t/p/w500$tmdbPosterPath"
+        } else {
+            null
+        }
         
         val plot = buildString {
             if (seriesData != null) {
@@ -375,13 +382,6 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 }
             }
         ) {
-            val tmdbPosterPath = seriesData?.optString("poster_path", "")
-            val tmdbPosterUrl = if (tmdbPosterPath?.isNotEmpty() == true) {
-                "https://image.tmdb.org/t/p/w500$tmdbPosterPath"
-            } else {
-                null
-            }
-            
             this.posterUrl = tmdbPosterUrl ?: loadData.poster
             this.plot = plot
             this.tags = listOf(loadData.group, loadData.nation)
@@ -583,19 +583,16 @@ class IptvPlaylistParser {
 
     private fun String.getAttributes(): Map<String, String> {
         val extInfRegex = Regex("(#EXTINF:.?[0-9]+)", RegexOption.IGNORE_CASE)
-        val attributesString = replace(extInfRegex, "").replaceQuotesAndTrim()
-        val titleAndAttributes = attributesString.split(",", limit = 2)
+        val attributesString = replace(extInfRegex, "").replaceQuotesAndTrim().split(",").first()
         
         val attributes = mutableMapOf<String, String>()
-        if (titleAndAttributes.size > 1) {
-            val attrRegex = Regex("([\\w-]+)=\"([^\"]*)\"|([\\w-]+)=([^\"]+)")
-            
-            attrRegex.findAll(titleAndAttributes[0]).forEach { matchResult ->
-                val (quotedKey, quotedValue, unquotedKey, unquotedValue) = matchResult.destructured
-                val key = quotedKey.takeIf { it.isNotEmpty() } ?: unquotedKey
-                val value = quotedValue.takeIf { it.isNotEmpty() } ?: unquotedValue
-                attributes[key] = value.replaceQuotesAndTrim()
-            }
+        val attrRegex = Regex("([\\w-]+)=\"([^\"]*)\"|([\\w-]+)=([^\"]+)")
+        
+        attrRegex.findAll(attributesString).forEach { matchResult ->
+            val (quotedKey, quotedValue, unquotedKey, unquotedValue) = matchResult.destructured
+            val key = quotedKey.takeIf { it.isNotEmpty() } ?: unquotedKey
+            val value = quotedValue.takeIf { it.isNotEmpty() } ?: unquotedValue
+            attributes[key] = value.replaceQuotesAndTrim()
         }
 
         if (!attributes.containsKey("tvg-country")) {
@@ -605,6 +602,7 @@ class IptvPlaylistParser {
             attributes["tvg-language"] = "TR/Altyazılı"
         }
         if (!attributes.containsKey("group-title")) {
+            val titleAndAttributes = this.split(",", limit = 2)
             val (cleanTitle, _, _) = parseEpisodeInfo(titleAndAttributes.last())
             attributes["group-title"] = cleanTitle
         }
