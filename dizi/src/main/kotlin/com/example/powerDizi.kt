@@ -7,7 +7,6 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import java.io.InputStream
-import com.example.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -17,47 +16,32 @@ import java.net.URLEncoder
 // İki farklı formatı işleyebilen yardımcı fonksiyon
 // Erişim belirleyici private'dan public'e değiştirildi
 fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
-    // Birinci format için regex: "Dizi Adı-Sezon. Sezon Bölüm. Bölüm(Ek Bilgi)"
-    val format1Regex = Regex("""(.*?)[^\w\d]+(\d+)\.\s*Sezon\s*(\d+)\.\s*Bölüm.*""")
+    // Farklı formatlar için düzenli ifadeler
+    val regexes = listOf(
+        Regex("""(.*?)\s*Sezon\s*(\d+)\s*Bölüm\s*(\d+).*""", RegexOption.IGNORE_CASE), // Dizi Adı Sezon X Bölüm Y
+        Regex("""(.*?)\s*S(\d+)E(\d+).*""", RegexOption.IGNORE_CASE), // Dizi Adı SXXEXX
+        Regex("""(.*?)\s*-?\s*(\d+)\.\s*Sezon\s*(\d+)\.\s*Bölüm.*""", RegexOption.IGNORE_CASE), // Dizi Adı-1. Sezon 1. Bölüm
+        Regex("""(.*?)\s*(\d+)x(\d+).*""", RegexOption.IGNORE_CASE) // Dizi Adı 1x1
+    )
 
-    // İkinci format için regex: "Dizi Adı sXXeYY"
-    val format2Regex = Regex("""(.*?)\s*s(\d+)e(\d+)""")
-
-    // Üçüncü ve en önemli format için regex: "Dizi Adı Sezon X Bölüm Y"
-    val format3Regex = Regex("""(.*?)\s*Sezon\s*(\d+)\s*Bölüm\s*(\d+).*""")
-
-    // Formatları sırayla deniyoruz
-    val matchResult1 = format1Regex.find(text)
-    if (matchResult1 != null) {
-        val (title, seasonStr, episodeStr) = matchResult1.destructured
-        val season = seasonStr.toIntOrNull()
-        val episode = episodeStr.toIntOrNull()
-        return Triple(title.trim(), season, episode)
+    // Regex'leri sırayla deneyerek eşleşeni bul
+    for (regex in regexes) {
+        val matchResult = regex.find(text)
+        if (matchResult != null) {
+            val (title, seasonStr, episodeStr) = matchResult.destructured
+            val season = seasonStr.toIntOrNull()
+            val episode = episodeStr.toIntOrNull()
+            return Triple(title.trim(), season, episode)
+        }
     }
 
-    val matchResult2 = format2Regex.find(text)
-    if (matchResult2 != null) {
-        val (title, seasonStr, episodeStr) = matchResult2.destructured
-        val season = seasonStr.toIntOrNull()
-        val episode = episodeStr.toIntOrNull()
-        return Triple(title.trim(), season, episode)
-    }
-
-    val matchResult3 = format3Regex.find(text)
-    if (matchResult3 != null) {
-        val (title, seasonStr, episodeStr) = matchResult3.destructured
-        val season = seasonStr.toIntOrNull()
-        val episode = episodeStr.toIntOrNull()
-        return Triple(title.trim(), season, episode)
-    }
-
-    // Hiçbir format eşleşmezse, orijinal başlığı ve null değerleri döndür.
+    // Hiçbir format eşleşmezse, orijinal başlığı ve null değerlerini döndür.
     return Triple(text.trim(), null, null)
 }
 
 class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://raw.githubusercontent.com/GitLatte/patr0n/site/lists/power-yabanci-dizi.m3u"
-    override var name = "A-B Dizi 🎬"
+    override var name = "A-B -C Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -152,9 +136,10 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     private suspend fun fetchTMDBData(title: String, season: Int, episode: Int): Pair<JSONObject?, JSONObject?> {
         return withContext(Dispatchers.IO) {
             try {
-                val apiKey = BuildConfig.TMDB_SECRET_API.trim('"')
-                if (apiKey.isEmpty()) {
-                    Log.e("TMDB", "API key is empty")
+                // TMDB API anahtarını doğrudan buraya yerleştir
+                val apiKey = "Lütfen_TMDB_API_Anahtarınızı_Buraya_Giriniz".trim('"')
+                if (apiKey.isEmpty() || apiKey == "Lütfen_TMDB_API_Anahtarınızı_Buraya_Giriniz") {
+                    Log.e("TMDB", "API key is empty. Please enter your TMDB API key.")
                     return@withContext Pair(null, null)
                 }
 
