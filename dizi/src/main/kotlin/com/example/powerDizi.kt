@@ -106,8 +106,10 @@ alphabeticGroups["#"]?.let { shows ->
 val searchResponses = shows.distinctBy { it.title }.map { kanal ->
 val streamurl = kanal.url.toString()
 val channelname = kanal.title.toString()
-val posterurl = kanal.attributes["tvg-logo"].toString()
-val nation = kanal.attributes["tvg-country"].toString()
+//val posterurl = kanal.attributes["tvg-logo"].toString()
+val posterurl = kanal.attributes["tvg-logo"]?.replace("http://", "https://") ?: "https://i.imgur.com/placeholder.png"
+
+    val nation = kanal.attributes["tvg-country"].toString()
 
 newLiveSearchResponse(
 channelname,
@@ -128,7 +130,9 @@ alphabeticGroups["0-9"]?.let { shows ->
 val searchResponses = shows.distinctBy { it.title }.map { kanal ->
 val streamurl = kanal.url.toString()
 val channelname = kanal.title.toString()
-val posterurl = kanal.attributes["tvg-logo"].toString()
+//val posterurl = kanal.attributes["tvg-logo"].toString()
+val posterurl = kanal.attributes["tvg-logo"]?.replace("http://", "https://") ?: "https://i.imgur.com/placeholder.png"
+
 val nation = kanal.attributes["tvg-country"].toString()
 
 newLiveSearchResponse(
@@ -151,8 +155,10 @@ if (letter != "#" && letter != "0-9") {
 val searchResponses = shows.distinctBy { it.title }.map { kanal ->
 val streamurl = kanal.url.toString()
 val channelname = kanal.title.toString()
-val posterurl = kanal.attributes["tvg-logo"].toString()
-val nation = kanal.attributes["tvg-country"].toString()
+//val posterurl = kanal.attributes["tvg-logo"].toString()
+val posterurl = kanal.attributes["tvg-logo"]?.replace("http://", "https://") ?: "https://i.imgur.com/placeholder.png"
+
+    val nation = kanal.attributes["tvg-country"].toString()
 
 newLiveSearchResponse(
 channelname,
@@ -182,8 +188,10 @@ return kanallar.items.filter { it.title.toString().lowercase().contains(query.lo
 
 val streamurl = kanal.url.toString()
 val channelname = kanal.title.toString()
-val posterurl = kanal.attributes["tvg-logo"].toString()
-val chGroup = kanal.attributes["group-title"].toString()
+//val posterurl = kanal.attributes["tvg-logo"].toString()
+val posterurl = kanal.attributes["tvg-logo"]?.replace("http://", "https://") ?: "https://i.imgur.com/placeholder.png"
+
+    val chGroup = kanal.attributes["group-title"].toString()
 val nation = kanal.attributes["tvg-country"].toString()
 
 // parseEpisodeInfo'yu kullanarak sezon ve bölüm bilgilerini çek
@@ -566,7 +574,8 @@ this.season = season
 
 this.episode = episode
 
-this.posterUrl = kanal.attributes["tvg-logo"].toString()
+//this.posterUrl = kanal.attributes["tvg-logo"].toString()
+this.posterurl = kanal.attributes["tvg-logo"]?.replace("http://", "https://") ?: "https://i.imgur.com/placeholder.png"
 
 // Eğer 'runTime' özelliği varsa ve kullanmak isterseniz:
 
