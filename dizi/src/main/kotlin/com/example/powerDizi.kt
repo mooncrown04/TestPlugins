@@ -444,7 +444,7 @@ public fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
             val match = episodeRegex.find(title)
             if (match != null) {
                 val (_, season, episode) = match.destructured
-                Episode(
+                newEpisode(
                     episode = episode.toInt(),
                     season = season.toInt(),
                     name = title,  // Bölüm başlığını ekle
