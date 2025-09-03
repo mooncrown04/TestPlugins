@@ -108,15 +108,35 @@ public fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
                 val channelname = kanal.title.toString()
                 val posterurl = kanal.attributes["tvg-logo"].toString()
                 val nation = kanal.attributes["tvg-country"].toString()
+// Eski kod (biraz daha karmaşık)
+/*
+newLiveSearchResponse(
+    channelname,
+    LoadData(...).toJson(),
+    type = TvType.TvSeries
+) {
+    this.posterUrl = posterurl
+    this.lang = nation
+}
+*/
 
-                newLiveSearchResponse(
-                    channelname,
-                    LoadData(streamurl, channelname, posterurl, "#", nation, kanal.season, kanal.episode).toJson(),
-                    type = TvType.TvSeries
-                ) {
-                    this.posterUrl = loadData.poster
-                    this.lang = nation
-                }
+
+// Yeni kod (daha basit ve daha güvenilir)
+newLiveSearchResponse(
+    name = channelname,
+    url = LoadData(streamurl, channelname, posterurl, letter, nation, kanal.season, kanal.episode).toJson(),
+    type = TvType.TvSeries,
+    posterUrl = posterurl // Poster URL'sini doğrudan parametre olarak gönderiyoruz
+)
+
+
+
+
+
+
+
+
+
             }
             if (searchResponses.isNotEmpty()) {
                 homePageLists.add(HomePageList("# Özel Karakterle Başlayanlar", searchResponses, isHorizontalImages = false))
