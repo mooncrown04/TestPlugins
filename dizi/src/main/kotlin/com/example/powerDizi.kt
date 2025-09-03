@@ -437,29 +437,35 @@ public fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
             }
         }
 
-        // Mevcut diziyi bul ve bölümlerini topla
-        val currentShowTitle = loadData.title.replace(Regex("""\s*\d+\.\s*Sezon\s*\d+\.\s*Bölüm.*"""), "").trim()
-        val currentShowEpisodes = allShows[currentShowTitle]?.mapNotNull { kanal ->
-            val title = kanal.title.toString()
-            val match = episodeRegex.find(title)
-            if (match != null) {
-                val (_, season, episode) = match.destructured
-                newEpisode(
-                    episode = episode.toInt(),
-                    season = season.toInt(),
-                    name = title,  // Bölüm başlığını ekle
-                    data = LoadData(
-                        kanal.url.toString(),
-                        title,
-                        kanal.attributes["tvg-logo"].toString(),
-                        kanal.attributes["group-title"].toString(),
-                        kanal.attributes["tvg-country"]?.toString() ?: "TR",
-                        season.toInt(),
-                        episode.toInt()
-                    ).toJson()
-                )
-            } else null
-        }?.sortedWith(compareBy({ it.season }, { it.episode })) ?: emptyList()
+    
+// Mevcut diziyi bul ve bölümlerini topla
+
+val currentShowEpisodes = allShows[currentShowCleanTitle]?.mapNotNull { kanal ->
+
+val (episodeCleanTitle, season, episode) = parseEpisodeInfo(kanal.title.toString())
+
+if (season != null && episode != null) {
+val episodeDataJson = LoadData(
+kanal.url.toString(),
+episodeCleanTitle,
+kanal.attributes["tvg-logo"].toString(),
+kanal.attributes["group-title"].toString(),
+kanal.attributes["tvg-country"]?.toString() ?: "TR",
+season,
+episode).toJson()
+
+// BURAYI GÜNCELLEDİK!
+newEpisode(episodeDataJson) { // URL/data parametresini ilk sıraya koyduk
+this.name = episodeCleanTitle
+this.season = season
+this.episode = episode
+this.posterUrl = kanal.attributes["tvg-logo"].toString()
+// Eğer 'runTime' özelliği varsa ve kullanmak isterseniz:
+// this.runTime = ...
+}
+} else null
+}?.sortedWith(compareBy({ it.season }, { it.episode })) ?: emptyList()
+sortedWith(compareBy({ it.season }, { it.episode })) ?: emptyList()
 
         return newTvSeriesLoadResponse(
             currentShowTitle,
