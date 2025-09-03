@@ -189,7 +189,6 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val loadData = fetchDataFromUrlOrJson(url)
         val (cleanTitle, _, _) = IptvParserUtils.parseEpisodeInfo(loadData.title)
         
-        // Poster URL'sini kontrol et
         val initialPosterUrl = loadData.poster
         val tmdbPosterUrl: String?
 
@@ -212,7 +211,6 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         }
         
         val plot = buildString {
-            // TMDB verisi varsa detayları ekle
             val (seriesData, episodeData) = if (tmdbPosterUrl != null) {
                 fetchTMDBData(cleanTitle, loadData.season, loadData.episode)
             } else {
@@ -566,6 +564,12 @@ class IptvPlaylistParser {
             attributes[key] = value.replaceQuotesAndTrim()
         }
 
+        // Poster URL'sini almak için daha esnek bir yaklaşım
+        val posterKeys = listOf("tvg-logo", "logo", "group-title")
+        val posterUrl = posterKeys.firstNotNullOfOrNull { attributes[it]?.takeIf { it.isNotEmpty() && it.isUrl() } }
+
+        attributes["tvg-logo"] = posterUrl ?: "http://yok"
+        
         if (!attributes.containsKey("tvg-country")) {
             attributes["tvg-country"] = "TR/Altyazılı"
         }
@@ -579,6 +583,10 @@ class IptvPlaylistParser {
         }
 
         return attributes
+    }
+    
+    private fun String.isUrl(): Boolean {
+        return this.startsWith("http://") || this.startsWith("https://")
     }
 }
 
