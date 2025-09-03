@@ -24,9 +24,6 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override val supportedTypes       = setOf(TvType.TvSeries)
 
 
-
-
-// İki farklı formatı işleyebilen yardımcı fonksiyon
 // Erişim belirleyici private'dan public'e değiştirildi
 public fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
     // Birinci format için regex: "Dizi Adı-Sezon. Sezon Bölüm. Bölüm(Ek Bilgi)"
