@@ -430,7 +430,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 }
             }
         ) {
-            this.posterUrl = loadData.poster
+            this.posterUrl = kanal.attributes["tvg-logo"].toString()
             this.plot = plot
             this.tags = listOf(loadData.group, loadData.nation)
         }
