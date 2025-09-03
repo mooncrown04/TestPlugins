@@ -498,6 +498,8 @@ this.posterUrl = kanal.attributes["tvg-logo"].toString()
 // this.runTime = ...
 }
 
+ )
+
 } else null
 
 }?.sortedWith(compareBy({ it.season }, { it.episode })) ?: emptyList()
