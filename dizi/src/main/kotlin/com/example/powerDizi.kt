@@ -383,8 +383,8 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 null
             }
             
-           // this.posterUrl = tmdbPosterUrl ?: loadData.poster
-              this.posterUrl = loadData.poster
+            this.posterUrl = tmdbPosterUrl ?: loadData.poster
+           
            this.plot = plot
             this.tags = listOf(loadData.group, loadData.nation)
         }
@@ -437,8 +437,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             return parseJson<LoadData>(data)
         } else {
             val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
-            val kanal = kanallar.items.first { it.url == data }
-            
+            val kanal = kanallar.items.first { it.url == data }            
             val streamurl = kanal.url.toString()
             val channelname = kanal.title.toString()
             val posterurl = kanal.attributes["tvg-logo"].toString()
