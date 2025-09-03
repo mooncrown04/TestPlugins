@@ -397,20 +397,21 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val match = episodeRegex.find(title)
             if (match != null) {
                 val (_, season, episode) = match.destructured
-       newEpisode(
-                    episode = episode.toInt(),
-                    season = season.toInt(),
-                    name = title,  // Bölüm başlığını ekle
-                    data = LoadData(
-                        kanal.url.toString(),
-                        title,
-                        kanal.attributes["tvg-logo"].toString(),
-                        kanal.attributes["group-title"].toString(),
-                        kanal.attributes["tvg-country"]?.toString() ?: "TR",
-                        season.toInt(),
-                        episode.toInt()
-                    ).toJson()
-                )
+      newEpisode(
+    LoadData(
+        kanal.url.toString(),
+        title,
+        kanal.attributes["tvg-logo"].toString(),
+        kanal.attributes["group-title"].toString(),
+        kanal.attributes["tvg-country"]?.toString() ?: "TR",
+        season.toInt(),
+        episode.toInt()
+    ).toJson()
+) {
+    this.episode = episode.toInt()
+    this.season = season.toInt()
+    this.name = title
+}
             } else null
         }?.sortedWith(compareBy({ it.season }, { it.episode })) ?: emptyList()
 
