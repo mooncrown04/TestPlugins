@@ -4,7 +4,7 @@ import android.content.SharedPreferences
 import android.util.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.utils.AppUtils.parseJson dizi ama kodu bu
+import com.lagradost.cloudstream3.utils.AppUtils.parseJson 
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import java.io.InputStream
 import com.example.BuildConfig
@@ -920,6 +920,41 @@ val languageMap = mapOf(
 "zh" to "Çince", // Genellikle Mandarin için kullanılır
 "hi" to "Hintçe",
 "ar" to "Arapça",
-// Avrupa Dilleri
 
-"nl" to "Felemenkçe", // veya "Hollanda
+    // Avrupa Dilleri
+    "nl" to "Felemenkçe", // veya "Hollandaca"
+    "sv" to "İsveççe",
+    "no" to "Norveççe",
+    "da" to "Danca",
+    "fi" to "Fince",
+    "pl" to "Lehçe", // veya "Polonyaca"
+    "cs" to "Çekçe",
+    "hu" to "Macarca",
+    "ro" to "Rumence",
+    "el" to "Yunanca", // Greek
+    "uk" to "Ukraynaca",
+    "bg" to "Bulgarca",
+    "sr" to "Sırpça",
+    "hr" to "Hırvatça",
+    "sk" to "Slovakça",
+    "sl" to "Slovence",
+
+    // Asya Dilleri
+    "th" to "Tayca",
+    "vi" to "Vietnamca",
+    "id" to "Endonezce",
+    "ms" to "Malayca",
+    "tl" to "Tagalogca", // Filipince
+    "fa" to "Farsça", // İran
+    "he" to "İbranice", // veya "iw"
+
+    // Diğer
+    "la" to "Latince",
+    "xx" to "Belirsiz",
+    "mul" to "Çok Dilli" 
+
+)
+
+fun getTurkishLanguageName(code: String?): String? {
+    return languageMap[code?.lowercase()]
+}
