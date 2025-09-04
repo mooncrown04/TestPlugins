@@ -63,7 +63,7 @@ private fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
   //  override var mainUrl = "https://raw.githubusercontent.com/GitLatte/patr0n/site/lists/power-yabanci-dizi.m3u"
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
-    override var name = "3508888888888808 MoOn Dizi 🎬"
+    override var name = "3508 MoOn Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
