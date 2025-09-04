@@ -197,7 +197,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
         val allShows = kanallar.items.filter { it.attributes["group-title"]?.trim() == groupTitle }
 
-        val finalPosterUrl = allShows.firstOrNull()?.attributes?.get("tvg-logo")?.toString() ?: DEFAULT_POSTER_URL
+   val finalPosterUrl = allShows.firstOrNull()?.attributes?.get("tvg-logo")?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
         val plot = "TMDB'den özet alınamadı."
 
         val currentShowEpisodes = allShows.mapNotNull { kanal ->
@@ -205,7 +205,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val (episodeCleanTitle, season, episode) = parseEpisodeInfo(title)
 
             if (season != null && episode != null) {
-                val episodePoster = kanal.attributes["tvg-logo"]?.toString() ?: DEFAULT_POSTER_URL
+                val episodePoster = kanal.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
                 newEpisode(LoadData(kanal.url.toString(), title, episodePoster, kanal.attributes["group-title"]?.toString() ?: "Bilinmeyen Grup", kanal.attributes["tvg-country"]?.toString() ?: "TR", season, episode).toJson()) {
                     this.name = episodeCleanTitle
                     this.season = season
