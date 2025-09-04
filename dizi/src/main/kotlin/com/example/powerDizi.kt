@@ -74,9 +74,6 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
 
 
-
-
-
         // Dizi listesi için tüm öğeleri işleyin
         val processedItems = kanallar.items.map { item ->
             val (cleanTitle, season, episode) = parseEpisodeInfo(item.title.toString())
@@ -112,7 +109,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
 
  // *** BURAYA LOG EKLEYİN ***
-Log.d("POWERDIZI_DEBUG", "getMainPage - Dizi: $channelname, M3U Poster URL: $posterurl")
+Log.e("POWERDIZI_DEBUG", "getMainPage - Dizi: $channelname, M3U Poster URL: $posterurl")
 
 
                 
@@ -240,8 +237,7 @@ Log.d("POWERDIZI_DEBUG", "getMainPage - Dizi: $channelname, M3U Poster URL: $pos
 
       
            // *** LOG: M3U'DAN GELEN POSTERİ KONTROL EDELİM ***
-  //  Log.d("POWERDIZI_DEBUG", "Load Fonksiyonu - M3U'dan gelen poster: ${loadData.poster}")
-   logError("Load Fonksiyonu - M3U'dan gelen poster: ${loadData.poster}")
+    Log.e("POWERDIZI_DEBUG", "Load Fonksiyonu - M3U'dan gelen poster: ${loadData.poster}")
 
 
         
@@ -421,7 +417,7 @@ Log.d("POWERDIZI_DEBUG", "getMainPage - Dizi: $channelname, M3U Poster URL: $pos
 
 
         // *** LOG: TMDB'DEN GELEN POSTERİ KONTROL EDELİM ***
-        Log.d("POWERDIZI_DEBUG", "Load Fonksiyonu - TMDB Poster URL: $tmdbPosterUrl")
+        Log.e("POWERDIZI_DEBUG", "Load Fonksiyonu - TMDB Poster URL: $tmdbPosterUrl")
     
            this.posterUrl = tmdbPosterUrl ?: loadData.poster    
            this.plot = plot
