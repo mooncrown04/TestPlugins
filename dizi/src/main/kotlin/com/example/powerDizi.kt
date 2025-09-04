@@ -103,7 +103,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val searchResponses = shows.distinctBy { it.title }.map { kanal ->
                 val streamurl = kanal.url.toString()
                 val channelname = kanal.title.toString()
-                val posterurl = kanal.attributes["tvg-logo"].toString().trim()
+                val posterurl = kanal.attributes["tvg-logo"].toString()
                 val nation = kanal.attributes["tvg-country"].toString()
 
 
@@ -111,6 +111,8 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
  // *** BURAYA LOG EKLEYİN ***
 Log.e("POWERDIZI_DEBUG", "getMainPage - Dizi: $channelname, M3U Poster URL: $posterurl")
 
+ val loadData = LoadData(streamurl, channelname, posterurl, letter, nation, kanal.season, kanal.episode)
+        val jsonData = loadData.toJson()
 
                 
                 newLiveSearchResponse(
