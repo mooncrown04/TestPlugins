@@ -63,7 +63,7 @@ private fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
   //  override var mainUrl = "https://raw.githubusercontent.com/GitLatte/patr0n/site/lists/power-yabanci-dizi.m3u"
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
-    override var name = "35087 MoOn Dizi 🎬"
+    override var name = "350444 MoOn Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -233,8 +233,6 @@ Log.e("POWERDIZI_DEBUG", "getMainPage - Dizi: $channelname, M3U Poster URL: $pos
         val isWatched = sharedPref?.getBoolean(watchKey, false) ?: false
         val watchProgress = sharedPref?.getLong(progressKey, 0L) ?: 0L
         val loadData = fetchDataFromUrlOrJson(url)
-
-
       
            // *** LOG: M3U'DAN GELEN POSTERİ KONTROL EDELİM ***
     Log.e("POWERDIZI_DEBUG", "Load Fonksiyonu - M3U'dan gelen poster: ${loadData.poster}")
@@ -246,13 +244,47 @@ Log.e("POWERDIZI_DEBUG", "getMainPage - Dizi: $channelname, M3U Poster URL: $pos
         
        
        
-       
- 
-       
-       
-       
-       
        val (seriesData, episodeData) = fetchTMDBData(cleanTitle, loadData.season, loadData.episode)
+
+
+
+
+
+
+
+
+
+
+
+
+
+// TMDB'den poster alınamazsa doğrudan varsayılanı kullanın
+    val finalPosterUrl = if (seriesData?.optString("poster_path")?.isNotEmpty() == true) {
+        "https://image.tmdb.org/t/p/w500${seriesData.optString("poster_path")}"
+    } else {
+        // M3U'dan gelen poster URL'si geçerliyse onu kullanın
+        if (loadData.poster.isNotEmpty() && loadData.poster.startsWith("http")) {
+            loadData.poster
+        } else {
+            // Aksi halde varsayılan posteri kullanın
+            "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         
         val plot = buildString {
             if (seriesData != null) {
@@ -418,8 +450,8 @@ Log.e("POWERDIZI_DEBUG", "getMainPage - Dizi: $channelname, M3U Poster URL: $pos
 
         // *** LOG: TMDB'DEN GELEN POSTERİ KONTROL EDELİM ***
         Log.e("POWERDIZI_DEBUG", "Load Fonksiyonu - TMDB Poster URL: $tmdbPosterUrl")
-    
-           this.posterUrl = tmdbPosterUrl ?: loadData.poster    
+    this.posterUrl = finalPosterUrl // Burada yeni değişkeni kullanın
+       //    this.posterUrl = tmdbPosterUrl ?: loadData.poster    
            this.plot = plot
            this.tags = listOf(loadData.group, loadData.nation)
         }
