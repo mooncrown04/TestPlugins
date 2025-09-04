@@ -14,6 +14,22 @@ import org.json.JSONObject
 import java.net.URL
 import java.net.URLEncoder
 
+
+
+class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
+  //  override var mainUrl = "https://raw.githubusercontent.com/GitLatte/patr0n/site/lists/power-yabanci-dizi.m3u"
+    override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
+    override var name = "3504 MoOn Dizi 🎬"
+    override val hasMainPage = true
+    override var lang = "tr"
+    override val hasQuickSearch = true
+    override val hasDownloadSupport = true
+    override val supportedTypes = setOf(TvType.TvSeries)
+
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
+
+
 // İki farklı formatı işleyebilen yardımcı fonksiyon
 // Erişim belirleyici private'dan public'e değiştirildi
 fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
@@ -55,18 +71,8 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
     return Triple(text.trim(), null, null)
 }
 
-class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
-  //  override var mainUrl = "https://raw.githubusercontent.com/GitLatte/patr0n/site/lists/power-yabanci-dizi.m3u"
-    override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
-    override var name = "35 MoOn Dizi 🎬"
-    override val hasMainPage = true
-    override var lang = "tr"
-    override val hasQuickSearch = true
-    override val hasDownloadSupport = true
-    override val supportedTypes = setOf(TvType.TvSeries)
 
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
+
 
         // Dizi listesi için tüm öğeleri işleyin
         val processedItems = kanallar.items.map { item ->
