@@ -128,14 +128,14 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 
 class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
-    override var name = "35 MoOnCrOwN Dizi 🎬"
+    override var name = "3588 MoOnCrOwN Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(TvType.TvSeries)
 
-    private val DEFAULT_POSTER_URL = "https://i.imgur.com/kS5z1c6.png"
+    private val DEFAULT_POSTER_URL = "https://dizifun5.com/images/data/too-hot-to-handle.webp"
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
