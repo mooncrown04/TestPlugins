@@ -241,9 +241,7 @@ Log.d("POWERDIZI_DEBUG", "getMainPage - Dizi: $channelname, M3U Poster URL: $pos
       
            // *** LOG: M3U'DAN GELEN POSTERİ KONTROL EDELİM ***
   //  Log.d("POWERDIZI_DEBUG", "Load Fonksiyonu - M3U'dan gelen poster: ${loadData.poster}")
-     logInfo("Load Fonksiyonu - M3U'dan gelen poster: ${loadData.poster}")
-       
-
+   logError("Load Fonksiyonu - M3U'dan gelen poster: ${loadData.poster}")
 
 
         
