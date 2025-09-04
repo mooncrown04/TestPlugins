@@ -393,8 +393,8 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 null
             }
             
-            this.posterUrl = tmdbPosterUrl ?: loadData.poster
-           
+          //  this.posterUrl = tmdbPosterUrl ?: loadData.poster
+            this.posterUrl = loadData.poster ?: tmdbPosterUrl
            this.plot = plot
             this.tags = listOf(loadData.group, loadData.nation)
         }
