@@ -115,7 +115,7 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 
 class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
-    override var name = "04 MoOnCrOwN Dizi 🎬"
+    override var name = "35 MoOnCrOwN Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -138,9 +138,8 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             )
         }
 
-        // Gruplandırma artık 'group-title' etiketine göre yapılacak
         val alphabeticGroups = processedItems.groupBy { item ->
-            val groupTitle = item.attributes["group-title"]?.trim() ?: "#"
+            val groupTitle = item.attributes["group-title"]?.trim() ?: "Bilinmeyen Dizi"
             val firstChar = groupTitle.firstOrNull()?.uppercaseChar() ?: '#'
             when {
                 firstChar.isLetter() -> firstChar.toString()
@@ -186,7 +185,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
         return kanallar.items.filter {
             it.title.toString().lowercase().contains(query.lowercase()) ||
-            it.attributes["group-title"].toString().lowercase().contains(query.lowercase())
+            it.attributes["group-title"]?.toString()?.lowercase()?.contains(query.lowercase()) == true
         }.map { kanal ->
             val streamurl = kanal.url.toString()
             val channelname = kanal.title.toString()
@@ -228,7 +227,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
             if (season != null && episode != null) {
                 val episodePoster = kanal.attributes["tvg-logo"]?.toString() ?: DEFAULT_POSTER_URL
-                newEpisode(LoadData(kanal.url.toString(), title, episodePoster, kanal.attributes["group-title"].toString(), kanal.attributes["tvg-country"]?.toString() ?: "TR", season, episode).toJson()) {
+                newEpisode(LoadData(kanal.url.toString(), title, episodePoster, kanal.attributes["group-title"]?.toString() ?: "Bilinmeyen Grup", kanal.attributes["tvg-country"]?.toString() ?: "TR", season, episode).toJson()) {
                     this.name = episodeCleanTitle
                     this.season = season
                     this.episode = episode
