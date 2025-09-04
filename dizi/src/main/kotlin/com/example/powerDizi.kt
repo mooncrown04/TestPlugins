@@ -60,17 +60,6 @@ private fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
   //  override var mainUrl = "https://raw.githubusercontent.com/GitLatte/patr0n/site/lists/power-yabanci-dizi.m3u"
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
@@ -618,7 +607,11 @@ class IptvPlaylistParser {
                 attributes[key] = value.replaceQuotesAndTrim()
             }
         }
+   if (!attributes.containsKey("tvg-logo")) {
+        attributes["tvg-logo"] = "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg" // Veya bir varsayılan resim URL'si atayın
+    }
 
+        
         if (!attributes.containsKey("tvg-country")) {
             attributes["tvg-country"] = "TR/Altyazılı"
         }
