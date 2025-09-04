@@ -638,10 +638,13 @@ class IptvPlaylistParser {
   // }
 
 
-   val tvgLogo = attributes["tvg-logo"]
-    if (tvgLogo.isNullOrBlank()) {
-        attributes["tvg-logo"] = "https://dizifun5.com/images/data/2007_the-big-bang-theory.webp"
+  val tvgLogo = attributes["tvg-logo"]
+    if (tvgLogo.isNullOrEmpty() || !tvgLogo.startsWith("http")) { // Geçerli bir URL değilse kontrolü
+        attributes["tvg-logo"] = "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
     }
+
+  
+
    
         
         if (!attributes.containsKey("tvg-country")) {
