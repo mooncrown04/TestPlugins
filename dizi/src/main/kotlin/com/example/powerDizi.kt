@@ -112,7 +112,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
 
  // *** BURAYA LOG EKLEYİN ***
-            Log.d("POWERDIZI_DEBUG", "getMainPage - Dizi: $channelname, M3U Poster URL: $posterurl")
+Log.d("POWERDIZI_DEBUG", "getMainPage - Dizi: $channelname, M3U Poster URL: $posterurl")
 
 
                 
@@ -240,8 +240,8 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
       
            // *** LOG: M3U'DAN GELEN POSTERİ KONTROL EDELİM ***
-    Log.d("POWERDIZI_DEBUG", "Load Fonksiyonu - M3U'dan gelen poster: ${loadData.poster}")
-    
+  //  Log.d("POWERDIZI_DEBUG", "Load Fonksiyonu - M3U'dan gelen poster: ${loadData.poster}")
+      logError("Load Fonksiyonu - M3U'dan gelen poster: ${loadData.poster}")
        
 
 
