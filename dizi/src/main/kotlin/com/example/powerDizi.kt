@@ -63,7 +63,7 @@ private fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
   //  override var mainUrl = "https://raw.githubusercontent.com/GitLatte/patr0n/site/lists/power-yabanci-dizi.m3u"
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
-    override var name = "35008 MoOn Dizi 🎬"
+    override var name = "3508888888888808 MoOn Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -236,6 +236,16 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val isWatched = sharedPref?.getBoolean(watchKey, false) ?: false
         val watchProgress = sharedPref?.getLong(progressKey, 0L) ?: 0L
         val loadData = fetchDataFromUrlOrJson(url)
+
+
+      
+           // *** LOG: M3U'DAN GELEN POSTERİ KONTROL EDELİM ***
+    Log.d("POWERDIZI_DEBUG", "Load Fonksiyonu - M3U'dan gelen poster: ${loadData.poster}")
+    
+       
+
+
+
         
         // Dizi adını temizle - hem "Dizi-1.Sezon" hem de "Dizi 1. Sezon" formatlarını destekler
         val (cleanTitle, loadDataSeason, loadDataEpisode) = parseEpisodeInfo(loadData.title)
@@ -243,11 +253,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
        
        
        
-       
-           // *** LOG: M3U'DAN GELEN POSTERİ KONTROL EDELİM ***
-    Log.d("POWERDIZI_DEBUG", "Load Fonksiyonu - M3U'dan gelen poster: ${loadData.poster}")
-    
-       
+ 
        
        
        
