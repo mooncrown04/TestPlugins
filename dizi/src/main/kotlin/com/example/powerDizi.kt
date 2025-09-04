@@ -1,5 +1,6 @@
 package com.example
 
+import android.content.SharedPreferences
 import android.util.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
@@ -9,7 +10,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import java.io.InputStream
-import android.content.SharedPreferences
+
 
 // Yardımcı sınıflar
 data class Playlist(val items: List<PlaylistItem> = emptyList())
@@ -109,7 +110,7 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 
 class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
-    override var name = "35 MoOn Dizi 🎬"
+    override var name = "35 MoOnCrOwN Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -219,7 +220,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val (episodeCleanTitle, season, episode) = parseEpisodeInfo(title)
 
             if (season != null && episode != null) {
-                newEpisode(LoadData(kanal.url.toString(), title, kanal.attributes["tvg-logo"].toString(), kanal.attributes["group-title"].toString(), kanal.attributes["tvg-country"]?.toString() ?: "TR", season, episode).toJson()) {
+                newEpisode(LoadData(kanal.url.toString(), title, kanal.attributes["tvg-logo"].toString()?: DEFAULT_POSTER_URL, kanal.attributes["group-title"].toString(), kanal.attributes["tvg-country"]?.toString() ?: "TR", season, episode).toJson()) {
                     this.name = episodeCleanTitle
                     this.season = season
                     this.episode = episode
