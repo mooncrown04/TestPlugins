@@ -111,7 +111,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
                 newLiveSearchResponse(
                     channelname,
-                    LoadData(streamurl, channelname, "", letter, nation, kanal.season, kanal.episode).toJson(),
+                    LoadData(streamurl, channelname, posterurl, letter, nation, kanal.season, kanal.episode).toJson(),
                     type = TvType.TvSeries
                 ) {
                     this.posterUrl = posterurl
@@ -148,7 +148,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
             newLiveSearchResponse(
                 cleanTitle,
-                LoadData(streamurl, channelname, "", chGroup, nation, season ?: 1, episode ?: 0).toJson(),
+                LoadData(streamurl, channelname,posterurl, chGroup, nation, season ?: 1, episode ?: 0).toJson(),
                 type = TvType.TvSeries
             ) {
                 this.posterUrl = posterurl
@@ -381,7 +381,8 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             currentShowEpisodes.map { episode ->
                 episode.apply {
                     val episodeLoadData = parseJson<LoadData>(episode.data)
-                    this.posterUrl = episodeLoadData.poster
+                   // this.posterUrl = episodeLoadData.poster
+                    this.posterUrl = loadData.poster
                 }
             }
         ) {
@@ -432,7 +433,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     data class LoadData(
         val url: String,
         val title: String,
-      //  val poster: String,
+        val poster: String,
         val group: String,
         val nation: String,
         val season: Int = 1,
