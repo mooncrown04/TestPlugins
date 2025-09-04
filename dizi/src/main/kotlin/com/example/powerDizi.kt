@@ -58,7 +58,7 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
   //  override var mainUrl = "https://raw.githubusercontent.com/GitLatte/patr0n/site/lists/power-yabanci-dizi.m3u"
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
-    override var name = "35rrrrrrr MoOn Dizi 🎬"
+    override var name = "35 88888MoOn Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -100,15 +100,18 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 val posterurl = kanal.attributes["tvg-logo"].toString()
                 val nation = kanal.attributes["tvg-country"].toString()
 
-                newLiveSearchResponse(
-                    channelname,
-                    LoadData(streamurl, channelname, posterurl, letter, nation, kanal.season, kanal.episode).toJson(),
-                    type = TvType.TvSeries
-                ) {
-                    this.posterUrl = posterurl
-                    this.lang = nation
-                }
-            }
+         // LoadData nesnesini artık JSON'a dönüştürmüyoruz.
+        val loadData = LoadData(streamurl, channelname, posterurl, letter, nation, kanal.season, kanal.episode)
+
+        newLiveSearchResponse(
+            channelname,
+            streamurl, // **Burada direkt URL'yi gönderiyoruz**
+            type = TvType.TvSeries
+        ) {
+            this.posterUrl = posterurl // **Posteri manuel olarak ayarla**
+            this.lang = nation
+        }
+    }
             if (searchResponses.isNotEmpty()) {
                 val listTitle = when (letter) {
                     "#" -> "# Özel Karakterle Başlayanlar"
@@ -365,6 +368,22 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             } else null
         }?.sortedWith(compareBy({ it.season }, { it.episode })) ?: emptyList()
 
+
+
+
+
+ val finalPosterUrl = if (seriesData?.optString("poster_path")?.isNotEmpty() == true) {
+        "https://image.tmdb.org/t/p/w500${seriesData.optString("poster_path")}"
+    } else {
+        kanal.attributes["tvg-logo"].toString() // M3U'dan gelen posteri kullan
+    }
+
+
+
+
+
+
+
         return newTvSeriesLoadResponse(
             cleanTitle,
             url,
@@ -376,10 +395,10 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 }
             }
         ) {
-    this.posterUrl = loadData.poster // Sadece M3U'dan gelen posteri kullan
-    this.plot = plot
-    this.tags = listOf(loadData.group, loadData.nation)
-}
+        this.posterUrl = finalPosterUrl
+        this.plot = plot
+        this.tags = listOf(kanal.attributes["group-title"].toString(), kanal.attributes["tvg-country"].toString())
+    }
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
@@ -435,6 +454,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val posterurl = kanal.attributes["tvg-logo"].toString()
             val chGroup = kanal.attributes["group-title"].toString()
             val nation = kanal.attributes["tvg-country"].toString()
+
             val (cleanTitle, season, episode) = parseEpisodeInfo(channelname)
 
             return LoadData(streamurl, cleanTitle, posterurl, chGroup, nation, season ?: 1, episode ?: 0)
@@ -502,11 +522,13 @@ class IptvPlaylistParser {
                 if (line.startsWith(EXT_INF)) {
                     val title = line.getTitle()
                     val attributes = line.getAttributes()
+
                     playlistItems.add(PlaylistItem(title, attributes))
                 } else if (line.startsWith(EXT_VLC_OPT)) {
                     val item = playlistItems[currentIndex]
                     val userAgent = item.userAgent ?: line.getTagValue("http-user-agent")?.toString()
                     val referrer = line.getTagValue("http-referrer")?.toString()
+
                     val headers = mutableMapOf<String, String>()
 
                     if (userAgent != null) {
