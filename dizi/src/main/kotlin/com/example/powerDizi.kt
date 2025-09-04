@@ -120,10 +120,7 @@ Log.e("POWERDIZI_DEBUG", "getMainPage - Dizi: $channelname, M3U Poster URL: $pos
                     jsonData, // Artık bu json'u kullanıyoruz
                  //  LoadData(streamurl, channelname, posterurl, letter, nation, kanal.season, kanal.episode).toJson(),
                     type = TvType.TvSeries
-                ) {
-                    this.posterUrl = posterurl
-                    this.lang = nation
-                }
+                ) 
             }
             if (searchResponses.isNotEmpty()) {
                 val listTitle = when (letter) {
