@@ -16,23 +16,10 @@ import java.net.URLEncoder
 
 
 
-class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
-  //  override var mainUrl = "https://raw.githubusercontent.com/GitLatte/patr0n/site/lists/power-yabanci-dizi.m3u"
-    override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
-    override var name = "3504 MoOn Dizi 🎬"
-    override val hasMainPage = true
-    override var lang = "tr"
-    override val hasQuickSearch = true
-    override val hasDownloadSupport = true
-    override val supportedTypes = setOf(TvType.TvSeries)
-
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
-
 
 // İki farklı formatı işleyebilen yardımcı fonksiyon
 // Erişim belirleyici private'dan public'e değiştirildi
-fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
+private fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
     // Birinci format için regex: "Dizi Adı-Sezon. Sezon Bölüm. Bölüm(Ek Bilgi)"
     val format1Regex = Regex("""(.*?)[^\w\d]+(\d+)\.\s*Sezon\s*(\d+)\.\s*Bölüm.*""")
 
@@ -70,6 +57,33 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
     // Hiçbir format eşleşmezse, orijinal başlığı ve null değerleri döndür.
     return Triple(text.trim(), null, null)
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
+  //  override var mainUrl = "https://raw.githubusercontent.com/GitLatte/patr0n/site/lists/power-yabanci-dizi.m3u"
+    override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
+    override var name = "3504 MoOn Dizi 🎬"
+    override val hasMainPage = true
+    override var lang = "tr"
+    override val hasQuickSearch = true
+    override val hasDownloadSupport = true
+    override val supportedTypes = setOf(TvType.TvSeries)
+
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
+
 
 
 
