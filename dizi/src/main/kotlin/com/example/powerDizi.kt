@@ -401,8 +401,8 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             currentShowEpisodes.map { episode ->
                 episode.apply {
                     val episodeLoadData = parseJson<LoadData>(episode.data)
-                   // this.posterUrl = episodeLoadData.poster
-                    this.posterUrl = loadData.poster
+                   this.posterUrl = episodeLoadData.poster
+              
                 }
             }
         ) {
@@ -418,15 +418,10 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
         // *** LOG: TMDB'DEN GELEN POSTERİ KONTROL EDELİM ***
         Log.d("POWERDIZI_DEBUG", "Load Fonksiyonu - TMDB Poster URL: $tmdbPosterUrl")
-
-
-
-
-            
-          //  this.posterUrl = tmdbPosterUrl ?: loadData.poster
-            this.posterUrl = loadData.poster ?: tmdbPosterUrl
+    
+           this.posterUrl = tmdbPosterUrl ?: loadData.poster    
            this.plot = plot
-            this.tags = listOf(loadData.group, loadData.nation)
+           this.tags = listOf(loadData.group, loadData.nation)
         }
     }
 
