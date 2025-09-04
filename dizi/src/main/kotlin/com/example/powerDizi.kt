@@ -67,8 +67,6 @@ class IptvPlaylistParser {
 
     private fun String.isExtendedM3u(): Boolean = startsWith(PlaylistItem.EXT_M3U)
     private fun String.getTitle(): String? = split(",").lastOrNull()?.trim()
-
-    // Bu fonksiyon boş ve hatalı etiketleri de işleyecek şekilde güncellenmiştir.
     private fun String.getAttributes(): Map<String, String> {
         val attributesString = substringAfter("#EXTINF:-1 ")
         val attributes = mutableMapOf<String, String>()
@@ -115,7 +113,7 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 
 class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
-    override var name = "35 MoOnCrOwN Dizi 🎬"
+    override var name = "354 MoOnCrOwN Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -126,56 +124,34 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
-
-        val processedItems = kanallar.items.map { item ->
-            val (cleanTitle, _, _) = parseEpisodeInfo(item.title.toString())
-            item.copy(
-                title = cleanTitle,
-                attributes = item.attributes.toMutableMap().apply {
-                    put("tvg-country", "TR/Altyazılı")
-                    put("tvg-language", "TR;EN")
-                }
-            )
+        
+        // `group-title` etiketine göre gruplandırma
+        val groupedByTitle = kanallar.items.groupBy { 
+            it.attributes["group-title"]?.trim() ?: "Bilinmeyen Dizi" 
         }
 
-        val alphabeticGroups = processedItems.groupBy { item ->
-            val groupTitle = item.attributes["group-title"]?.trim() ?: "Bilinmeyen Dizi"
-            val firstChar = groupTitle.firstOrNull()?.uppercaseChar() ?: '#'
-            when {
-                firstChar.isLetter() -> firstChar.toString()
-                firstChar.isDigit() -> "0-9"
-                else -> "#"
-            }
-        }.toSortedMap()
+        val homePageLists = groupedByTitle.toSortedMap().mapNotNull { (groupTitle, shows) ->
+            val searchResponses = shows.map { kanal ->
+                val (cleanTitle, _, _) = parseEpisodeInfo(kanal.title.toString())
+                val posterUrl = kanal.attributes["tvg-logo"]?.toString() ?: DEFAULT_POSTER_URL
+                val nation = kanal.attributes["tvg-country"]?.toString() ?: "TR"
 
-        val homePageLists = mutableListOf<HomePageList>()
-
-        alphabeticGroups.forEach { (letter, shows) ->
-            val searchResponses = shows.distinctBy { it.attributes["group-title"] }.map { kanal ->
-                val channelname = kanal.attributes["group-title"]?.toString() ?: "Bilinmeyen Dizi"
-                val posterurl = kanal.attributes["tvg-logo"]?.toString() ?: DEFAULT_POSTER_URL
-                val nation = kanal.attributes["tvg-country"].toString()
-
-                val loadData = LoadData(kanal.url.toString(), channelname, posterurl, letter, nation)
+                val loadData = LoadData(kanal.url.toString(), cleanTitle, posterUrl, groupTitle, nation)
                 val jsonData = loadData.toJson()
 
                 newLiveSearchResponse(
-                    channelname,
+                    cleanTitle,
                     jsonData,
                     type = TvType.TvSeries
                 ) {
-                    this.posterUrl = posterurl
+                    this.posterUrl = posterUrl
                     this.lang = nation
                 }
             }
+
             if (searchResponses.isNotEmpty()) {
-                val listTitle = when (letter) {
-                    "#" -> "# Özel Karakterle Başlayanlar"
-                    "0-9" -> "0-9 rakam olarak başlayan DİZİLER"
-                    else -> "$letter ile başlayanlar DİZİLER"
-                }
-                homePageLists.add(HomePageList(listTitle, searchResponses, isHorizontalImages = true))
-            }
+                HomePageList(groupTitle, searchResponses, isHorizontalImages = true)
+            } else null
         }
 
         return newHomePageResponse(homePageLists, hasNext = false)
@@ -217,11 +193,10 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
         val allShows = kanallar.items.groupBy { item ->
-            val (itemCleanTitle, _, _) = parseEpisodeInfo(item.title.toString())
-            itemCleanTitle
+            item.attributes["group-title"]?.trim() ?: "Bilinmeyen Dizi"
         }
 
-        val currentShowEpisodes = allShows[cleanTitle]?.mapNotNull { kanal ->
+        val currentShowEpisodes = allShows[loadData.group]?.mapNotNull { kanal ->
             val title = kanal.title.toString()
             val (episodeCleanTitle, season, episode) = parseEpisodeInfo(title)
 
