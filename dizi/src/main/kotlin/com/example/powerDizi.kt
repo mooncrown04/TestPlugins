@@ -73,10 +73,20 @@ class IptvPlaylistParser {
         val attributes = mutableMapOf<String, String>()
         val regex = Regex("""([a-zA-Z0-9-]+)="(.*?)"|([a-zA-Z0-9-]+)=([^"\s]+)""")
         regex.findAll(attributesString).forEach { matchResult ->
-            val (key, value) = if (matchResult.groups[1] != null) {
-                matchResult.destructured
+            val key: String
+            val value: String
+
+            val quotedMatch = matchResult.groups[1]
+            val unquotedMatch = matchResult.groups[3]
+
+            if (quotedMatch != null) {
+                key = quotedMatch.value
+                value = matchResult.groups[2]?.value.orEmpty()
+            } else if (unquotedMatch != null) {
+                key = unquotedMatch.value
+                value = matchResult.groups[4]?.value.orEmpty()
             } else {
-                matchResult.groups[3]!!.value to matchResult.groups[4]!!.value
+                return@forEach
             }
             attributes[key] = value.trim()
         }
