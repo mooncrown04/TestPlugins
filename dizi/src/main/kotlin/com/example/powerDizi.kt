@@ -115,7 +115,8 @@ Log.e("POWERDIZI_DEBUG", "getMainPage - Dizi: $channelname, M3U Poster URL: $pos
                 
                 newLiveSearchResponse(
                     channelname,
-                    LoadData(streamurl, channelname, posterurl, letter, nation, kanal.season, kanal.episode).toJson(),
+                    jsonData, // Artık bu json'u kullanıyoruz
+                 //  LoadData(streamurl, channelname, posterurl, letter, nation, kanal.season, kanal.episode).toJson(),
                     type = TvType.TvSeries
                 ) {
                     this.posterUrl = posterurl
@@ -150,14 +151,34 @@ Log.e("POWERDIZI_DEBUG", "getMainPage - Dizi: $channelname, M3U Poster URL: $pos
             
             val (cleanTitle, season, episode) = parseEpisodeInfo(channelname)
 
-            newLiveSearchResponse(
-                cleanTitle,
-                LoadData(streamurl, channelname,posterurl, chGroup, nation, season ?: 1, episode ?: 0).toJson(),
-                type = TvType.TvSeries
-            ) {
-                this.posterUrl = posterurl
-                this.lang = nation
-            }
+
+
+// Önce LoadData nesnesini oluşturun
+val loadData = LoadData(streamurl, channelname, posterurl, letter, nation, kanal.season, kanal.episode)
+
+// Yeni nesneyi JSON'a dönüştürürken poster'ı da ekleyin
+val jsonData = mapOf(
+    "url" to streamurl,
+    "title" to channelname,
+    "poster" to posterurl, // Poster URL'sini açıkça ekleyin
+    "group" to letter,
+    "nation" to nation,
+    "season" to kanal.season,
+    "episode" to kanal.episode
+).toJson()
+
+// newLiveSearchResponse'ta jsonData'yı kullanın
+newLiveSearchResponse(
+   cleanTitle,
+//    LoadData(streamurl, channelname,posterurl, chGroup, nation, season ?: 1, episode ?: 0).toJson(), 
+   jsonData, // Artık bu json'u kullanıyoruz
+    type = TvType.TvSeries
+) {
+    this.posterUrl = posterurl // Burayı koruyun
+    this.lang = nation
+}
+
+            
         }
     }
 
