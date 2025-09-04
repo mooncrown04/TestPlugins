@@ -63,7 +63,7 @@ private fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
   //  override var mainUrl = "https://raw.githubusercontent.com/GitLatte/patr0n/site/lists/power-yabanci-dizi.m3u"
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
-    override var name = "35007 MoOn Dizi 🎬"
+    override var name = "35008 MoOn Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -109,6 +109,13 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 val posterurl = kanal.attributes["tvg-logo"].toString()
                 val nation = kanal.attributes["tvg-country"].toString()
 
+
+
+ // *** BURAYA LOG EKLEYİN ***
+            Log.d("POWERDIZI_DEBUG", "getMainPage - Dizi: $channelname, M3U Poster URL: $posterurl")
+
+
+                
                 newLiveSearchResponse(
                     channelname,
                     LoadData(streamurl, channelname, posterurl, letter, nation, kanal.season, kanal.episode).toJson(),
@@ -232,7 +239,20 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         
         // Dizi adını temizle - hem "Dizi-1.Sezon" hem de "Dizi 1. Sezon" formatlarını destekler
         val (cleanTitle, loadDataSeason, loadDataEpisode) = parseEpisodeInfo(loadData.title)
-        val (seriesData, episodeData) = fetchTMDBData(cleanTitle, loadData.season, loadData.episode)
+        
+       
+       
+       
+       
+           // *** LOG: M3U'DAN GELEN POSTERİ KONTROL EDELİM ***
+    Log.d("POWERDIZI_DEBUG", "Load Fonksiyonu - M3U'dan gelen poster: ${loadData.poster}")
+    
+       
+       
+       
+       
+       
+       val (seriesData, episodeData) = fetchTMDBData(cleanTitle, loadData.season, loadData.episode)
         
         val plot = buildString {
             if (seriesData != null) {
@@ -392,6 +412,16 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             } else {
                 null
             }
+
+
+
+
+        // *** LOG: TMDB'DEN GELEN POSTERİ KONTROL EDELİM ***
+        Log.d("POWERDIZI_DEBUG", "Load Fonksiyonu - TMDB Poster URL: $tmdbPosterUrl")
+
+
+
+
             
           //  this.posterUrl = tmdbPosterUrl ?: loadData.poster
             this.posterUrl = loadData.poster ?: tmdbPosterUrl
