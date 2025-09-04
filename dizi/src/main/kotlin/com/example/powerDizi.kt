@@ -6,9 +6,14 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import java.io.InputStream
-
+// powerDizi.kt dosyasının en üstüne, diğer import'ların altına bu satırı ekleyin:
+import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.ExtractorLinkType
+import com.lagradost.cloudstream3.utils.newExtractorLink
+import com.lagradost.cloudstream3.utils.Qualities
 // Tanimlarin ayni dosyada oldugundan emin olun
 data class Playlist(
+ 
     val items: List<PlaylistItem> = emptyList()
 )
 
