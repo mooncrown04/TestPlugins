@@ -63,7 +63,7 @@ private fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
   //  override var mainUrl = "https://raw.githubusercontent.com/GitLatte/patr0n/site/lists/power-yabanci-dizi.m3u"
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
-    override var name = "3508 MoOn Dizi 🎬"
+    override var name = "3508999999999 MoOn Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -633,10 +633,16 @@ class IptvPlaylistParser {
                 attributes[key] = value.replaceQuotesAndTrim()
             }
         }
-   if (!attributes.containsKey("tvg-logo")) {
-        attributes["tvg-logo"] = "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg" // Veya bir varsayılan resim URL'si atayın
-    }
+  // if (!attributes.containsKey("tvg-logo")) {
+    //    attributes["tvg-logo"] = "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg" // Veya bir varsayılan resim URL'si atayın
+  // }
 
+
+   val tvgLogo = attributes["tvg-logo"]
+    if (tvgLogo.isNullOrBlank()) {
+        attributes["tvg-logo"] = "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
+    }
+   
         
         if (!attributes.containsKey("tvg-country")) {
             attributes["tvg-country"] = "TR/Altyazılı"
