@@ -1,6 +1,6 @@
    package com.example
 
-
+import com.example.BuildConfig
 import android.content.SharedPreferences
 import android.util.Log
 import com.lagradost.cloudstream3.*
@@ -13,7 +13,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.URL
 import java.net.URLEncoder
-import com.example.BuildConfig
+
 // İki farklı formatı işleyebilen yardımcı fonksiyon
 // Erişim belirleyici private'dan public'e değiştirildi
 fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
@@ -105,7 +105,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                     LoadData(streamurl, channelname, posterurl, letter, nation, kanal.season, kanal.episode).toJson(),
                     type = TvType.TvSeries
                 ) {
-                    this.posterUrl = posterurl
+                    this.posterUrl = kanal.attributes["tvg-logo"].toString()
                     this.lang = nation
                 }
             }
@@ -142,7 +142,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 LoadData(streamurl, channelname, posterurl, chGroup, nation, season ?: 1, episode ?: 0).toJson(),
                 type = TvType.TvSeries
             ) {
-                this.posterUrl = posterurl
+                this.posterUrl = kanal.attributes["tvg-logo"].toString()
                 this.lang = nation
             }
         }
@@ -383,8 +383,8 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 null
             }
             
-          //  this.posterUrl = tmdbPosterUrl ?: loadData.poster
-            this.posterUrl = loadData.poster
+            this.posterUrl = tmdbPosterUrl ?: loadData.poster
+           
            this.plot = plot
             this.tags = listOf(loadData.group, loadData.nation)
         }
