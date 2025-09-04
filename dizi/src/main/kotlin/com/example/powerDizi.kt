@@ -67,12 +67,17 @@ class IptvPlaylistParser {
 
     private fun String.isExtendedM3u(): Boolean = startsWith(PlaylistItem.EXT_M3U)
     private fun String.getTitle(): String? = split(",").lastOrNull()?.trim()
+
     private fun String.getAttributes(): Map<String, String> {
         val attributesString = substringAfter("#EXTINF:-1 ")
         val attributes = mutableMapOf<String, String>()
-        val regex = Regex("""([a-zA-Z0-9-]+)="([^"]*)"""")
+        val regex = Regex("""([a-zA-Z0-9-]+)="(.*?)"|([a-zA-Z0-9-]+)=([^"\s]+)""")
         regex.findAll(attributesString).forEach { matchResult ->
-            val (key, value) = matchResult.destructured
+            val (key, value) = if (matchResult.groups[1] != null) {
+                matchResult.destructured
+            } else {
+                matchResult.groups[3]!!.value to matchResult.groups[4]!!.value
+            }
             attributes[key] = value.trim()
         }
         return attributes
@@ -113,7 +118,7 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 
 class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
-    override var name = "354 MoOnCrOwN Dizi 🎬"
+    override var name = "35 MoOnCrOwN Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -125,33 +130,25 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
         
-        // `group-title` etiketine göre gruplandırma
-        val groupedByTitle = kanallar.items.groupBy { 
-            it.attributes["group-title"]?.trim() ?: "Bilinmeyen Dizi" 
+        val groupedByTitle = kanallar.items.groupBy {
+            it.attributes["group-title"]?.trim() ?: "Bilinmeyen Dizi"
         }
 
         val homePageLists = groupedByTitle.toSortedMap().mapNotNull { (groupTitle, shows) ->
-            val searchResponses = shows.map { kanal ->
-                val (cleanTitle, _, _) = parseEpisodeInfo(kanal.title.toString())
-                val posterUrl = kanal.attributes["tvg-logo"]?.toString() ?: DEFAULT_POSTER_URL
-                val nation = kanal.attributes["tvg-country"]?.toString() ?: "TR"
+            val firstShow = shows.firstOrNull() ?: return@mapNotNull null
+            val posterUrl = firstShow.attributes["tvg-logo"]?.toString() ?: DEFAULT_POSTER_URL
+            val nation = firstShow.attributes["tvg-country"]?.toString() ?: "TR"
 
-                val loadData = LoadData(kanal.url.toString(), cleanTitle, posterUrl, groupTitle, nation)
-                val jsonData = loadData.toJson()
-
-                newLiveSearchResponse(
-                    cleanTitle,
-                    jsonData,
-                    type = TvType.TvSeries
-                ) {
-                    this.posterUrl = posterUrl
-                    this.lang = nation
-                }
+            val searchResponse = newLiveSearchResponse(
+                groupTitle,
+                LoadData(groupTitle, groupTitle, posterUrl, groupTitle, nation).toJson(),
+                type = TvType.TvSeries
+            ) {
+                this.posterUrl = posterUrl
+                this.lang = nation
             }
 
-            if (searchResponses.isNotEmpty()) {
-                HomePageList(groupTitle, searchResponses, isHorizontalImages = true)
-            } else null
+            HomePageList(groupTitle, listOf(searchResponse), isHorizontalImages = true)
         }
 
         return newHomePageResponse(homePageLists, hasNext = false)
@@ -159,24 +156,23 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
-        return kanallar.items.filter {
-            it.title.toString().lowercase().contains(query.lowercase()) ||
-            it.attributes["group-title"]?.toString()?.lowercase()?.contains(query.lowercase()) == true
-        }.map { kanal ->
-            val streamurl = kanal.url.toString()
-            val channelname = kanal.title.toString()
-            val posterurl = kanal.attributes["tvg-logo"]?.toString() ?: DEFAULT_POSTER_URL
-            val chGroup = kanal.attributes["group-title"]?.toString() ?: "Bilinmeyen Grup"
-            val nation = kanal.attributes["tvg-country"]?.toString() ?: "Bilinmeyen Dil"
+        val groupedByTitle = kanallar.items.groupBy {
+            it.attributes["group-title"]?.trim() ?: "Bilinmeyen Dizi"
+        }
 
-            val (cleanTitle, season, episode) = parseEpisodeInfo(channelname)
+        return groupedByTitle.filter { (groupTitle, _) ->
+            groupTitle.lowercase().contains(query.lowercase())
+        }.map { (groupTitle, shows) ->
+            val firstShow = shows.firstOrNull() ?: return@map newLiveSearchResponse("", "", type = TvType.TvSeries)
+            val posterUrl = firstShow.attributes["tvg-logo"]?.toString() ?: DEFAULT_POSTER_URL
+            val nation = firstShow.attributes["tvg-country"]?.toString() ?: "TR"
 
             newLiveSearchResponse(
-                cleanTitle,
-                LoadData(streamurl, channelname, posterurl, chGroup, nation, season ?: 1, episode ?: 0).toJson(),
+                groupTitle,
+                LoadData(groupTitle, groupTitle, posterUrl, groupTitle, nation).toJson(),
                 type = TvType.TvSeries
             ) {
-                this.posterUrl = posterurl
+                this.posterUrl = posterUrl
                 this.lang = nation
             }
         }
@@ -185,18 +181,15 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
 
     override suspend fun load(url: String): LoadResponse {
-        val loadData = fetchDataFromUrlOrJson(url)
-        val (cleanTitle, _, _) = parseEpisodeInfo(loadData.title)
-
-        val finalPosterUrl = loadData.poster
-        val plot = "TMDB'den özet alınamadı."
+        val groupTitle = if (url.startsWith("{")) parseJson<LoadData>(url).group else url
 
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
-        val allShows = kanallar.items.groupBy { item ->
-            item.attributes["group-title"]?.trim() ?: "Bilinmeyen Dizi"
-        }
+        val allShows = kanallar.items.filter { it.attributes["group-title"]?.trim() == groupTitle }
 
-        val currentShowEpisodes = allShows[loadData.group]?.mapNotNull { kanal ->
+        val finalPosterUrl = allShows.firstOrNull()?.attributes?.get("tvg-logo")?.toString() ?: DEFAULT_POSTER_URL
+        val plot = "TMDB'den özet alınamadı."
+
+        val currentShowEpisodes = allShows.mapNotNull { kanal ->
             val title = kanal.title.toString()
             val (episodeCleanTitle, season, episode) = parseEpisodeInfo(title)
 
@@ -209,10 +202,10 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                     this.posterUrl = episodePoster
                 }
             } else null
-        }?.sortedWith(compareBy({ it.season }, { it.episode })) ?: emptyList()
+        }.sortedWith(compareBy({ it.season }, { it.episode }))
 
         return newTvSeriesLoadResponse(
-            cleanTitle,
+            groupTitle,
             url,
             TvType.TvSeries,
             currentShowEpisodes.map { episode ->
@@ -224,7 +217,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         ) {
             this.posterUrl = finalPosterUrl
             this.plot = plot
-            this.tags = listOf(loadData.group, loadData.nation)
+            this.tags = listOf(groupTitle, allShows.firstOrNull()?.attributes?.get("tvg-country")?.toString() ?: "TR")
         }
     }
 
@@ -234,7 +227,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val loadData = fetchDataFromUrlOrJson(data)
+        val loadData = parseJson<LoadData>(data)
         val videoUrl = loadData.url
 
         callback.invoke(
