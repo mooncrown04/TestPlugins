@@ -119,9 +119,9 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
 
 // Poster yoksa kullanılacak varsayılan resim URL'si
-    private val DEFAULT_POSTER_URL = "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
+   // private val DEFAULT_POSTER_URL = "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
 
-
+ private val DEFAULT_POSTER_URL = "https://dizifun5.com/images/data/too-hot-to-handle.webp"
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
