@@ -145,7 +145,8 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
         val homePageLists = groupedByTitle.toSortedMap().mapNotNull { (groupTitle, shows) ->
             val firstShow = shows.firstOrNull() ?: return@mapNotNull null
-            val posterUrl = firstShow.attributes["tvg-logo"]?.toString() ?: DEFAULT_POSTER_URL
+          val posterUrl = firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
+
             val nation = firstShow.attributes["tvg-country"]?.toString() ?: "TR"
 
             val searchResponse = newLiveSearchResponse(
@@ -173,7 +174,8 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             groupTitle.lowercase().contains(query.lowercase())
         }.map { (groupTitle, shows) ->
             val firstShow = shows.firstOrNull() ?: return@map newLiveSearchResponse("", "", type = TvType.TvSeries)
-            val posterUrl = firstShow.attributes["tvg-logo"]?.toString() ?: DEFAULT_POSTER_URL
+        val posterUrl = firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
+
             val nation = firstShow.attributes["tvg-country"]?.toString() ?: "TR"
 
             newLiveSearchResponse(
