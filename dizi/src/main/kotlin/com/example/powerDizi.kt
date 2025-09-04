@@ -70,7 +70,6 @@ class IptvPlaylistParser {
     private fun String.getTitle(): String? = split(",").lastOrNull()?.trim()
     private fun String.getUrl(): String? = split("|").firstOrNull()?.trim()
 
-    // Bu fonksiyon güncellenmiştir.
     private fun String.getAttributes(): Map<String, String> {
         val attributesString = substringAfter("#EXTINF:-1 ")
         val attributes = mutableMapOf<String, String>()
@@ -122,12 +121,8 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(TvType.TvSeries)
 
-
-// Poster yoksa kullanılacak varsayılan resim URL'si
-    private val DEFAULT_POSTER_URL = "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
- //private val DEFAULT_POSTER_URL = "https://dizifun5.com/images/data/too-hot-to-handle.webp"
-
-
+    // Poster yoksa kullanılacak varsayılan resim URL'si
+    private val DEFAULT_POSTER_URL = "https://i.imgur.com/kS5z1c6.png"
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
@@ -156,7 +151,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         alphabeticGroups.forEach { (letter, shows) ->
             val searchResponses = shows.distinctBy { it.title }.map { kanal ->
                 val channelname = kanal.title.toString()
-                val posterurl = kanal.attributes["tvg-logo"]?.toString()?: DEFAULT_POSTER_URL
+                val posterurl = kanal.attributes["tvg-logo"]?.toString() ?: DEFAULT_POSTER_URL
                 val nation = kanal.attributes["tvg-country"].toString()
 
                 val loadData = LoadData(kanal.url.toString(), channelname, posterurl, letter, nation)
@@ -189,7 +184,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         return kanallar.items.filter { it.title.toString().lowercase().contains(query.lowercase()) }.map { kanal ->
             val streamurl = kanal.url.toString()
             val channelname = kanal.title.toString()
-            val posterurl = kanal.attributes["tvg-logo"]?.toString()?: DEFAULT_POSTER_URL
+            val posterurl = kanal.attributes["tvg-logo"]?.toString() ?: DEFAULT_POSTER_URL
             val chGroup = kanal.attributes["group-title"].toString()
             val nation = kanal.attributes["tvg-country"].toString()
 
@@ -226,11 +221,11 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val (episodeCleanTitle, season, episode) = parseEpisodeInfo(title)
 
             if (season != null && episode != null) {
-                newEpisode(LoadData(kanal.url.toString(), title, kanal.attributes["tvg-logo"]?.toString()?: DEFAULT_POSTER_URL, kanal.attributes["group-title"].toString(), kanal.attributes["tvg-country"]?.toString() ?: "TR", season, episode).toJson()) {
+                newEpisode(LoadData(kanal.url.toString(), title, kanal.attributes["tvg-logo"]?.toString() ?: DEFAULT_POSTER_URL, kanal.attributes["group-title"].toString(), kanal.attributes["tvg-country"]?.toString() ?: "TR", season, episode).toJson()) {
                     this.name = episodeCleanTitle
                     this.season = season
                     this.episode = episode
-                    this.posterUrl = kanal.attributes["tvg-logo"]?.toString()?: DEFAULT_POSTER_URL
+                    this.posterUrl = kanal.attributes["tvg-logo"]?.toString() ?: DEFAULT_POSTER_URL
                 }
             } else null
         }?.sortedWith(compareBy({ it.season }, { it.episode })) ?: emptyList()
@@ -252,7 +247,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         }
     }
 
-override suspend fun loadLinks(
+    override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -268,13 +263,11 @@ override suspend fun loadLinks(
                 url = videoUrl,
                 type = ExtractorLinkType.M3U8
             ) {
-                // Kalite parametresi bu bloğun içine yerleştirilmelidir.
                 quality = Qualities.Unknown.value
             }
         )
         return true
     }
-    
 
     data class LoadData(
         val url: String,
@@ -297,7 +290,7 @@ override suspend fun loadLinks(
             return LoadData(
                 kanal.url.toString(),
                 cleanTitle,
-                kanal.attributes["tvg-logo"]?.toString()?: DEFAULT_POSTER_URL,
+                kanal.attributes["tvg-logo"]?.toString() ?: DEFAULT_POSTER_URL,
                 kanal.attributes["group-title"].toString(),
                 kanal.attributes["tvg-country"].toString(),
                 season ?: 1,
