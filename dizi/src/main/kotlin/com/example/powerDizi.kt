@@ -1,6 +1,6 @@
    package com.example
 
-import com.example.BuildConfig
+
 import android.content.SharedPreferences
 import android.util.Log
 import com.lagradost.cloudstream3.*
@@ -13,7 +13,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.URL
 import java.net.URLEncoder
-
+import com.example.BuildConfig
 // İki farklı formatı işleyebilen yardımcı fonksiyon
 // Erişim belirleyici private'dan public'e değiştirildi
 fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
