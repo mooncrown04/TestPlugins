@@ -56,7 +56,6 @@ class IptvPlaylistParser {
                         playlistItems[currentIndex] = item.copy(url = url)
                         currentIndex++
                     } else {
-                        // Eğer EXTINF satırı yoksa bu URL'yi atla
                         Log.w("IptvPlaylistParser", "URL'ye karşılık gelen EXTINF satırı bulunamadı, atlanıyor: $line")
                     }
                 }
@@ -68,18 +67,20 @@ class IptvPlaylistParser {
 
     private fun String.isExtendedM3u(): Boolean = startsWith(PlaylistItem.EXT_M3U)
     private fun String.getTitle(): String? = split(",").lastOrNull()?.trim()
-    private fun String.getUrl(): String? = split("|").firstOrNull()?.trim()
 
+    // Bu fonksiyon boş ve hatalı etiketleri de işleyecek şekilde güncellenmiştir.
     private fun String.getAttributes(): Map<String, String> {
         val attributesString = substringAfter("#EXTINF:-1 ")
         val attributes = mutableMapOf<String, String>()
         val regex = Regex("""([a-zA-Z0-9-]+)="([^"]*)"""")
         regex.findAll(attributesString).forEach { matchResult ->
             val (key, value) = matchResult.destructured
-            attributes[key] = value
+            attributes[key] = value.trim()
         }
         return attributes
     }
+
+    private fun String.getUrl(): String? = split("|").firstOrNull()?.trim()
 }
 
 sealed class PlaylistParserException(message: String) : Exception(message) {
@@ -114,18 +115,18 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 
 class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
-    override var name = "35 MoOnCrOwN Dizi 🎬"
+    override var name = "04 MoOnCrOwN Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(TvType.TvSeries)
 
-    // Poster yoksa kullanılacak varsayılan resim URL'si
     private val DEFAULT_POSTER_URL = "https://i.imgur.com/kS5z1c6.png"
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
+
         val processedItems = kanallar.items.map { item ->
             val (cleanTitle, _, _) = parseEpisodeInfo(item.title.toString())
             item.copy(
@@ -137,8 +138,10 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             )
         }
 
+        // Gruplandırma artık 'group-title' etiketine göre yapılacak
         val alphabeticGroups = processedItems.groupBy { item ->
-            val firstChar = item.title?.firstOrNull()?.uppercaseChar() ?: '#'
+            val groupTitle = item.attributes["group-title"]?.trim() ?: "#"
+            val firstChar = groupTitle.firstOrNull()?.uppercaseChar() ?: '#'
             when {
                 firstChar.isLetter() -> firstChar.toString()
                 firstChar.isDigit() -> "0-9"
@@ -149,8 +152,8 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val homePageLists = mutableListOf<HomePageList>()
 
         alphabeticGroups.forEach { (letter, shows) ->
-            val searchResponses = shows.distinctBy { it.title }.map { kanal ->
-                val channelname = kanal.title.toString()
+            val searchResponses = shows.distinctBy { it.attributes["group-title"] }.map { kanal ->
+                val channelname = kanal.attributes["group-title"]?.toString() ?: "Bilinmeyen Dizi"
                 val posterurl = kanal.attributes["tvg-logo"]?.toString() ?: DEFAULT_POSTER_URL
                 val nation = kanal.attributes["tvg-country"].toString()
 
@@ -181,12 +184,15 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
-        return kanallar.items.filter { it.title.toString().lowercase().contains(query.lowercase()) }.map { kanal ->
+        return kanallar.items.filter {
+            it.title.toString().lowercase().contains(query.lowercase()) ||
+            it.attributes["group-title"].toString().lowercase().contains(query.lowercase())
+        }.map { kanal ->
             val streamurl = kanal.url.toString()
             val channelname = kanal.title.toString()
             val posterurl = kanal.attributes["tvg-logo"]?.toString() ?: DEFAULT_POSTER_URL
-            val chGroup = kanal.attributes["group-title"].toString()
-            val nation = kanal.attributes["tvg-country"].toString()
+            val chGroup = kanal.attributes["group-title"]?.toString() ?: "Bilinmeyen Grup"
+            val nation = kanal.attributes["tvg-country"]?.toString() ?: "Bilinmeyen Dil"
 
             val (cleanTitle, season, episode) = parseEpisodeInfo(channelname)
 
@@ -221,11 +227,12 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val (episodeCleanTitle, season, episode) = parseEpisodeInfo(title)
 
             if (season != null && episode != null) {
-                newEpisode(LoadData(kanal.url.toString(), title, kanal.attributes["tvg-logo"]?.toString() ?: DEFAULT_POSTER_URL, kanal.attributes["group-title"].toString(), kanal.attributes["tvg-country"]?.toString() ?: "TR", season, episode).toJson()) {
+                val episodePoster = kanal.attributes["tvg-logo"]?.toString() ?: DEFAULT_POSTER_URL
+                newEpisode(LoadData(kanal.url.toString(), title, episodePoster, kanal.attributes["group-title"].toString(), kanal.attributes["tvg-country"]?.toString() ?: "TR", season, episode).toJson()) {
                     this.name = episodeCleanTitle
                     this.season = season
                     this.episode = episode
-                    this.posterUrl = kanal.attributes["tvg-logo"]?.toString() ?: DEFAULT_POSTER_URL
+                    this.posterUrl = episodePoster
                 }
             } else null
         }?.sortedWith(compareBy({ it.season }, { it.episode })) ?: emptyList()
@@ -284,18 +291,23 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             return parseJson<LoadData>(data)
         } else {
             val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
-            val kanal = kanallar.items.first { it.url == data }
-            val (cleanTitle, season, episode) = parseEpisodeInfo(kanal.title.toString())
+            val kanal = kanallar.items.firstOrNull { it.url == data }
 
-            return LoadData(
-                kanal.url.toString(),
-                cleanTitle,
-                kanal.attributes["tvg-logo"]?.toString() ?: DEFAULT_POSTER_URL,
-                kanal.attributes["group-title"].toString(),
-                kanal.attributes["tvg-country"].toString(),
-                season ?: 1,
-                episode ?: 0
-            )
+            if (kanal != null) {
+                val (cleanTitle, season, episode) = parseEpisodeInfo(kanal.title.toString())
+
+                return LoadData(
+                    kanal.url.toString(),
+                    cleanTitle,
+                    kanal.attributes["tvg-logo"]?.toString() ?: DEFAULT_POSTER_URL,
+                    kanal.attributes["group-title"]?.toString() ?: "Bilinmeyen Grup",
+                    kanal.attributes["tvg-country"]?.toString() ?: "TR",
+                    season ?: 1,
+                    episode ?: 0
+                )
+            } else {
+                throw Exception("LoadData: URL bulunamadı veya format hatalı")
+            }
         }
     }
 }
