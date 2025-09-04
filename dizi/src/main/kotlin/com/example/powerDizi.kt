@@ -68,25 +68,20 @@ class IptvPlaylistParser {
     private fun String.isExtendedM3u(): Boolean = startsWith(PlaylistItem.EXT_M3U)
     private fun String.getTitle(): String? = split(",").lastOrNull()?.trim()
 
+    // Bu fonksiyon boş ve hatalı etiketleri de işleyecek şekilde güncellenmiştir.
     private fun String.getAttributes(): Map<String, String> {
         val attributesString = substringAfter("#EXTINF:-1 ")
         val attributes = mutableMapOf<String, String>()
         val regex = Regex("""([a-zA-Z0-9-]+)="(.*?)"|([a-zA-Z0-9-]+)=([^"\s]+)""")
         regex.findAll(attributesString).forEach { matchResult ->
-            val key: String
-            val value: String
-
-            val quotedMatch = matchResult.groups[1]
-            val unquotedMatch = matchResult.groups[3]
-
-            if (quotedMatch != null) {
-                key = quotedMatch.value
-                value = matchResult.groups[2]?.value.orEmpty()
-            } else if (unquotedMatch != null) {
-                key = unquotedMatch.value
-                value = matchResult.groups[4]?.value.orEmpty()
+            val (key, value) = if (matchResult.groups[1] != null) {
+                // Tırnak içindeki değeri al
+                matchResult.destructured
             } else {
-                return@forEach
+                // Tırnak olmayan değeri al
+                val unquotedKey = matchResult.groups[3]?.value
+                val unquotedValue = matchResult.groups[4]?.value
+                unquotedKey to (unquotedValue ?: "")
             }
             attributes[key] = value.trim()
         }
@@ -128,14 +123,15 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 
 class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
-    override var name = "3588 MoOnCrOwN Dizi 🎬"
+    override var name = "35 MoOnCrOwN Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(TvType.TvSeries)
 
-    private val DEFAULT_POSTER_URL = "https://dizifun5.com/images/data/too-hot-to-handle.webp"
+ //   private val DEFAULT_POSTER_URL = "https://i.imgur.com/kS5z1c6.png"
+    private val DEFAULT_POSTER_URL = "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
