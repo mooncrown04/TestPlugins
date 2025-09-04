@@ -68,23 +68,26 @@ class IptvPlaylistParser {
     private fun String.isExtendedM3u(): Boolean = startsWith(PlaylistItem.EXT_M3U)
     private fun String.getTitle(): String? = split(",").lastOrNull()?.trim()
 
-    // Bu fonksiyon boş ve hatalı etiketleri de işleyecek şekilde güncellenmiştir.
     private fun String.getAttributes(): Map<String, String> {
         val attributesString = substringAfter("#EXTINF:-1 ")
         val attributes = mutableMapOf<String, String>()
-        val regex = Regex("""([a-zA-Z0-9-]+)="(.*?)"|([a-zA-Z0-9-]+)=([^"\s]+)""")
-        regex.findAll(attributesString).forEach { matchResult ->
-            val (key, value) = if (matchResult.groups[1] != null) {
-                // Tırnak içindeki değeri al
-                matchResult.destructured
-            } else {
-                // Tırnak olmayan değeri al
-                val unquotedKey = matchResult.groups[3]?.value
-                val unquotedValue = matchResult.groups[4]?.value
-                unquotedKey to (unquotedValue ?: "")
-            }
+
+        // Tırnak işaretli değerleri bul
+        val quotedRegex = Regex("""([a-zA-Z0-9-]+)="(.*?)"""")
+        quotedRegex.findAll(attributesString).forEach { matchResult ->
+            val (key, value) = matchResult.destructured
             attributes[key] = value.trim()
         }
+        
+        // Tırnak işaretsiz değerleri bul
+        val unquotedRegex = Regex("""([a-zA-Z0-9-]+)=([^"\s]+)""")
+        unquotedRegex.findAll(attributesString).forEach { matchResult ->
+            val (key, value) = matchResult.destructured
+            if (!attributes.containsKey(key)) {
+                attributes[key] = value.trim()
+            }
+        }
+        
         return attributes
     }
 
@@ -130,7 +133,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(TvType.TvSeries)
 
- //   private val DEFAULT_POSTER_URL = "https://i.imgur.com/kS5z1c6.png"
+//    private val DEFAULT_POSTER_URL = "https://i.imgur.com/kS5z1c6.png"
     private val DEFAULT_POSTER_URL = "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
