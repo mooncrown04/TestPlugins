@@ -58,7 +58,7 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
   //  override var mainUrl = "https://raw.githubusercontent.com/GitLatte/patr0n/site/lists/power-yabanci-dizi.m3u"
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
-    override var name = "35 88888MoOn Dizi 🎬"
+    override var name = "35 MoOn Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -224,10 +224,30 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val watchProgress = sharedPref?.getLong(progressKey, 0L) ?: 0L
         val loadData = fetchDataFromUrlOrJson(url)
         
+		 // Burada kanal değişkenini tanımlayın
+    val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
+    val kanal = kanallar.items.firstOrNull { it.url == url } ?: throw Exception("Kanal bulunamadı")
+
+		
+		
         // Dizi adını temizle - hem "Dizi-1.Sezon" hem de "Dizi 1. Sezon" formatlarını destekler
         val (cleanTitle, loadDataSeason, loadDataEpisode) = parseEpisodeInfo(loadData.title)
         val (seriesData, episodeData) = fetchTMDBData(cleanTitle, loadData.season, loadData.episode)
         
+		
+		
+		
+		
+		
+		  val finalPosterUrl = if (seriesData?.optString("poster_path")?.isNotEmpty() == true) {
+        "https://image.tmdb.org/t/p/w500${seriesData.optString("poster_path")}"
+    } else {
+        kanal.attributes["tvg-logo"].toString()
+    }
+		
+		
+		
+		
         val plot = buildString {
             if (seriesData != null) {
                 append("<b>📺<u> Dizi Bilgileri</u> (Genel)</b><br><br>")
