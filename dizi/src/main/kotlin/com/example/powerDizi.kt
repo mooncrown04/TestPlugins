@@ -63,7 +63,7 @@ private fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
   //  override var mainUrl = "https://raw.githubusercontent.com/GitLatte/patr0n/site/lists/power-yabanci-dizi.m3u"
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
-    override var name = "3504 MoOn Dizi 🎬"
+    override var name = "35007 MoOn Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -111,7 +111,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
                 newLiveSearchResponse(
                     channelname,
-                    LoadData(streamurl, channelname, posterurl, letter, nation, kanal.season, kanal.episode).toJson(),
+                    LoadData(streamurl, channelname, "", letter, nation, kanal.season, kanal.episode).toJson(),
                     type = TvType.TvSeries
                 ) {
                     this.posterUrl = posterurl
@@ -148,7 +148,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
             newLiveSearchResponse(
                 cleanTitle,
-                LoadData(streamurl, channelname, posterurl, chGroup, nation, season ?: 1, episode ?: 0).toJson(),
+                LoadData(streamurl, channelname, "", chGroup, nation, season ?: 1, episode ?: 0).toJson(),
                 type = TvType.TvSeries
             ) {
                 this.posterUrl = posterurl
@@ -432,7 +432,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     data class LoadData(
         val url: String,
         val title: String,
-        val poster: String,
+      //  val poster: String,
         val group: String,
         val nation: String,
         val season: Int = 1,
