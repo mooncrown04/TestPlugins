@@ -277,8 +277,8 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 return LoadData(
                     kanal.url.toString(),
                     cleanTitle,
-                    kanal.attributes["tvg-logo"]?.toString() ?: DEFAULT_POSTER_URL,
-                    kanal.attributes["group-title"]?.toString() ?: "Bilinmeyen Grup",
+                   kanal.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL,
+				   kanal.attributes["group-title"]?.toString() ?: "Bilinmeyen Grup",
                     kanal.attributes["tvg-country"]?.toString() ?: "TR",
                     season ?: 1,
                     episode ?: 0
