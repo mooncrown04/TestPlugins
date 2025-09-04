@@ -103,7 +103,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val searchResponses = shows.distinctBy { it.title }.map { kanal ->
                 val streamurl = kanal.url.toString()
                 val channelname = kanal.title.toString()
-                val posterurl = kanal.attributes["tvg-logo"].toString()
+                val posterurl = kanal.attributes["tvg-logo"].toString().trim()
                 val nation = kanal.attributes["tvg-country"].toString()
 
 
@@ -144,7 +144,7 @@ Log.e("POWERDIZI_DEBUG", "getMainPage - Dizi: $channelname, M3U Poster URL: $pos
         return kanallar.items.filter { it.title.toString().lowercase().contains(query.lowercase()) }.map { kanal ->
             val streamurl = kanal.url.toString()
             val channelname = kanal.title.toString()
-            val posterurl = kanal.attributes["tvg-logo"].toString()
+            val posterurl = kanal.attributes["tvg-logo"].toString().trim()
             val chGroup = kanal.attributes["group-title"].toString()
             val nation = kanal.attributes["tvg-country"].toString()
             
@@ -475,7 +475,7 @@ Log.e("POWERDIZI_DEBUG", "getMainPage - Dizi: $channelname, M3U Poster URL: $pos
             val kanal = kanallar.items.first { it.url == data }            
             val streamurl = kanal.url.toString()
             val channelname = kanal.title.toString()
-            val posterurl = kanal.attributes["tvg-logo"].toString()
+            val posterurl = kanal.attributes["tvg-logo"].toString().trim()
             val chGroup = kanal.attributes["group-title"].toString()
             val nation = kanal.attributes["tvg-country"].toString()
 
