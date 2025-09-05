@@ -170,7 +170,7 @@ class MoOnCrOwNTV(private val sharedPref: SharedPreferences?) : MainAPI() {
             type = TvType.Live,
             dataUrl = allUrls.toJson()
         ) {
-            this.posterUrl = selectedKanal.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
+            this.poster = selectedKanal.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
         }
     }
 
