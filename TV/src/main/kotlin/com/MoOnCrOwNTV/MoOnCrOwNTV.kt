@@ -147,7 +147,6 @@ class MoOnCrOwNTV : MainAPI() {
     )
 
     // Yeni: Tekil kanalları başlığa göre gruplayıp önbellekte tutacak bir değişken.
-    // Her kanalın birden fazla kaynağı olabilir.
     private var allGroupedChannelsCache: Map<String, List<PlaylistItem>>? = null
 
     private suspend fun getAllGroupedChannels(): Map<String, List<PlaylistItem>> {
@@ -165,23 +164,13 @@ class MoOnCrOwNTV : MainAPI() {
                     }
                 }.awaitAll().flatten()
             }
-
-            // Sadece başlığı ve URL'si olan kanalları filtreler
+            
             val cleanedList = combinedList.filter { it.title != null && it.url != null }
-
-            val seenTitles = ConcurrentHashMap<String, Boolean>()
-            val uniqueList = cleanedList.filter {
-                val title = it.title ?: return@filter false
-                seenTitles.putIfAbsent(title, true) == null
-            }
-
-            // Kanalları başlıklarına göre gruplar.
             allGroupedChannelsCache = cleanedList.groupBy { it.title!! }
         }
         return allGroupedChannelsCache!!
     }
 
-    // Yeni: Birden fazla URL'yi tutabilecek LoadData sınıfı
     data class LoadData(
         val title: String, 
         val poster: String, 
@@ -194,8 +183,11 @@ class MoOnCrOwNTV : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val groupedChannels = getAllGroupedChannels()
         
-        // Kanalları gruplarına göre ayrıştırır
-        val groupedByCategories = groupedChannels.values.flatten().groupBy {
+        // Önce benzersiz kanalları alırız, aynı başlığa sahip kanallardan sadece ilkini seçerek
+        val uniqueChannelsByTitle = groupedChannels.values.mapNotNull { it.firstOrNull() }
+
+        // Şimdi bu benzersiz kanalları gruplarına göre ayrıştırırız
+        val groupedByCategories = uniqueChannelsByTitle.groupBy {
             it.attributes["group-title"] ?: "Diğer"
         }
 
@@ -203,22 +195,17 @@ class MoOnCrOwNTV : MainAPI() {
             if (groupTitle.isNullOrBlank() || channelList.isEmpty()) {
                 null
             } else {
-                // Her bir kategori için sadece benzersiz kanal başlıklarını alırız
-                val uniqueChannelTitles = channelList.distinctBy { it.title }.mapNotNull { it.title }
-
-                val show = uniqueChannelTitles.mapNotNull { title ->
-                    val channelsWithSameTitle = groupedChannels[title]
-                    val firstChannel = channelsWithSameTitle?.firstOrNull() ?: return@mapNotNull null
-
-                    val streamurl = firstChannel.url
-                    val channelname = firstChannel.title
-                    val posterurl = firstChannel.attributes["tvg-logo"]
-                    val chGroup = firstChannel.attributes["group-title"]
-                    val nation = firstChannel.attributes["tvg-country"]
-
+                val show = channelList.mapNotNull { kanal ->
+                    val streamurl = kanal.url
+                    val channelname = kanal.title
+                    val posterurl = kanal.attributes["tvg-logo"]
+                    val chGroup = kanal.attributes["group-title"]
+                    val nation = kanal.attributes["tvg-country"]
+                    
                     if (streamurl.isNullOrBlank() || channelname.isNullOrBlank()) {
                         null
                     } else {
+                        val channelsWithSameTitle = groupedChannels[channelname] ?: emptyList()
                         newLiveSearchResponse(
                             channelname,
                             LoadData(
