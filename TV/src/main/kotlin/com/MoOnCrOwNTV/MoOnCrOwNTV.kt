@@ -133,7 +133,8 @@ sealed class PlaylistParserException(message: String) : Exception(message) {
 
 // --- Ana Eklenti Sınıfı ---
 class MoOnCrOwNTV : MainAPI() {
-    override var mainUrl = "placeholder"
+    // Burası, URL'nin doğru yeridir.
+    override var mainUrl = "https://dl.dropbox.com/scl/fi/r4p9v7g76ikwt8zsyuhyn/sile.m3u?rlkey=esnalbpm4kblxgkvym51gjokm"
     override var name = "35 MoOnCrOwN TV"
     override val hasMainPage = true
     override var lang = "tr"
@@ -141,16 +142,15 @@ class MoOnCrOwNTV : MainAPI() {
     override val hasDownloadSupport = false
     override val supportedTypes = setOf(TvType.Live)
 
-    private val singleM3uUrl = "https://dl.dropbox.com/scl/fi/r4p9v7g76ikwt8zsyuhyn/sile.m3u?rlkey=esnalbpm4kblxgkvym51gjokm"
-
     private var allGroupedChannelsCache: Map<String, List<PlaylistItem>>? = null
 
     private suspend fun getAllGroupedChannels(): Map<String, List<PlaylistItem>> {
         if (allGroupedChannelsCache == null) {
             val content = try {
-                app.get(singleM3uUrl).text
+                // mainUrl'yi direkt olarak kullanır.
+                app.get(mainUrl).text
             } catch (e: Exception) {
-                Log.e("MoOnCrOwNTV", "Failed to fetch or parse URL: $singleM3uUrl", e)
+                Log.e("MoOnCrOwNTV", "Failed to fetch or parse URL: $mainUrl", e)
                 ""
             }
             
@@ -281,87 +281,4 @@ class MoOnCrOwNTV : MainAPI() {
                 val rcChGroup = kanal.attributes["group-title"]
                 val rcNation = kanal.attributes["tvg-country"]
 
-                val channelsWithSameTitle = groupedChannels[rcChannelName] ?: emptyList()
-                if (channelsWithSameTitle.isNotEmpty()) {
-                    recommendations.add(
-                        newLiveSearchResponse(
-                            rcChannelName,
-                            LoadData(
-                                title = rcChannelName,
-                                poster = rcPosterUrl ?: "",
-                                group = rcChGroup ?: "",
-                                nation = rcNation ?: "",
-                                urls = channelsWithSameTitle.mapNotNull { it.url },
-                                headers = channelsWithSameTitle.mapNotNull { it.url?.let { url -> url to it.headers } }?.toMap() ?: emptyMap()
-                            ).toJson(),
-                            type = TvType.Live
-                        ) {
-                            this.posterUrl = rcPosterUrl
-                            this.lang = rcNation
-                        }
-                    )
-                }
-            }
-        }
-        
-        val uniqueRecommendations = recommendations.distinctBy { it.name }
-
-        val firstUrl = loadData.urls.firstOrNull() ?: ""
-
-        return newLiveStreamLoadResponse(loadData.title, firstUrl, url) {
-            this.posterUrl = loadData.poster
-            this.plot = nation
-            this.tags = listOf(loadData.group, loadData.nation)
-            this.recommendations = uniqueRecommendations
-        }
-    }
-
-    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        val loadData = fetchDataFromUrlOrJson(data)
-        Log.d("IPTV", "loadData » $loadData")
-
-        loadData.urls.forEachIndexed { index, url ->
-            val headers = loadData.headers[url] ?: emptyMap()
-            val name = if (loadData.urls.size > 1) "${this.name} Kaynak ${index + 1}" else this.name
-            
-            callback.invoke(
-                newExtractorLink(
-                    source = name,
-                    name = name,
-                    url = url,
-                    type = ExtractorLinkType.M3U8
-                ) {
-                    this.referer = headers["referrer"] ?: ""
-                    this.headers = headers
-                    quality = Qualities.Unknown.value
-                }
-            )
-        }
-        return true
-    }
-
-    private suspend fun fetchDataFromUrlOrJson(data: String): LoadData {
-        if (data.startsWith("{")) {
-            return parseJson<LoadData>(data)
-        } else {
-            val groupedChannels = getAllGroupedChannels()
-            val allChannels = groupedChannels.values.flatten()
-            val kanal = allChannels.firstOrNull { it.url == data }
-            
-            if (kanal == null || kanal.title == null || kanal.url == null) {
-                return LoadData("", "", "", "", emptyList(), emptyMap())
-            }
-
-            val channelsWithSameTitle = groupedChannels[kanal.title] ?: emptyList()
-
-            return LoadData(
-                title = kanal.title,
-                poster = kanal.attributes["tvg-logo"] ?: "",
-                group = kanal.attributes["group-title"] ?: "",
-                nation = kanal.attributes["tvg-country"] ?: "",
-                urls = channelsWithSameTitle.mapNotNull { it.url },
-                headers = channelsWithSameTitle.mapNotNull { it.url?.let { url -> url to it.headers } }?.toMap() ?: emptyMap()
-            )
-        }
-    }
-}
+                val channelsWith
