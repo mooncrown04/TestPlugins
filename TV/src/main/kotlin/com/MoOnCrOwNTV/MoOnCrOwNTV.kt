@@ -7,9 +7,8 @@ import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope // Bu import eklendi
+import kotlinx.coroutines.coroutineScope
 import java.io.InputStream
-import java.util.concurrent.ConcurrentHashMap
 
 // --- Yardımcı Veri Sınıfları ---
 data class Playlist(
@@ -146,11 +145,12 @@ class MoOnCrOwNTV : MainAPI() {
         "https://raw.githubusercontent.com/iptv-org/iptv/master/channels/tr.m3u"
     )
 
-    private var allChannelsCache: List<PlaylistItem>? = null
+    // Yeni: Tekil kanalları başlığa göre gruplayıp önbellekte tutacak bir değişken.
+    // Her kanalın birden fazla kaynağı olabilir.
+    private var allGroupedChannelsCache: Map<String, List<PlaylistItem>>? = null
 
-    private suspend fun getAllChannels(): List<PlaylistItem> {
-        if (allChannelsCache == null) {
-            // Yeni: 'coroutineScope' bloğu eklenerek 'async' için uygun bir kapsam oluşturuldu
+    private suspend fun getAllGroupedChannels(): Map<String, List<PlaylistItem>> {
+        if (allGroupedChannelsCache == null) {
             val combinedList = coroutineScope {
                 mainUrls.map { url ->
                     async {
@@ -164,62 +164,108 @@ class MoOnCrOwNTV : MainAPI() {
                     }
                 }.awaitAll().flatten()
             }
+            
+            // Sadece başlığı ve URL'si olan kanalları filtreler
+            val cleanedList = combinedList.filter { it.title != null && it.url != null }
 
-            val seenTitles = ConcurrentHashMap<String, Boolean>()
-            val uniqueChannels = combinedList.filter { channel ->
-                val title = channel.title ?: return@filter false
-                seenTitles.putIfAbsent(title, true) == null
-            }
-            allChannelsCache = uniqueChannels
+            // Yeni: Kanalları başlıklarına göre gruplar.
+            // Bu sayede aynı başlıktaki farklı kaynaklar bir araya gelir.
+            allGroupedChannelsCache = cleanedList.groupBy { it.title!! }
         }
-        return allChannelsCache!!
+        return allGroupedChannelsCache!!
     }
 
-    data class LoadData(val url: String, val title: String, val poster: String, val group: String, val nation: String)
+    // Yeni: Birden fazla URL'yi tutabilecek LoadData sınıfı
+    data class LoadData(
+        val title: String, 
+        val poster: String, 
+        val group: String, 
+        val nation: String, 
+        val urls: List<String>,
+        val headers: Map<String, Map<String, String>>
+    )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val kanallar = getAllChannels()
+        val groupedChannels = getAllGroupedChannels()
         
-        return newHomePageResponse(
-            kanallar.groupBy { it.attributes["group-title"] }.map { group ->
-                val title = group.key ?: ""
-                val show = group.value.map { kanal ->
-                    val streamurl = kanal.url.toString()
-                    val channelname = kanal.title.toString()
-                    val posterurl = kanal.attributes["tvg-logo"].toString()
-                    val chGroup = kanal.attributes["group-title"].toString()
-                    val nation = kanal.attributes["tvg-country"].toString()
-                    newLiveSearchResponse(
-                        channelname,
-                        LoadData(streamurl, channelname, posterurl, chGroup, nation).toJson(),
-                        type = TvType.Live
-                    ) {
-                        this.posterUrl = posterurl
-                        this.lang = nation
+        // Kanalları gruplarına göre ayrıştırır
+        val groupedByCategories = groupedChannels.values.flatten().groupBy {
+            it.attributes["group-title"] ?: "Diğer"
+        }
+
+        val homepageList = groupedByCategories.mapNotNull { (groupTitle, channelList) ->
+            if (groupTitle.isNullOrBlank() || channelList.isEmpty()) {
+                null
+            } else {
+                val show = channelList.mapNotNull { kanal ->
+                    val streamurl = kanal.url
+                    val channelname = kanal.title
+                    val posterurl = kanal.attributes["tvg-logo"]
+                    val chGroup = kanal.attributes["group-title"]
+                    val nation = kanal.attributes["tvg-country"]
+                    
+                    if (streamurl.isNullOrBlank() || channelname.isNullOrBlank()) {
+                        null
+                    } else {
+                        newLiveSearchResponse(
+                            channelname,
+                            // Tek bir kanala ait tüm URL'leri LoadData içine koyar
+                            LoadData(
+                                title = channelname,
+                                poster = posterurl ?: "",
+                                group = chGroup ?: "",
+                                nation = nation ?: "",
+                                urls = groupedChannels[channelname]?.mapNotNull { it.url } ?: emptyList(),
+                                headers = groupedChannels[channelname]?.mapNotNull { it.url?.let { url -> url to it.headers } }?.toMap() ?: emptyMap()
+                            ).toJson(),
+                            type = TvType.Live
+                        ) {
+                            this.posterUrl = posterurl
+                            this.lang = nation
+                        }
                     }
                 }
-                HomePageList(title, show, isHorizontalImages = true)
-            },
-            hasNext = false
-        )
+                if (show.isNotEmpty()) {
+                    HomePageList(groupTitle, show.distinctBy { it.name }, isHorizontalImages = true)
+                } else {
+                    null
+                }
+            }
+        }
+        return newHomePageResponse(homepageList, hasNext = false)
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val kanallar = getAllChannels()
+        val groupedChannels = getAllGroupedChannels()
         
-        return kanallar.filter { it.title.toString().lowercase().contains(query.lowercase()) }.map { kanal ->
-            val streamurl = kanal.url.toString()
-            val channelname = kanal.title.toString()
-            val posterurl = kanal.attributes["tvg-logo"].toString()
-            val chGroup = kanal.attributes["group-title"].toString()
-            val nation = kanal.attributes["tvg-country"].toString()
-            newLiveSearchResponse(
-                channelname,
-                LoadData(streamurl, channelname, posterurl, chGroup, nation).toJson(),
-                type = TvType.Live
-            ) {
-                this.posterUrl = posterurl
-                this.lang = nation
+        return groupedChannels.filter { (title, _) ->
+            title.lowercase().contains(query.lowercase())
+        }.mapNotNull { (title, channels) ->
+            val firstChannel = channels.firstOrNull() ?: return@mapNotNull null
+            val streamurl = firstChannel.url
+            val channelname = firstChannel.title
+            val posterurl = firstChannel.attributes["tvg-logo"]
+            val chGroup = firstChannel.attributes["group-title"]
+            val nation = firstChannel.attributes["tvg-country"]
+
+            if (streamurl.isNullOrBlank() || channelname.isNullOrBlank()) {
+                null
+            } else {
+                newLiveSearchResponse(
+                    channelname,
+                    LoadData(
+                        title = channelname,
+                        poster = posterurl ?: "",
+                        group = chGroup ?: "",
+                        nation = nation ?: "",
+                        urls = channels.mapNotNull { it.url },
+                        headers = channels.mapNotNull { it.url?.let { url -> url to it.headers } }?.toMap() ?: emptyMap()
+                    ).toJson(),
+                    type = TvType.Live
+                ) {
+                    this.posterUrl = posterurl
+                    this.lang = nation
+                }
             }
         }
     }
@@ -234,36 +280,55 @@ class MoOnCrOwNTV : MainAPI() {
             "» ${loadData.group} | ${loadData.nation} «"
         }
 
-        val kanallar = getAllChannels()
         val recommendations = mutableListOf<LiveSearchResponse>()
-
-        for (kanal in kanallar) {
+        val groupedChannels = getAllGroupedChannels()
+        val allChannels = groupedChannels.values.flatten()
+        
+        for (kanal in allChannels) {
             if (kanal.attributes["group-title"].toString() == loadData.group) {
-                val rcStreamUrl = kanal.url.toString()
-                val rcChannelName = kanal.title.toString()
-                if (rcChannelName == loadData.title) continue
+                val rcStreamUrl = kanal.url
+                val rcChannelName = kanal.title
 
-                val rcPosterUrl = kanal.attributes["tvg-logo"].toString()
-                val rcChGroup = kanal.attributes["group-title"].toString()
-                val rcNation = kanal.attributes["tvg-country"].toString()
+                if (rcStreamUrl.isNullOrBlank() || rcChannelName.isNullOrBlank() || rcChannelName == loadData.title) continue
 
-                recommendations.add(
-                    newLiveSearchResponse(
-                        rcChannelName,
-                        LoadData(rcStreamUrl, rcChannelName, rcPosterUrl, rcChGroup, rcNation).toJson(),
-                        type = TvType.Live
-                    ) {
-                        this.posterUrl = rcPosterUrl
-                        this.lang = rcNation
-                    })
+                val rcPosterUrl = kanal.attributes["tvg-logo"]
+                val rcChGroup = kanal.attributes["group-title"]
+                val rcNation = kanal.attributes["tvg-country"]
+
+                val channelsWithSameTitle = groupedChannels[rcChannelName] ?: emptyList()
+                if (channelsWithSameTitle.isNotEmpty()) {
+                    recommendations.add(
+                        newLiveSearchResponse(
+                            rcChannelName,
+                            LoadData(
+                                title = rcChannelName,
+                                poster = rcPosterUrl ?: "",
+                                group = rcChGroup ?: "",
+                                nation = rcNation ?: "",
+                                urls = channelsWithSameTitle.mapNotNull { it.url },
+                                headers = channelsWithSameTitle.mapNotNull { it.url?.let { url -> url to it.headers } }?.toMap() ?: emptyMap()
+                            ).toJson(),
+                            type = TvType.Live
+                        ) {
+                            this.posterUrl = rcPosterUrl
+                            this.lang = rcNation
+                        }
+                    )
+                }
             }
         }
+        
+        // Önerilen kanallarda aynı isimli olanları elemek için
+        val uniqueRecommendations = recommendations.distinctBy { it.name }
 
-        return newLiveStreamLoadResponse(loadData.title, loadData.url, url) {
+        // LoadData'da tek bir URL olmadığı için ilk URL'yi kullanırız
+        val firstUrl = loadData.urls.firstOrNull() ?: ""
+
+        return newLiveStreamLoadResponse(loadData.title, firstUrl, url) {
             this.posterUrl = loadData.poster
             this.plot = nation
             this.tags = listOf(loadData.group, loadData.nation)
-            this.recommendations = recommendations
+            this.recommendations = uniqueRecommendations
         }
     }
 
@@ -271,22 +336,24 @@ class MoOnCrOwNTV : MainAPI() {
         val loadData = fetchDataFromUrlOrJson(data)
         Log.d("IPTV", "loadData » $loadData")
 
-        val kanallar = getAllChannels()
-        val kanal = kanallar.first { it.url == loadData.url }
-        Log.d("IPTV", "kanal » $kanal")
-
-        callback.invoke(
-            newExtractorLink(
-                source = this.name,
-                name = this.name,
-                url = loadData.url,
-                type = ExtractorLinkType.M3U8
-            ) {
-                this.referer = kanal.headers["referrer"] ?: ""
-                this.headers = kanal.headers
-                quality = Qualities.Unknown.value
-            }
-        )
+        // Yeni: Birden fazla URL'yi döngüye alarak her biri için ayrı kaynak oluşturur
+        loadData.urls.forEachIndexed { index, url ->
+            val headers = loadData.headers[url] ?: emptyMap()
+            val name = if (loadData.urls.size > 1) "${this.name} Kaynak ${index + 1}" else this.name
+            
+            callback.invoke(
+                newExtractorLink(
+                    source = name,
+                    name = name,
+                    url = url,
+                    type = ExtractorLinkType.M3U8
+                ) {
+                    this.referer = headers["referrer"] ?: ""
+                    this.headers = headers
+                    quality = Qualities.Unknown.value
+                }
+            )
+        }
         return true
     }
 
@@ -294,14 +361,24 @@ class MoOnCrOwNTV : MainAPI() {
         if (data.startsWith("{")) {
             return parseJson<LoadData>(data)
         } else {
-            val kanallar = getAllChannels()
-            val kanal = kanallar.first { it.url == data }
-            val streamurl = kanal.url.toString()
-            val channelname = kanal.title.toString()
-            val posterurl = kanal.attributes["tvg-logo"].toString()
-            val chGroup = kanal.attributes["group-title"].toString()
-            val nation = kanal.attributes["tvg-country"].toString()
-            return LoadData(streamurl, channelname, posterurl, chGroup, nation)
+            val groupedChannels = getAllGroupedChannels()
+            val allChannels = groupedChannels.values.flatten()
+            val kanal = allChannels.firstOrNull { it.url == data }
+            
+            if (kanal == null || kanal.title == null || kanal.url == null) {
+                return LoadData("", "", "", "", emptyList(), emptyMap())
+            }
+
+            val channelsWithSameTitle = groupedChannels[kanal.title] ?: emptyList()
+
+            return LoadData(
+                title = kanal.title,
+                poster = kanal.attributes["tvg-logo"] ?: "",
+                group = kanal.attributes["group-title"] ?: "",
+                nation = kanal.attributes["tvg-country"] ?: "",
+                urls = channelsWithSameTitle.mapNotNull { it.url },
+                headers = channelsWithSameTitle.mapNotNull { it.url?.let { url -> url to it.headers } }?.toMap() ?: emptyMap()
+            )
         }
     }
 }
