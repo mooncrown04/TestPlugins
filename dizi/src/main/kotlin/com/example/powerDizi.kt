@@ -10,7 +10,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import java.io.InputStream
-
+import java.util.Locale
 
 // Yardımcı sınıflar
 data class Playlist(val items: List<PlaylistItem> = emptyList())
@@ -133,32 +133,31 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(TvType.TvSeries)
 
-//    private val DEFAULT_POSTER_URL = "https://i.imgur.com/kS5z1c6.png"
     private val DEFAULT_POSTER_URL = "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
         
-        val groupedByTitle = kanallar.items.groupBy {
-            it.attributes["group-title"]?.trim() ?: "Bilinmeyen Dizi"
+        val groupedByCleanTitle = kanallar.items.groupBy {
+            val (cleanTitle, _, _) = parseEpisodeInfo(it.title.toString())
+            cleanTitle
         }
 
-        val homePageLists = groupedByTitle.toSortedMap().mapNotNull { (groupTitle, shows) ->
+        val homePageLists = groupedByCleanTitle.toSortedMap().mapNotNull { (cleanTitle, shows) ->
             val firstShow = shows.firstOrNull() ?: return@mapNotNull null
-          val posterUrl = firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
-
+            val posterUrl = firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
             val nation = firstShow.attributes["tvg-country"]?.toString() ?: "TR"
 
             val searchResponse = newLiveSearchResponse(
-                groupTitle,
-                LoadData(groupTitle, groupTitle, posterUrl, groupTitle, nation).toJson(),
+                cleanTitle,
+                LoadData(firstShow.url.toString(), cleanTitle, posterUrl, firstShow.attributes["group-title"]?.toString() ?: cleanTitle, nation).toJson(),
                 type = TvType.TvSeries
             ) {
                 this.posterUrl = posterUrl
                 this.lang = nation
             }
 
-            HomePageList(groupTitle, listOf(searchResponse), isHorizontalImages = true)
+            HomePageList(cleanTitle, listOf(searchResponse), isHorizontalImages = true)
         }
 
         return newHomePageResponse(homePageLists, hasNext = false)
@@ -166,21 +165,22 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
-        val groupedByTitle = kanallar.items.groupBy {
-            it.attributes["group-title"]?.trim() ?: "Bilinmeyen Dizi"
+        
+        val groupedByCleanTitle = kanallar.items.groupBy {
+            val (cleanTitle, _, _) = parseEpisodeInfo(it.title.toString())
+            cleanTitle
         }
 
-        return groupedByTitle.filter { (groupTitle, _) ->
-            groupTitle.lowercase().contains(query.lowercase())
-        }.map { (groupTitle, shows) ->
+        return groupedByCleanTitle.filter { (cleanTitle, _) ->
+            cleanTitle.lowercase(Locale.getDefault()).contains(query.lowercase(Locale.getDefault()))
+        }.map { (cleanTitle, shows) ->
             val firstShow = shows.firstOrNull() ?: return@map newLiveSearchResponse("", "", type = TvType.TvSeries)
-        val posterUrl = firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
-
+            val posterUrl = firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
             val nation = firstShow.attributes["tvg-country"]?.toString() ?: "TR"
 
             newLiveSearchResponse(
-                groupTitle,
-                LoadData(groupTitle, groupTitle, posterUrl, groupTitle, nation).toJson(),
+                cleanTitle,
+                LoadData(firstShow.url.toString(), cleanTitle, posterUrl, firstShow.attributes["group-title"]?.toString() ?: cleanTitle, nation).toJson(),
                 type = TvType.TvSeries
             ) {
                 this.posterUrl = posterUrl
@@ -197,7 +197,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
         val allShows = kanallar.items.filter { it.attributes["group-title"]?.trim() == groupTitle }
 
-   val finalPosterUrl = allShows.firstOrNull()?.attributes?.get("tvg-logo")?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
+        val finalPosterUrl = allShows.firstOrNull()?.attributes?.get("tvg-logo")?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
         val plot = "TMDB'den özet alınamadı."
 
         val currentShowEpisodes = allShows.mapNotNull { kanal ->
@@ -277,8 +277,8 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 return LoadData(
                     kanal.url.toString(),
                     cleanTitle,
-                   kanal.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL,
-				   kanal.attributes["group-title"]?.toString() ?: "Bilinmeyen Grup",
+                    kanal.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL,
+                    kanal.attributes["group-title"]?.toString() ?: "Bilinmeyen Grup",
                     kanal.attributes["tvg-country"]?.toString() ?: "TR",
                     season ?: 1,
                     episode ?: 0
