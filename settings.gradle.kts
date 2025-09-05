@@ -11,28 +11,7 @@ pluginManagement {
     }
 }
 
-
-
-
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories {
-        google()
-        mavenCentral()
-        maven("https://jitpack.io")
-        maven("https://maven.pkg.github.com/LagradOst/CloudStream-Releases/")
-    }
-}
-
-
-
-
-
-
-
-
-
-rootProject.name = "TestPlugins"
+rootProject.name = "CloudstreamPlugins"
 
 // Bu dosya, hangi projelerin dahil edildiğini ayarlar.
 // Tüm yeni projeler, "disabled" değişkeninde belirtilmedikçe otomatik olarak dahil edilmelidir.
@@ -49,8 +28,9 @@ fun File.eachDir(block: (File) -> Unit) {
     listFiles()?.filter { it.isDirectory }?.forEach { block(it) }
 }
 
-// Yalnızca tek bir projeyi dahil etmek için, önceki satırları (ilk hariç) yorumlayın ve eklentinizi şöyle dahil edin:/
-//include( ":TV",":dizi",":Sinema")
+// Yalnızca tek bir projeyi dahil etmek için, önceki satırları (ilk hariç) yorumlayın ve eklentinizi şöyle dahil edin:
+//include(":dizi",":Sinema")
+
 
 include(":dizi")
 include(":Sinema")
