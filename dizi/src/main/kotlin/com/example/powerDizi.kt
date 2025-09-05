@@ -353,23 +353,22 @@ override suspend fun loadLinks(
     
     // URL listesi üzerinden döngü kurup her birini bir kaynak olarak ekler.
     loadData.urls.forEachIndexed { index, videoUrl ->
-        val linkName = "${loadData.title} Kaynak ${index + 1}"
-        val uniqueSource = "${this.name} ${index + 1}" // Kaynak adını benzersiz hale getiriyoruz
+        val linkQuality = "Kaynak ${index + 1}"
 
         callback.invoke(
             newExtractorLink(
-                source = uniqueSource, // Burada benzersiz kaynak adını kullanıyoruz
-                name = linkName,
+                source = this.name,
+                name = loadData.title,
                 url = videoUrl,
                 type = ExtractorLinkType.M3U8
             ) {
-                quality = Qualities.Unknown.value
+                // Her link için benzersiz bir kalite adı belirliyoruz.
+                this.quality = linkQuality
             }
         )
     }
     return true
 }
-
     // Gelen verinin URL mi yoksa JSON mu olduğunu kontrol edip ilgili LoadData nesnesini döndürür.
     private suspend fun fetchDataFromUrlOrJson(data: String): LoadData {
         if (data.startsWith("{")) {
