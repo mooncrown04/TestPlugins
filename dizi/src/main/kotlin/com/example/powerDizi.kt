@@ -343,30 +343,31 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     }
 
     // Bölümü oynatmak için gerekli linkleri sağlar.
-override suspend fun loadLinks(
-    data: String,
-    isCasting: Boolean,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
-): Boolean {
-    val loadData = parseJson<LoadData>(data)
-    
-    loadData.urls.forEachIndexed { index, videoUrl ->
-        val linkQuality = (index + 1) * 1080 // Her kaynağa benzersiz bir sayısal kalite değeri atıyoruz
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val loadData = parseJson<LoadData>(data)
+        
+        loadData.urls.forEachIndexed { index, videoUrl ->
+            val linkQuality = Qualities.Unknown.value
 
-        callback.invoke(
-            newExtractorLink(
-                source = this.name,
-                name = "Kaynak ${index + 1}", // Kaynak ismini burada gösteriyoruz
-                url = videoUrl,
-                type = ExtractorLinkType.M3U8
-            ) {
-                quality = linkQuality
-            }
-        )
+            callback.invoke(
+                newExtractorLink(
+                    source = this.name,
+                    name = "Kaynak ${index + 1}",
+                    url = videoUrl,
+                    type = ExtractorLinkType.M3U8
+                ) {
+                    quality = linkQuality
+                }
+            )
+        }
+        return true
     }
-    return true
-}
+
     // Gelen verinin URL mi yoksa JSON mu olduğunu kontrol edip ilgili LoadData nesnesini döndürür.
     private suspend fun fetchDataFromUrlOrJson(data: String): LoadData {
         if (data.startsWith("{")) {
