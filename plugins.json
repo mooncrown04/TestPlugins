@@ -1,0 +1,87 @@
+[
+    {
+        "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powerdizi/powerdizi.png",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
+        "fileSize": 27727,
+        "status": 1,
+        "language": "tr",
+        "authors": [
+            "GitLatte",
+            "patr0nq",
+            "keyiflerolsun"
+        ],
+        "tvTypes": [
+            "TvSeries"
+        ],
+        "version": 3,
+        "internalName": "Anime",
+        "description": "yabanc\u0131 anime ar\u015fivi",
+        "url": "https://raw.githubusercontent.com/mooncrown04/TestPlugins/builds/Anime.cs3",
+        "name": "Anime"
+    },
+    {
+        "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powerdizi/powerdizi.png",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
+        "fileSize": 24828,
+        "status": 1,
+        "language": "tr",
+        "authors": [
+            "GitLatte",
+            "patr0nq",
+            "keyiflerolsun"
+        ],
+        "tvTypes": [
+            "TvSeries"
+        ],
+        "version": 3,
+        "internalName": "dizi",
+        "description": "powerboard`un yabanc\u0131 dizi ar\u015fivi",
+        "url": "https://raw.githubusercontent.com/mooncrown04/TestPlugins/builds/dizi.cs3",
+        "name": "dizi"
+    },
+    {
+        "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
+        "fileSize": 28312,
+        "status": 1,
+        "language": "tr",
+        "authors": [
+            "GitLatte",
+            "patr0nq",
+            "keyiflerolsun"
+        ],
+        "tvTypes": [
+            "Movie"
+        ],
+        "version": 3,
+        "internalName": "Sinema",
+        "description": "powerboard`un sinema ar\u015fivi",
+        "url": "https://raw.githubusercontent.com/mooncrown04/TestPlugins/builds/Sinema.cs3",
+        "name": "Sinema"
+    },
+    {
+        "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powerdizi/powerdizi.png",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
+        "fileSize": 23375,
+        "status": 1,
+        "language": "tr",
+        "authors": [
+            "MoOnCrOwN",
+            "GitLatte",
+            "patr0nq",
+            "keyiflerolsun"
+        ],
+        "tvTypes": [
+            "TvSeries"
+        ],
+        "version": 3,
+        "internalName": "TV",
+        "description": "MoOnCrOwN TV",
+        "url": "https://raw.githubusercontent.com/mooncrown04/TestPlugins/builds/TV.cs3",
+        "name": "TV"
+    }
+]
