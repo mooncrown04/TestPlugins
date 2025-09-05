@@ -17,13 +17,12 @@ class MoOnCrOwNTV : MainAPI() {
         val items = channels.mapNotNull {
             val name = it.selectFirst("h3")?.text() ?: return@mapNotNull null
             val url = fixUrl(it.selectFirst("a")?.attr("href") ?: return@mapNotNull null)
-            val poster = fixUrlNull(it.selectFirst("img")?.attr("src"))
+            val posterUrl = fixUrlNull(it.selectFirst("img")?.attr("src"))
 
             newLiveSearchResponse(
                 name = name,
                 url = url,
-                type = TvType.Live,
-                poster = poster
+                posterUrl = posterUrl
             )
         }
 
@@ -38,13 +37,12 @@ class MoOnCrOwNTV : MainAPI() {
         return results.mapNotNull {
             val name = it.selectFirst("h3")?.text() ?: return@mapNotNull null
             val url = fixUrl(it.selectFirst("a")?.attr("href") ?: return@mapNotNull null)
-            val poster = fixUrlNull(it.selectFirst("img")?.attr("src"))
+            val posterUrl = fixUrlNull(it.selectFirst("img")?.attr("src"))
 
             newLiveSearchResponse(
                 name = name,
                 url = url,
-                type = TvType.Live,
-                poster = poster
+                posterUrl = posterUrl
             )
         }
     }
@@ -52,16 +50,14 @@ class MoOnCrOwNTV : MainAPI() {
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
         val name = document.selectFirst("h1")?.text() ?: "MoOnCrOwNTV"
-        val poster = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
+        val posterUrl = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
         val streamUrl = document.selectFirst("iframe")?.attr("src") ?: url
 
         return newLiveStreamLoadResponse(
             name = name,
             url = streamUrl,
             dataUrl = url,
-            type = TvType.Live,
-            poster = poster,
-            contentRating = null
+            posterUrl = posterUrl
         )
     }
 }
