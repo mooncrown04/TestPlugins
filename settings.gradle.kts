@@ -11,6 +11,27 @@ pluginManagement {
     }
 }
 
+
+
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        maven("https://jitpack.io")
+        maven("https://maven.pkg.github.com/LagradOst/CloudStream-Releases/")
+    }
+}
+
+
+
+
+
+
+
+
+
 rootProject.name = "CloudstreamPlugins"
 
 // Bu dosya, hangi projelerin dahil edildiğini ayarlar.
