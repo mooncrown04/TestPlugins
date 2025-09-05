@@ -351,19 +351,17 @@ override suspend fun loadLinks(
 ): Boolean {
     val loadData = parseJson<LoadData>(data)
     
-    // URL listesi üzerinden döngü kurup her birini bir kaynak olarak ekler.
     loadData.urls.forEachIndexed { index, videoUrl ->
-        val linkQuality = "Kaynak ${index + 1}"
+        val linkQuality = (index + 1) * 1080 // Her kaynağa benzersiz bir sayısal kalite değeri atıyoruz
 
         callback.invoke(
             newExtractorLink(
                 source = this.name,
-                name = loadData.title,
+                name = "Kaynak ${index + 1}", // Kaynak ismini burada gösteriyoruz
                 url = videoUrl,
                 type = ExtractorLinkType.M3U8
             ) {
-                // Her link için benzersiz bir kalite adı belirliyoruz.
-                this.quality = linkQuality
+                quality = linkQuality
             }
         )
     }
