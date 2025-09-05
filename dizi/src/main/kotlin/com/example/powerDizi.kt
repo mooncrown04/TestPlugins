@@ -353,14 +353,14 @@ override suspend fun loadLinks(
     
     // URL listesi üzerinden döngü kurup her birini bir kaynak olarak ekler.
     loadData.urls.forEachIndexed { index, videoUrl ->
-        // Her URL'ye benzersiz bir sorgu parametresi ekliyoruz
-        val uniqueUrl = "$videoUrl?source=${index + 1}"
+        val linkName = "${loadData.title} Kaynak ${index + 1}"
+        val uniqueSource = "${this.name} ${index + 1}" // Kaynak adını benzersiz hale getiriyoruz
 
         callback.invoke(
             newExtractorLink(
-                source = this.name,
-                name = "${loadData.title} Kaynak ${index + 1}",
-                url = uniqueUrl, // Burada benzersiz URL'yi kullanıyoruz
+                source = uniqueSource, // Burada benzersiz kaynak adını kullanıyoruz
+                name = linkName,
+                url = videoUrl,
                 type = ExtractorLinkType.M3U8
             ) {
                 quality = Qualities.Unknown.value
