@@ -343,29 +343,32 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     }
 
     // Bölümü oynatmak için gerekli linkleri sağlar.
-    override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        val loadData = parseJson<LoadData>(data)
-        
-        // URL listesi üzerinden döngü kurup her birini bir kaynak olarak ekler.
-        loadData.urls.forEachIndexed { index, videoUrl ->
-            callback.invoke(
-                newExtractorLink(
-                    source = this.name,
-                    name = "${loadData.title} Kaynak ${index + 1}", // Kaynak 1, Kaynak 2 olarak adlandırılabilir.
-                    url = videoUrl,
-                    type = ExtractorLinkType.M3U8
-                ) {
-                    quality = Qualities.Unknown.value
-                }
-            )
-        }
-        return true
+override suspend fun loadLinks(
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    val loadData = parseJson<LoadData>(data)
+    
+    // URL listesi üzerinden döngü kurup her birini bir kaynak olarak ekler.
+    loadData.urls.forEachIndexed { index, videoUrl ->
+        // Her URL'ye benzersiz bir sorgu parametresi ekliyoruz
+        val uniqueUrl = "$videoUrl?source=${index + 1}"
+
+        callback.invoke(
+            newExtractorLink(
+                source = this.name,
+                name = "${loadData.title} Kaynak ${index + 1}",
+                url = uniqueUrl, // Burada benzersiz URL'yi kullanıyoruz
+                type = ExtractorLinkType.M3U8
+            ) {
+                quality = Qualities.Unknown.value
+            }
+        )
     }
+    return true
+}
 
     // Gelen verinin URL mi yoksa JSON mu olduğunu kontrol edip ilgili LoadData nesnesini döndürür.
     private suspend fun fetchDataFromUrlOrJson(data: String): LoadData {
