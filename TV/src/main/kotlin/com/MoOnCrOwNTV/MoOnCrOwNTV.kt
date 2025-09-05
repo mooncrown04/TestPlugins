@@ -10,20 +10,20 @@ class MoOnCrOwNTV : MainAPI() {
     override val hasMainPage = true
     override val supportedTypes = setOf(TvType.Live)
 
-    override suspend fun getMainPage(): HomePageResponse {
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
         val document = app.get(mainUrl).document
         val channels = document.select("div.channel-card")
 
         val items = channels.mapNotNull {
             val name = it.selectFirst("h3")?.text() ?: return@mapNotNull null
             val url = fixUrl(it.selectFirst("a")?.attr("href") ?: return@mapNotNull null)
-            val posterUrl = fixUrlNull(it.selectFirst("img")?.attr("src"))
+            val poster = fixUrlNull(it.selectFirst("img")?.attr("src"))
 
             newLiveSearchResponse(
                 name = name,
                 url = url,
                 type = TvType.Live,
-                posterUrl = posterUrl
+                poster = poster
             )
         }
 
@@ -38,13 +38,13 @@ class MoOnCrOwNTV : MainAPI() {
         return results.mapNotNull {
             val name = it.selectFirst("h3")?.text() ?: return@mapNotNull null
             val url = fixUrl(it.selectFirst("a")?.attr("href") ?: return@mapNotNull null)
-            val posterUrl = fixUrlNull(it.selectFirst("img")?.attr("src"))
+            val poster = fixUrlNull(it.selectFirst("img")?.attr("src"))
 
             newLiveSearchResponse(
                 name = name,
                 url = url,
                 type = TvType.Live,
-                posterUrl = posterUrl
+                poster = poster
             )
         }
     }
@@ -52,15 +52,16 @@ class MoOnCrOwNTV : MainAPI() {
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
         val name = document.selectFirst("h1")?.text() ?: "MoOnCrOwNTV"
-        val posterUrl = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
+        val poster = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
         val streamUrl = document.selectFirst("iframe")?.attr("src") ?: url
 
-        return LiveStreamLoadResponse(
+        return newLiveStreamLoadResponse(
             name = name,
             url = streamUrl,
-            apiName = this.name,
+            dataUrl = url,
             type = TvType.Live,
-            posterUrl = posterUrl
+            poster = poster,
+            contentRating = null
         )
     }
 }
