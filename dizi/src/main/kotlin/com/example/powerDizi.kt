@@ -114,7 +114,6 @@ sealed class PlaylistParserException(message: String) : Exception(message) {
 }
 
 // Dizi başlıklarını "Dizi Adı", sezon ve bölüm bilgisi olarak ayrıştıran fonksiyon.
-// Örn: "Kuruluş Osman 1. Sezon 1. Bölüm" -> ("Kuruluş Osman", 1, 1)
 fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
     val format1Regex = Regex("""(.*?)[^\w\d]+(\d+)\.\s*Sezon\s*(\d+)\.\s*Bölüm.*""")
     val format2Regex = Regex("""(.*?)\s*s(\d+)e(\d+)""")
@@ -158,18 +157,17 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
         
-        // Dizi başlıklarına göre dizileri gruplar (örn: tüm "Kuruluş Osman" bölümleri tek grupta).
+        // Dizi başlıklarına göre dizileri gruplar.
         val groupedByCleanTitle = kanallar.items.groupBy {
             val (cleanTitle, _, _) = parseEpisodeInfo(it.title.toString())
             cleanTitle
         }
 
-        // Gruplanmış dizileri, alfabetik olarak harflere göre ayırır.
+        // Gruplanmış dizileri, harflere veya özel gruplara göre ayırır.
         val alphabeticGroups = groupedByCleanTitle.toSortedMap().mapNotNull { (cleanTitle, shows) ->
             val firstChar = cleanTitle.firstOrNull()?.uppercaseChar() ?: '#'
             val firstShow = shows.firstOrNull() ?: return@mapNotNull null
             
-            // Her bir ana başlık için (örn. "Kuruluş Osman") tek bir arama yanıtı (SearchResponse) oluşturur.
             val searchResponse = newLiveSearchResponse(
                 cleanTitle,
                 LoadData(firstShow.url.toString(), cleanTitle, firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL, cleanTitle, firstShow.attributes["tvg-country"]?.toString() ?: "TR").toJson(),
@@ -179,43 +177,50 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 this.lang = firstShow.attributes["tvg-country"]?.toString() ?: "TR"
             }
             
+            // Gruplama anahtarını belirler: harf, sayı veya özel karakter.
             val groupKey = when {
                 firstChar.isLetter() -> firstChar.toString()
                 firstChar.isDigit() -> "0-9"
-                else -> "#"
+                else -> "#" // Harf veya sayı değilse, özel karaktere atar.
             }
             Pair(groupKey, searchResponse)
         }.groupBy { it.first }.mapValues { it.value.map { it.second } }.toSortedMap()
 
         val finalHomePageLists = mutableListOf<HomePageList>()
         
-        // Türkçe alfabe dizisi
-        val trAlphabet = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUVYZ".split("").filter { it.isNotBlank() }
+        // Hem Türkçe hem de İngilizce harfleri içeren tam bir alfabe oluşturur ve sıralar.
+        val fullAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZÇĞİÖŞÜ".split("").filter { it.isNotBlank() }
+        val sortedAlphabet = fullAlphabet.sorted()
+
+        // Grupları işleme listesine ekler.
+        val allGroupsToProcess = mutableListOf<String>()
+        if (alphabeticGroups.containsKey("0-9")) allGroupsToProcess.add("0-9")
         
-        // Sayı ve özel karakter gruplarını alfabetik listenin başına ve sonuna ekler.
-        val allGroupsToProcess = trAlphabet.toMutableList()
-        if (alphabeticGroups.containsKey("0-9")) {
-            allGroupsToProcess.add(0, "0-9")
+        // Alfabetik grupları sırayla ekler.
+        sortedAlphabet.forEach { char ->
+            if (alphabeticGroups.containsKey(char)) {
+                allGroupsToProcess.add(char)
+            }
         }
-        if (alphabeticGroups.containsKey("#")) {
-            allGroupsToProcess.add(allGroupsToProcess.size, "#")
-        }
+        
+        // `#` grubunu en sona ekler.
+        if (alphabeticGroups.containsKey("#")) allGroupsToProcess.add("#")
 
         // Her harf grubunu dolaşır ve ana sayfa listelerini oluşturur.
-        allGroupsToProcess.forEachIndexed { index, char ->
+        allGroupsToProcess.forEach { char ->
             val shows = alphabeticGroups[char]
             if (shows != null && shows.isNotEmpty()) {
-                // Listelerin başlıklarını dinamik olarak belirler. Harfin kendisini vurgular.
                 val listTitle = when (char) {
-                    "0-9" -> "🔢 **0-9** A B C Ç D..."
-                    "#" -> "🔣 **#** A B C Ç D..."
+                    "0-9" -> "🔢 **0-9** A B C..."
+                    "#" -> "🔣 **#** A B C..."
                     else -> {
-                        val startIndex = trAlphabet.indexOf(char)
+                        val startIndex = sortedAlphabet.indexOf(char)
                         if (startIndex != -1) {
-                            val remainingAlphabet = trAlphabet.subList(startIndex, trAlphabet.size).joinToString(" ") { it }
+                            val remainingAlphabet = sortedAlphabet.subList(startIndex, sortedAlphabet.size).joinToString(" ") { it }
                             "🎬 **$char** ${remainingAlphabet.substring(1).lowercase(Locale.getDefault())}"
                         } else {
-                            "🎬 **$char**"
+                            // Alfabe içinde olmayan, ancak harf olan karakterler için yedek başlık
+                            "🎬 **$char** ile Başlayan Diziler"
                         }
                     }
                 }
@@ -226,7 +231,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         return newHomePageResponse(finalHomePageLists, hasNext = false)
     }
 
-    // Arama fonksiyonu. Kullanıcının girdiği sorguya göre dizileri arar.
+    // Arama fonksiyonu.
     override suspend fun search(query: String): List<SearchResponse> {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
         
@@ -263,7 +268,6 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
         
-        // Aynı dizi adına sahip tüm bölümleri filtreler.
         val allShows = kanallar.items.filter { 
             val (itemCleanTitle, _, _) = parseEpisodeInfo(it.title.toString())
             itemCleanTitle == cleanTitle
@@ -272,7 +276,6 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val finalPosterUrl = allShows.firstOrNull()?.attributes?.get("tvg-logo")?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
         val plot = "TMDB'den özet alınamadı."
 
-        // Bölüm bilgilerini yeni bir liste olarak oluşturur.
         val currentShowEpisodes = allShows.mapNotNull { kanal ->
             val title = kanal.title.toString()
             val (episodeCleanTitle, season, episode) = parseEpisodeInfo(title)
@@ -286,7 +289,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                     this.posterUrl = episodePoster
                 }
             } else null
-        }.sortedWith(compareBy({ it.season }, { it.episode })) // Sezon ve bölüm numarasına göre sıralar.
+        }.sortedWith(compareBy({ it.season }, { it.episode }))
 
         return newTvSeriesLoadResponse(
             cleanTitle,
