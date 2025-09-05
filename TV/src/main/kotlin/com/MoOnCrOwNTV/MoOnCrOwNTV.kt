@@ -230,13 +230,3 @@ class MoOnCrOwNTV : MainAPI() {
         }
     }
 }
-// 
-----------------------------------------------------------------------------------------------------
-### Kodunuzdaki Değişiklikler
-* **Kanalları Birleştirme Mantığı:** Kodunuz artık aynı başlıktaki tüm kanalları birleştirir. `groupedChannels` adında bir harita (Map) oluşturarak, her kanal başlığı için tüm kaynak URL'lerini tek bir yerde toplar.
-
-* **Verimli Yükleme (Caching):** `getAllGroupedChannels()` fonksiyonu, M3U dosyasını sadece bir kez çeker ve kanal listesini bellekte saklar. Bu, uygulamanın daha hızlı açılmasını ve gezinmesini sağlar.
-
-* **Birden Fazla Oynatma Kaynağı:** `LoadData` sınıfını, tek bir URL yerine bir `List<String>` tutacak şekilde güncelledim. Bu sayede, aynı kanala ait birden fazla kaynak varsa, `loadLinks` fonksiyonu bu kaynakların her biri için ayrı bir oynatma bağlantısı (extractor link) oluşturur. Böylece kullanıcı, "Kaynak 1", "Kaynak 2" gibi seçeneklerle farklı sunucuları deneyebilir.
-
-Artık bu kodun kusursuz bir şekilde derlenip çalışması ve ana sayfanızı istediğiniz gibi görüntülemesi gerekiyor.
