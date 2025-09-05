@@ -121,7 +121,7 @@ class MoOnCrOwNTV(private val sharedPref: SharedPreferences?) : MainAPI() {
                     url = firstItem.url.toString(),
                     type = TvType.Live
                 ) {
-                    this.posterUrl = firstItem.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
+                    this.poster = firstItem.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
                 }
             }
             HomePageList(groupTitle, channelList, isHorizontalImages = true)
@@ -145,11 +145,45 @@ class MoOnCrOwNTV(private val sharedPref: SharedPreferences?) : MainAPI() {
                 url = firstItem.url.toString(),
                 type = TvType.Live
             ) {
-                this.posterUrl = firstItem.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
+                this.poster = firstItem.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
             }
         }
     }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+fun newSearchResponse(
+    name: String,
+    url: String,
+    type: TvType,
+    posterUrl: String? = null
+): SearchResponse {
+    return SearchResponse(name, url, type).apply {
+        this.poster = posterUrl
+    }
+}
+
+
+
+
+
+
+
+    
     // Hızlı arama için arama fonksiyonunu kullanır.
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
 
