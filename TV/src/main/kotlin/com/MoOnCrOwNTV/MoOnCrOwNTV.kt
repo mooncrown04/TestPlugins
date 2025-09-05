@@ -140,22 +140,18 @@ class MoOnCrOwNTV : MainAPI() {
     override val hasDownloadSupport = false
     override val supportedTypes = setOf(TvType.Live)
 
-    // Yeni: Birden fazla M3U adresini içeren liste
     private val mainUrls = setOf(
         "https://dl.dropbox.com/scl/fi/r4p9v7g76ikwt8zsyuhyn/sile.m3u?rlkey=esnalbpm4kblxgkvym51gjokm",
         "https://raw.githubusercontent.com/iptv-org/iptv/master/channels/tr.m3u"
-        // Buraya istediğiniz diğer M3U URL'lerini ekleyebilirsiniz
     )
 
-    // Yeni: Tüm kanalları bir defa çekip bellekte tutan bir önbellek
     private var allChannelsCache: List<PlaylistItem>? = null
-    private val lock = Any() // Ön bellek için senkronizasyon nesnesi
 
-    // Yeni: Tüm M3U listelerini eş zamanlı olarak çekip birleştiren fonksiyon
     private suspend fun getAllChannels(): List<PlaylistItem> {
         if (allChannelsCache == null) {
             val allRequests = mainUrls.map { url ->
-                async {
+                // 'async' yerine 'app.async' kullanarak doğru CoroutineScope'u sağlarız.
+                app.async {
                     try {
                         val content = app.get(url).text
                         IptvPlaylistParser().parseM3U(content).items
@@ -165,24 +161,18 @@ class MoOnCrOwNTV : MainAPI() {
                     }
                 }
             }
-            // Tüm işlemlerin bitmesini bekler ve sonuçları tek bir listede birleştirir
             val combinedList = allRequests.awaitAll().flatten()
             
-            // Kanalların benzersiz olmasını sağlamak için mükerrerleri eleme
             val seenTitles = ConcurrentHashMap<String, Boolean>()
             val uniqueChannels = combinedList.filter { channel ->
-                // title boşsa ele
                 val title = channel.title ?: return@filter false
-                // aynı isimli kanalları ele
                 seenTitles.putIfAbsent(title, true) == null
             }
-
             allChannelsCache = uniqueChannels
         }
         return allChannelsCache!!
     }
 
-    // JSON verilerini kolayca taşımak için veri sınıfı
     data class LoadData(val url: String, val title: String, val poster: String, val group: String, val nation: String)
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -298,13 +288,13 @@ class MoOnCrOwNTV : MainAPI() {
         return true
     }
 
-    // Yardımcı fonksiyon
     private suspend fun fetchDataFromUrlOrJson(data: String): LoadData {
         if (data.startsWith("{")) {
             return parseJson<LoadData>(data)
         } else {
             val kanallar = getAllChannels()
-            val kanal = kanallar.items.first { it.url == data }
+            // .items kullanımı kaldırıldı, çünkü 'kanallar' zaten bir PlaylistItem listesidir.
+            val kanal = kanallar.first { it.url == data }
             val streamurl = kanal.url.toString()
             val channelname = kanal.title.toString()
             val posterurl = kanal.attributes["tvg-logo"].toString()
