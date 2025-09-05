@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope // Bu import eklendi
 import java.io.InputStream
 import java.util.concurrent.ConcurrentHashMap
 
@@ -149,20 +150,21 @@ class MoOnCrOwNTV : MainAPI() {
 
     private suspend fun getAllChannels(): List<PlaylistItem> {
         if (allChannelsCache == null) {
-            val allRequests = mainUrls.map { url ->
-                // 'async' yerine 'app.async' kullanarak doğru CoroutineScope'u sağlarız.
-                app.async {
-                    try {
-                        val content = app.get(url).text
-                        IptvPlaylistParser().parseM3U(content).items
-                    } catch (e: Exception) {
-                        Log.e("MoOnCrOwNTV", "Failed to fetch or parse URL: $url", e)
-                        emptyList()
+            // Yeni: 'coroutineScope' bloğu eklenerek 'async' için uygun bir kapsam oluşturuldu
+            val combinedList = coroutineScope {
+                mainUrls.map { url ->
+                    async {
+                        try {
+                            val content = app.get(url).text
+                            IptvPlaylistParser().parseM3U(content).items
+                        } catch (e: Exception) {
+                            Log.e("MoOnCrOwNTV", "Failed to fetch or parse URL: $url", e)
+                            emptyList()
+                        }
                     }
-                }
+                }.awaitAll().flatten()
             }
-            val combinedList = allRequests.awaitAll().flatten()
-            
+
             val seenTitles = ConcurrentHashMap<String, Boolean>()
             val uniqueChannels = combinedList.filter { channel ->
                 val title = channel.title ?: return@filter false
@@ -293,7 +295,6 @@ class MoOnCrOwNTV : MainAPI() {
             return parseJson<LoadData>(data)
         } else {
             val kanallar = getAllChannels()
-            // .items kullanımı kaldırıldı, çünkü 'kanallar' zaten bir PlaylistItem listesidir.
             val kanal = kanallar.first { it.url == data }
             val streamurl = kanal.url.toString()
             val channelname = kanal.title.toString()
