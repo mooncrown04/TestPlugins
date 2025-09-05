@@ -141,30 +141,20 @@ class MoOnCrOwNTV : MainAPI() {
     override val hasDownloadSupport = false
     override val supportedTypes = setOf(TvType.Live)
 
-    private val mainUrls = setOf(
-        "https://dl.dropbox.com/scl/fi/r4p9v7g76ikwt8zsyuhyn/sile.m3u?rlkey=esnalbpm4kblxgkvym51gjokm",
-        "https://raw.githubusercontent.com/iptv-org/iptv/master/channels/tr.m3u"
-    )
+    private val singleM3uUrl = "https://dl.dropbox.com/scl/fi/r4p9v7g76ikwt8zsyuhyn/sile.m3u?rlkey=esnalbpm4kblxgkvym51gjokm"
 
-    // Yeni: Tekil kanalları başlığa göre gruplayıp önbellekte tutacak bir değişken.
     private var allGroupedChannelsCache: Map<String, List<PlaylistItem>>? = null
 
     private suspend fun getAllGroupedChannels(): Map<String, List<PlaylistItem>> {
         if (allGroupedChannelsCache == null) {
-            val combinedList = coroutineScope {
-                mainUrls.map { url ->
-                    async {
-                        try {
-                            val content = app.get(url).text
-                            IptvPlaylistParser().parseM3U(content).items
-                        } catch (e: Exception) {
-                            Log.e("MoOnCrOwNTV", "Failed to fetch or parse URL: $url", e)
-                            emptyList()
-                        }
-                    }
-                }.awaitAll().flatten()
+            val content = try {
+                app.get(singleM3uUrl).text
+            } catch (e: Exception) {
+                Log.e("MoOnCrOwNTV", "Failed to fetch or parse URL: $singleM3uUrl", e)
+                ""
             }
             
+            val combinedList = IptvPlaylistParser().parseM3U(content).items
             val cleanedList = combinedList.filter { it.title != null && it.url != null }
             allGroupedChannelsCache = cleanedList.groupBy { it.title!! }
         }
@@ -183,10 +173,8 @@ class MoOnCrOwNTV : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val groupedChannels = getAllGroupedChannels()
         
-        // Önce benzersiz kanalları alırız, aynı başlığa sahip kanallardan sadece ilkini seçerek
         val uniqueChannelsByTitle = groupedChannels.values.mapNotNull { it.firstOrNull() }
 
-        // Şimdi bu benzersiz kanalları gruplarına göre ayrıştırırız
         val groupedByCategories = uniqueChannelsByTitle.groupBy {
             it.attributes["group-title"] ?: "Diğer"
         }
