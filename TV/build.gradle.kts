@@ -11,7 +11,6 @@ android {
     defaultConfig {
         minSdkVersion(21)
         targetSdkVersion(34)
-
         val apiKey = project.findProperty("tmdbApiKey")?.toString() ?: ""
         buildConfigField("String", "TMDB_SECRET_API", "\"$apiKey\"")
     }
@@ -32,7 +31,6 @@ android {
 
 dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-    // Bu satır, hatanın kaynağı olan kütüphaneyi ekler.
     implementation("com.lagradost.cloudstream3:cloudstream3-api:latest.integration")
 }
 
