@@ -11,6 +11,7 @@ import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import java.io.InputStream
 import java.util.Locale
+import java.util.regex.Pattern
 
 // Bu dosya, Cloudstream için bir dizi eklentisi (provider) oluşturmak amacıyla yazılmıştır.
 // Ana amaç, bir M3U dosyasını parse etmek ve içindeki dizileri düzenli bir şekilde listelemektir.
@@ -115,29 +116,33 @@ sealed class PlaylistParserException(message: String) : Exception(message) {
 
 // Dizi başlıklarını "Dizi Adı", sezon ve bölüm bilgisi olarak ayrıştıran fonksiyon.
 fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
-    val format1Regex = Regex("""(.*?)[^\w\d]+(\d+)\.\s*Sezon\s*(\d+)\.\s*Bölüm.*""")
-    val format2Regex = Regex("""(.*?)\s*s(\d+)e(\d+)""")
-    val format3Regex = Regex("""(.*?)\s*Sezon\s*(\d+)\s*Bölüm\s*(\d+).*""")
+    // Başlıktaki görünmez özel karakterleri (sol-sağ işaretçi) temizle.
+    // Bu, "Dokuz Kusursuz Yabancı" başlığının başındaki özel karakteri siler.
+    val textWithCleanedChars = text.replace(Regex("[\\u200E\\u200F]"), "")
 
-    val matchResult1 = format1Regex.find(text)
+    val format1Regex = Regex("""(.*?)[^\w\d]+(\d+)\.\s*Sezon\s*(\d+)\.\s*Bölüm.*""", Pattern.CASE_INSENSITIVE)
+    val format2Regex = Regex("""(.*?)\s*s(\d+)e(\d+)""", Pattern.CASE_INSENSITIVE)
+    val format3Regex = Regex("""(.*?)\s*Sezon\s*(\d+)\s*Bölüm\s*(\d+).*""", Pattern.CASE_INSENSITIVE)
+
+    val matchResult1 = format1Regex.find(textWithCleanedChars)
     if (matchResult1 != null) {
         val (title, seasonStr, episodeStr) = matchResult1.destructured
         return Triple(title.trim(), seasonStr.toIntOrNull(), episodeStr.toIntOrNull())
     }
 
-    val matchResult2 = format2Regex.find(text)
+    val matchResult2 = format2Regex.find(textWithCleanedChars)
     if (matchResult2 != null) {
         val (title, seasonStr, episodeStr) = matchResult2.destructured
         return Triple(title.trim(), seasonStr.toIntOrNull(), episodeStr.toIntOrNull())
     }
 
-    val matchResult3 = format3Regex.find(text)
+    val matchResult3 = format3Regex.find(textWithCleanedChars)
     if (matchResult3 != null) {
         val (title, seasonStr, episodeStr) = matchResult3.destructured
         return Triple(title.trim(), seasonStr.toIntOrNull(), episodeStr.toIntOrNull())
     }
 
-    return Triple(text.trim(), null, null)
+    return Triple(textWithCleanedChars.trim(), null, null)
 }
 
 // --- Ana Eklenti Sınıfı ---
