@@ -1,6 +1,5 @@
 package com.MoOnCrOwNTV
 
-
 import android.content.SharedPreferences
 import android.util.Log
 import com.lagradost.cloudstream3.*
@@ -15,26 +14,19 @@ import java.io.InputStream
 import java.util.Locale
 import java.util.regex.Pattern
 
-// Bu dosya, Cloudstream için canlı TV kanallarını grup bazında listeleyen bir eklentidir.
-
-// --- Yardımcı Sınıflar ---
-
-// M3U dosyasını temsil eden ana veri sınıfı.
 data class Playlist(val items: List<PlaylistItem> = emptyList())
 
-// M3U dosyasındaki her bir video akışını (kanal) temsil eder.
 data class PlaylistItem(
     val title: String? = null,
     val attributes: Map<String, String> = emptyMap(),
     val url: String? = null
 ) {
     companion object {
-        const val EXT_M3U = "#EXTM3U" // M3U dosyasının başlık etiketi.
-        const val EXT_INF = "#EXTINF" // Kanal veya video bilgisinin başladığı etiket.
+        const val EXT_M3U = "#EXTM3U"
+        const val EXT_INF = "#EXTINF"
     }
 }
 
-// M3U dosyasını satır satır okuyarak Playlist ve PlaylistItem nesnelerine dönüştürür.
 class IptvPlaylistParser {
     fun parseM3U(content: String): Playlist = parseM3U(content.byteInputStream())
 
@@ -85,12 +77,9 @@ class IptvPlaylistParser {
     private fun String.getUrl(): String? = split("|").firstOrNull()?.trim()
 }
 
-// Hata yönetimi için özel bir istisna sınıfı
 sealed class PlaylistParserException(message: String) : Exception(message) {
     class InvalidHeader : PlaylistParserException("Invalid file header.")
 }
-
-// --- Ana Eklenti Sınıfı ---
 
 class MoOnCrOwNTV(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/r4p9v7g76ikwt8zsyuhyn/sile.m3u?rlkey=esnalbpm4kblxgkvym51gjokm"
@@ -103,12 +92,10 @@ class MoOnCrOwNTV(private val sharedPref: SharedPreferences?) : MainAPI() {
 
     private val DEFAULT_POSTER_URL = "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
 
-    // Ana sayfa düzenini oluşturur.
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
-        
-        // Kanalları "group-title" etiketine göre gruplar.
-        val groupedByGroupTitle = kanallar.items.groupBy { 
+
+        val groupedByGroupTitle = kanallar.items.groupBy {
             it.attributes["group-title"] ?: "Diğer"
         }
 
@@ -119,21 +106,19 @@ class MoOnCrOwNTV(private val sharedPref: SharedPreferences?) : MainAPI() {
                 newSearchResponse(
                     name = title,
                     url = firstItem.url.toString(),
-                    type = TvType.Live
-                ) {
-                    this.poster = firstItem.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
-                }
+                    type = TvType.Live,
+                    posterUrl = firstItem.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
+                )
             }
             HomePageList(groupTitle, channelList, isHorizontalImages = true)
         }
-        
+
         return newHomePageResponse(homePageLists, hasNext = false)
     }
 
-    // Arama fonksiyonu.
     override suspend fun search(query: String): List<SearchResponse> {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
-        
+
         val groupedChannels = kanallar.items.groupBy { it.title.toString() }
 
         return groupedChannels.filter { (title, _) ->
@@ -143,72 +128,34 @@ class MoOnCrOwNTV(private val sharedPref: SharedPreferences?) : MainAPI() {
             newSearchResponse(
                 name = title,
                 url = firstItem.url.toString(),
-                type = TvType.Live
-            ) {
-                this.poster = firstItem.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
-            }
+                type = TvType.Live,
+                posterUrl = firstItem.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
+            )
         }
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-fun newSearchResponse(
-    name: String,
-    url: String,
-    type: TvType,
-    posterUrl: String? = null
-): SearchResponse {
-    return SearchResponse(name, url, type).apply {
-        this.poster = posterUrl
-    }
-}
-
-
-
-
-
-
-
-    
-    // Hızlı arama için arama fonksiyonunu kullanır.
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
 
-    // Bir kanala tıklandığında oynatma bilgilerini yükler.
     override suspend fun load(url: String): LoadResponse {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
-        
+
         val selectedKanal = kanallar.items.firstOrNull { it.url == url }
             ?: throw Exception("Kanal bulunamadı: $url")
-            
+
         val channelTitle = selectedKanal.title.toString()
 
         val allUrls = kanallar.items.filter { it.title == channelTitle }.map { it.url.toString() }
-        
+
         return newMovieLoadResponse(
             name = channelTitle,
             url = url,
             type = TvType.Live,
             dataUrl = allUrls.toJson()
         ) {
-            this.poster = selectedKanal.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
+            poster = selectedKanal.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
         }
     }
 
-    // Kanalı oynatmak için gerekli linkleri sağlar.
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -231,5 +178,20 @@ fun newSearchResponse(
             )
         }
         return true
+    }
+
+    private fun newSearchResponse(
+        name: String,
+        url: String,
+        type: TvType,
+        posterUrl: String? = null
+    ): SearchResponse {
+        return LiveSearchResponse(
+            name = name,
+            url = url,
+            apiName = this.name,
+            type = type,
+            poster = posterUrl
+        )
     }
 }
