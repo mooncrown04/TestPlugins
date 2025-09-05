@@ -17,10 +17,13 @@ import java.util.Locale
 
 // --- Yardımcı Sınıflar ---
 
-// M3U dosyasını temsil eden sınıf. M3U dosyasındaki tüm öğeleri (items) tutar.
+// M3U dosyasını temsil eden ana veri sınıfı.
 data class Playlist(val items: List<PlaylistItem> = emptyList())
 
 // M3U dosyasındaki her bir video akışını (kanal veya bölüm) temsil eder.
+// title: Video başlığı.
+// attributes: `tvg-logo`, `group-title` gibi ekstra bilgiler.
+// url: Videonun oynatılabilir linki.
 data class PlaylistItem(
     val title: String? = null,
     val attributes: Map<String, String> = emptyMap(),
@@ -29,9 +32,9 @@ data class PlaylistItem(
     val userAgent: String? = null
 ) {
     companion object {
-        const val EXT_M3U = "#EXTM3U" // M3U dosyasının başlık etiketi
-        const val EXT_INF = "#EXTINF" // Kanal veya video bilgisinin başladığı etiket
-        const val EXT_VLC_OPT = "#EXTVLCOPT" // VLC player için ek seçenekleri belirten etiket
+        const val EXT_M3U = "#EXTM3U" // M3U dosyasının başlık etiketi.
+        const val EXT_INF = "#EXTINF" // Kanal veya video bilgisinin başladığı etiket.
+        const val EXT_VLC_OPT = "#EXTVLCOPT" // VLC player için ek seçenekleri belirten etiket.
     }
 }
 
@@ -54,7 +57,7 @@ class IptvPlaylistParser {
         var currentIndex = 0
         var line: String? = reader.readLine()
 
-        // Dosyayı satır satır okur.
+        // Dosyayı satır satır okur ve ilgili bilgileri yakalar.
         while (line != null) {
             if (line.isNotEmpty()) {
                 if (line.startsWith(PlaylistItem.EXT_INF)) {
@@ -186,18 +189,35 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
         val finalHomePageLists = mutableListOf<HomePageList>()
         
-        // Türkçe alfabe ve sayılar için gruplar oluşturur.
-        val trAlphabetAndNumbers = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUVYZ".split("").filter { it.isNotBlank() } + listOf("0-9", "#")
+        // Türkçe alfabe dizisi
+        val trAlphabet = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUVYZ".split("").filter { it.isNotBlank() }
+        
+        // Sayı ve özel karakter gruplarını alfabetik listenin başına ve sonuna ekler.
+        val allGroupsToProcess = trAlphabet.toMutableList()
+        if (alphabeticGroups.containsKey("0-9")) {
+            allGroupsToProcess.add(0, "0-9")
+        }
+        if (alphabeticGroups.containsKey("#")) {
+            allGroupsToProcess.add(allGroupsToProcess.size, "#")
+        }
 
         // Her harf grubunu dolaşır ve ana sayfa listelerini oluşturur.
-        trAlphabetAndNumbers.forEach { char ->
+        allGroupsToProcess.forEachIndexed { index, char ->
             val shows = alphabeticGroups[char]
             if (shows != null && shows.isNotEmpty()) {
                 // Listelerin başlıklarını dinamik olarak belirler. Harfin kendisini vurgular.
                 val listTitle = when (char) {
-                    "0-9" -> "🔢 0-9 ile Başlayan Diziler"
-                    "#" -> "🔣 # ile Başlayan Diziler"
-                    else -> "🎬 **$char** ile Başlayan Diziler"
+                    "0-9" -> "🔢 **0-9** A B C Ç D..."
+                    "#" -> "🔣 **#** A B C Ç D..."
+                    else -> {
+                        val startIndex = trAlphabet.indexOf(char)
+                        if (startIndex != -1) {
+                            val remainingAlphabet = trAlphabet.subList(startIndex, trAlphabet.size).joinToString(" ") { it }
+                            "🎬 **$char** ${remainingAlphabet.substring(1).lowercase(Locale.getDefault())}"
+                        } else {
+                            "🎬 **$char**"
+                        }
+                    }
                 }
                 finalHomePageLists.add(HomePageList(listTitle, shows, isHorizontalImages = true))
             }
