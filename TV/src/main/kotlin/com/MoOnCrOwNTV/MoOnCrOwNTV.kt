@@ -6,7 +6,6 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import java.io.InputStream
-import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.coroutineScope
 
 // --- Ana Eklenti Sınıfı ---
@@ -230,8 +229,12 @@ class MoOnCrOwNTV : MainAPI() {
         }
     }
 }
-// 
----
+
+// --- Yardımcı Sınıflar ---
+sealed class PlaylistParserException(message: String) : Exception(message) {
+    class InvalidHeader : PlaylistParserException("Invalid file header. Header doesn't start with #EXTM3U")
+}
+
 data class Playlist(
     val items: List<PlaylistItem> = emptyList()
 )
@@ -245,33 +248,20 @@ data class PlaylistItem(
 )
 
 class IptvPlaylistParser {
-
-    /**
-     * Parse M3U8 string into [Playlist]
-     *
-     * @param content M3U8 content string.
-     * @throws PlaylistParserException if an error occurs.
-     */
     fun parseM3U(content: String): Playlist {
         return parseM3U(content.byteInputStream())
     }
 
-    /**
-     * Parse M3U8 content [InputStream] into [Playlist]
-     *
-     * @param input Stream of input data.
-     * @throws PlaylistParserException if an error occurs.
-     */
     @Throws(PlaylistParserException::class)
     fun parseM3U(input: InputStream): Playlist {
         val reader = input.bufferedReader()
-
-        if (!reader.readLine().isExtendedM3u()) {
+        val firstLine = reader.readLine()
+        if (firstLine == null || !firstLine.isExtendedM3u()) {
             throw PlaylistParserException.InvalidHeader()
         }
 
         val playlistItems: MutableList<PlaylistItem> = mutableListOf()
-        var currentIndex = 0
+        var currentIndex = -1 // currentIndex'i -1'den başlat
 
         var line: String? = reader.readLine()
 
@@ -280,133 +270,72 @@ class IptvPlaylistParser {
                 if (line.startsWith(EXT_INF)) {
                     val title = line.getTitle()
                     val attributes = line.getAttributes()
-
                     playlistItems.add(PlaylistItem(title, attributes))
+                    currentIndex++ // Yeni bir kanal başladığında indexi artır
                 } else if (line.startsWith(EXT_VLC_OPT)) {
-                    val item = playlistItems[currentIndex]
-                    val userAgent = item.userAgent ?: line.getTagValue("http-user-agent")
-                    val referrer = line.getTagValue("http-referrer")
+                    if (currentIndex >= 0 && currentIndex < playlistItems.size) { // Güvenlik kontrolü
+                        val item = playlistItems[currentIndex]
+                        val userAgent = item.userAgent ?: line.getTagValue("http-user-agent")
+                        val referrer = line.getTagValue("http-referrer")
+                        val headers = item.headers.toMutableMap()
 
-                    val headers = mutableMapOf<String, String>()
-
-                    if (userAgent != null) {
-                        headers["user-agent"] = userAgent
+                        if (userAgent != null) {
+                            headers["user-agent"] = userAgent
+                        }
+                        if (referrer != null) {
+                            headers["referrer"] = referrer
+                        }
+                        playlistItems[currentIndex] = item.copy(
+                            userAgent = userAgent,
+                            headers = headers
+                        )
                     }
-
-                    if (referrer != null) {
-                        headers["referrer"] = referrer
-                    }
-
-                    playlistItems[currentIndex] = item.copy(
-                        userAgent = userAgent,
-                        headers = headers
-                    )
-                } else {
-                    if (!line.startsWith("#")) {
+                } else if (!line.startsWith("#")) {
+                    if (currentIndex >= 0 && currentIndex < playlistItems.size) { // Güvenlik kontrolü
                         val item = playlistItems[currentIndex]
                         val url = line.getUrl()
                         val userAgent = line.getUrlParameter("user-agent")
                         val referrer = line.getUrlParameter("referer")
-                        val urlHeaders = if (referrer != null) {
-                            item.headers + mapOf("referrer" to referrer)
-                        } else item.headers
+                        val urlHeaders = item.headers.toMutableMap()
+
+                        if (referrer != null) {
+                            urlHeaders["referrer"] = referrer
+                        }
 
                         playlistItems[currentIndex] = item.copy(
                             url = url,
-                            headers = item.headers + urlHeaders,
+                            headers = urlHeaders,
                             userAgent = userAgent ?: item.userAgent
                         )
-                        currentIndex++
                     }
                 }
             }
-
             line = reader.readLine()
         }
         return Playlist(playlistItems)
     }
 
-    /** Replace "" (quotes) from given string. */
     private fun String.replaceQuotesAndTrim(): String {
         return replace("\"", "").trim()
     }
 
-    /** Check if given content is valid M3U8 playlist. */
     private fun String.isExtendedM3u(): Boolean = startsWith(EXT_M3U)
 
-    /**
-     * Get title of media.
-     *
-     * Example:-
-     *
-     * Input:
-     * ```
-     * #EXTINF:-1 tvg-id="1234" group-title="Kids" tvg-logo="url/to/logo", Title
-     * ```
-     *
-     * Result: Title
-     */
     private fun String.getTitle(): String? {
         return split(",").lastOrNull()?.replaceQuotesAndTrim()
     }
 
-    /**
-     * Get media url.
-     *
-     * Example:-
-     *
-     * Input:
-     * ```
-     * [https://example.com/sample.m3u8](https://example.com/sample.m3u8)|user-agent="Custom"
-     * ```
-     *
-     * Result: https://example.com/sample.m3u8
-     */
     private fun String.getUrl(): String? {
         return split("|").firstOrNull()?.replaceQuotesAndTrim()
     }
 
-    /**
-     * Get url parameter with key.
-     *
-     * Example:-
-     *
-     * Input:
-     * ```
-     * [http://192.54.104.122:8080/d/abcdef/video.mp4](http://192.54.104.122:8080/d/abcdef/video.mp4)|User-Agent=Mozilla&Referer=CustomReferrer
-     * ```
-     *
-     * If given key is `user-agent`, then
-     *
-     * Result: Mozilla
-     */
     private fun String.getUrlParameter(key: String): String? {
         val urlRegex = Regex("^(.*)\\|", RegexOption.IGNORE_CASE)
         val keyRegex = Regex("$key=(\\w[^&]*)", RegexOption.IGNORE_CASE)
         val paramsString = replace(urlRegex, "").replaceQuotesAndTrim()
-
         return keyRegex.find(paramsString)?.groups?.get(1)?.value
     }
 
-    /**
-     * Get attributes from `#EXTINF` tag as Map<String, String>.
-     *
-     * Example:-
-     *
-     * Input:
-     * ```
-     * #EXTINF:-1 tvg-id="1234" group-title="Kids" tvg-logo="url/to/logo", Title
-     * ```
-     *
-     * Result will be equivalent to kotlin map:
-     * ```Kotlin
-     * mapOf(
-     * "tvg-id" to "1234",
-     * "group-title" to "Kids",
-     * "tvg-logo" to "url/to/logo"
-     * )
-     * ```
-     */
     private fun String.getAttributes(): Map<String, String> {
         val extInfRegex = Regex("(#EXTINF:.?[0-9]+)", RegexOption.IGNORE_CASE)
         val attributesString = replace(extInfRegex, "").replaceQuotesAndTrim().split(",").first()
@@ -420,10 +349,14 @@ class IptvPlaylistParser {
             .toMap()
     }
 
-    /**
-     * Get value from a tag.
-     *
-     * Example:-
-     *
-     * Input:
-     *
+    private fun String.getTagValue(key: String): String? {
+        val keyRegex = Regex("$key=(.*)", RegexOption.IGNORE_CASE)
+        return keyRegex.find(this)?.groups?.get(1)?.value?.replaceQuotesAndTrim()
+    }
+
+    companion object {
+        const val EXT_M3U = "#EXTM3U"
+        const val EXT_INF = "#EXTINF"
+        const val EXT_VLC_OPT = "#EXTVLCOPT"
+    }
+}
