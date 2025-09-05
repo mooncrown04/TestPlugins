@@ -122,10 +122,9 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 
 
 
-   val format1Regex = Regex("""(.*?)[^\w\d]+(\d+)\.\s*Sezon\s*(\d+)\.\s*Bölüm.*""")
-    val format2Regex = Regex("""(.*?)\s*s(\d+)e(\d+)""")
-    val format3Regex = Regex("""(.*?)\s*Sezon\s*(\d+)\s*Bölüm\s*(\d+).*""")
-
+  val format1Regex = Regex("""(.*?)[^\w\d]+(\d+)\.\s*Sezon\s*(\d+)\.\s*Bölüm.*""", RegexOption.IGNORE_CASE)
+val format2Regex = Regex("""(.*?)\s*s(\d+)e(\d+)""", RegexOption.IGNORE_CASE)
+val format3Regex = Regex("""(.*?)\s*Sezon\s*(\d+)\s*Bölüm\s*(\d+).*""", RegexOption.IGNORE_CASE)
     val matchResult1 = format1Regex.find(text)
     if (matchResult1 != null) {
         val (title, seasonStr, episodeStr) = matchResult1.destructured
