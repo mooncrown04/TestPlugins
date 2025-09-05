@@ -188,16 +188,23 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
         val finalHomePageLists = mutableListOf<HomePageList>()
         
-        // Hem Türkçe hem de İngilizce harfleri içeren tam bir alfabe oluşturur ve sıralar.
-        val fullAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZÇĞİÖŞÜ".split("").filter { it.isNotBlank() }
-        val sortedAlphabet = fullAlphabet.sorted()
+        // Türkçe alfabenin doğru sıralaması
+        val turkishAlphabet = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUVYZ".split("").filter { it.isNotBlank() }
+        
+        // Diğer İngilizce harfleri kendi yerlerine yerleştirir
+        val fullAlphabet = mutableListOf<String>()
+        fullAlphabet.addAll(turkishAlphabet)
+        fullAlphabet.add(fullAlphabet.indexOf("S"), "Q")
+        fullAlphabet.add(fullAlphabet.indexOf("V"), "W")
+        fullAlphabet.add(fullAlphabet.indexOf("Z"), "X")
+        fullAlphabet.add(fullAlphabet.indexOf("Z") + 1, "Y") // Y'yi Z'den önce getiririz
 
         // Grupları işleme listesine ekler.
         val allGroupsToProcess = mutableListOf<String>()
         if (alphabeticGroups.containsKey("0-9")) allGroupsToProcess.add("0-9")
         
         // Alfabetik grupları sırayla ekler.
-        sortedAlphabet.forEach { char ->
+        fullAlphabet.forEach { char ->
             if (alphabeticGroups.containsKey(char)) {
                 allGroupsToProcess.add(char)
             }
@@ -214,9 +221,9 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                     "0-9" -> "🔢 **0-9** A B C..."
                     "#" -> "🔣 **#** A B C..."
                     else -> {
-                        val startIndex = sortedAlphabet.indexOf(char)
+                        val startIndex = fullAlphabet.indexOf(char)
                         if (startIndex != -1) {
-                            val remainingAlphabet = sortedAlphabet.subList(startIndex, sortedAlphabet.size).joinToString(" ") { it }
+                            val remainingAlphabet = fullAlphabet.subList(startIndex, fullAlphabet.size).joinToString(" ") { it }
                             "🎬 **$char** ${remainingAlphabet.substring(1).lowercase(Locale.getDefault())}"
                         } else {
                             // Alfabe içinde olmayan, ancak harf olan karakterler için yedek başlık
