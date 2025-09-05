@@ -9,6 +9,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import java.io.InputStream
+import java.util.concurrent.ConcurrentHashMap
 
 // --- Yardımcı Veri Sınıfları ---
 data class Playlist(
@@ -164,12 +165,17 @@ class MoOnCrOwNTV : MainAPI() {
                     }
                 }.awaitAll().flatten()
             }
-            
+
             // Sadece başlığı ve URL'si olan kanalları filtreler
             val cleanedList = combinedList.filter { it.title != null && it.url != null }
 
-            // Yeni: Kanalları başlıklarına göre gruplar.
-            // Bu sayede aynı başlıktaki farklı kaynaklar bir araya gelir.
+            val seenTitles = ConcurrentHashMap<String, Boolean>()
+            val uniqueList = cleanedList.filter {
+                val title = it.title ?: return@filter false
+                seenTitles.putIfAbsent(title, true) == null
+            }
+
+            // Kanalları başlıklarına göre gruplar.
             allGroupedChannelsCache = cleanedList.groupBy { it.title!! }
         }
         return allGroupedChannelsCache!!
@@ -197,26 +203,31 @@ class MoOnCrOwNTV : MainAPI() {
             if (groupTitle.isNullOrBlank() || channelList.isEmpty()) {
                 null
             } else {
-                val show = channelList.mapNotNull { kanal ->
-                    val streamurl = kanal.url
-                    val channelname = kanal.title
-                    val posterurl = kanal.attributes["tvg-logo"]
-                    val chGroup = kanal.attributes["group-title"]
-                    val nation = kanal.attributes["tvg-country"]
-                    
+                // Her bir kategori için sadece benzersiz kanal başlıklarını alırız
+                val uniqueChannelTitles = channelList.distinctBy { it.title }.mapNotNull { it.title }
+
+                val show = uniqueChannelTitles.mapNotNull { title ->
+                    val channelsWithSameTitle = groupedChannels[title]
+                    val firstChannel = channelsWithSameTitle?.firstOrNull() ?: return@mapNotNull null
+
+                    val streamurl = firstChannel.url
+                    val channelname = firstChannel.title
+                    val posterurl = firstChannel.attributes["tvg-logo"]
+                    val chGroup = firstChannel.attributes["group-title"]
+                    val nation = firstChannel.attributes["tvg-country"]
+
                     if (streamurl.isNullOrBlank() || channelname.isNullOrBlank()) {
                         null
                     } else {
                         newLiveSearchResponse(
                             channelname,
-                            // Tek bir kanala ait tüm URL'leri LoadData içine koyar
                             LoadData(
                                 title = channelname,
                                 poster = posterurl ?: "",
                                 group = chGroup ?: "",
                                 nation = nation ?: "",
-                                urls = groupedChannels[channelname]?.mapNotNull { it.url } ?: emptyList(),
-                                headers = groupedChannels[channelname]?.mapNotNull { it.url?.let { url -> url to it.headers } }?.toMap() ?: emptyMap()
+                                urls = channelsWithSameTitle.mapNotNull { it.url },
+                                headers = channelsWithSameTitle.mapNotNull { it.url?.let { url -> url to it.headers } }?.toMap() ?: emptyMap()
                             ).toJson(),
                             type = TvType.Live
                         ) {
@@ -226,7 +237,7 @@ class MoOnCrOwNTV : MainAPI() {
                     }
                 }
                 if (show.isNotEmpty()) {
-                    HomePageList(groupTitle, show.distinctBy { it.name }, isHorizontalImages = true)
+                    HomePageList(groupTitle, show, isHorizontalImages = true)
                 } else {
                     null
                 }
@@ -318,10 +329,8 @@ class MoOnCrOwNTV : MainAPI() {
             }
         }
         
-        // Önerilen kanallarda aynı isimli olanları elemek için
         val uniqueRecommendations = recommendations.distinctBy { it.name }
 
-        // LoadData'da tek bir URL olmadığı için ilk URL'yi kullanırız
         val firstUrl = loadData.urls.firstOrNull() ?: ""
 
         return newLiveStreamLoadResponse(loadData.title, firstUrl, url) {
@@ -336,7 +345,6 @@ class MoOnCrOwNTV : MainAPI() {
         val loadData = fetchDataFromUrlOrJson(data)
         Log.d("IPTV", "loadData » $loadData")
 
-        // Yeni: Birden fazla URL'yi döngüye alarak her biri için ayrı kaynak oluşturur
         loadData.urls.forEachIndexed { index, url ->
             val headers = loadData.headers[url] ?: emptyMap()
             val name = if (loadData.urls.size > 1) "${this.name} Kaynak ${index + 1}" else this.name
