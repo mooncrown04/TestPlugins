@@ -7,6 +7,6 @@ import android.content.Context
 @CloudstreamPlugin
 class powerDiziPlugin: Plugin() {
     override fun load(context: Context) {
-        registerMainAPI(MoOnCrOwNTV(context.getSharedPreferences("MoOnCrOwNTV", 0)))
+       registerMainAPI(MoOnCrOwNTV())
     }
 }
