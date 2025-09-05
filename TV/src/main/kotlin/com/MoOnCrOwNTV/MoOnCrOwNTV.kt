@@ -5,7 +5,6 @@ import com.lagradost.cloudstream3.utils.*
 
 class MoOnCrOwNTV : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/r4p9v7g76ikwt8zsyuhyn/sile.m3u?rlkey=esnalbpm4kblxgkvym51gjokm"
-
     override var name = "MoOnCrOwNTV"
     override val hasMainPage = true
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
@@ -15,14 +14,10 @@ class MoOnCrOwNTV : MainAPI() {
             HomePageList(
                 "Popüler",
                 listOf(
-                    newMovieSearchResponse(
-                        name = "Örnek Film",
-                        url = "$mainUrl/movie/123",
-                        apiName = this.name,
-                        type = TvType.Movie,
-                        posterUrl = "https://example.com/image.jpg",
-                        year = 2023
-                    )
+                    newMovieSearchResponse("Örnek Film", "$mainUrl/movie/123", TvType.Movie) {
+                        this.posterUrl = "https://example.com/image.jpg"
+                        this.year = 2023
+                    }
                 )
             )
         )
@@ -31,28 +26,19 @@ class MoOnCrOwNTV : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         return listOf(
-            newMovieSearchResponse(
-                name = "Arama: $query",
-                url = "$mainUrl/search?q=$query",
-                apiName = this.name,
-                type = TvType.Movie,
-                posterUrl = "https://example.com/image.jpg",
-                year = 2023
-            )
+            newMovieSearchResponse("Arama: $query", "$mainUrl/search?q=$query", TvType.Movie) {
+                this.posterUrl = "https://example.com/image.jpg"
+                this.year = 2023
+            }
         )
     }
 
     override suspend fun load(url: String): LoadResponse {
-        return newMovieLoadResponse(
-            name = "Örnek Film",
-            url = url,
-            apiName = this.name,
-            type = TvType.Movie,
-            dataUrl = url,
-            posterUrl = "https://example.com/image.jpg",
-            year = 2023,
-            plot = "Bu bir örnek açıklamadır.",
-            contentRating = "PG-13"
-        )
+        return newMovieLoadResponse("Örnek Film", url, TvType.Movie, url) {
+            this.posterUrl = "https://example.com/image.jpg"
+            this.year = 2023
+            this.plot = "Bu bir örnek açıklamadır."
+            this.contentRating = "PG-13"
+        }
     }
 }
