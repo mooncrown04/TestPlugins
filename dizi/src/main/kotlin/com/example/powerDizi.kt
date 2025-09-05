@@ -357,7 +357,8 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             callback.invoke(
                 newExtractorLink(
                     source = this.name,
-                    name = "Kaynak ${index + 1}",
+                 //   name = "Kaynak ${index + 1}",
+                    name = "${loadData.title} Kaynak ${index + 1}"
                     url = videoUrl,
                     type = ExtractorLinkType.M3U8
                 ) {
