@@ -1,28 +1,28 @@
 plugins {
-    id 'com.android.library'
-    id 'org.jetbrains.kotlin.android'
-    id 'com.lagradost.cloudstream3.plugin'
+    id("com.android.library")
+    id("org.jetbrains.kotlin.android")
+    id("com.lagradost.cloudstream3.plugin")
 }
 
 android {
-    namespace 'com.MoOnCrOwNTV'
-    compileSdkVersion 34
+    namespace = "com.MoOnCrOwNTV"
+    compileSdkVersion(34)
 
     defaultConfig {
-        minSdkVersion 21
-        targetSdkVersion 34
+        minSdkVersion(21)
+        targetSdkVersion(34)
 
         val apiKey = project.findProperty("tmdbApiKey")?.toString() ?: ""
         buildConfigField("String", "TMDB_SECRET_API", "\"$apiKey\"")
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
 
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = "1.8"
     }
 
     buildFeatures {
@@ -32,24 +32,14 @@ android {
 
 dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-    
-    // Asıl sorunun kaynağı olan satır bu.
     implementation("com.lagradost.cloudstream3:cloudstream3-api:latest.integration")
 }
 
 cloudstream {
-    authors   = listOf("MoOnCrOwN","GitLatte", "patr0nq", "keyiflerolsun")
-    language  = "tr"
+    authors = listOf("MoOnCrOwN", "GitLatte", "patr0nq", "keyiflerolsun")
+    language = "tr"
     description = "MoOnCrOwN TV"
-
-    /**
-     * Status int as the following:
-     * 0: Down
-     * 1: Ok
-     * 2: Slow
-     * 3: Beta only
-     **/
-    status  = 1 // will be 3 if unspecified
+    status = 1
     tvTypes = listOf("Live")
     iconUrl = "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powerdizi/powerdizi.png"
 }
