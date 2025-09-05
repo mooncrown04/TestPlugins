@@ -72,14 +72,12 @@ class IptvPlaylistParser {
         val attributesString = substringAfter("#EXTINF:-1 ")
         val attributes = mutableMapOf<String, String>()
 
-        // Tırnak işaretli değerleri bul
         val quotedRegex = Regex("""([a-zA-Z0-9-]+)="(.*?)"""")
         quotedRegex.findAll(attributesString).forEach { matchResult ->
             val (key, value) = matchResult.destructured
             attributes[key] = value.trim()
         }
         
-        // Tırnak işaretsiz değerleri bul
         val unquotedRegex = Regex("""([a-zA-Z0-9-]+)=([^"\s]+)""")
         unquotedRegex.findAll(attributesString).forEach { matchResult ->
             val (key, value) = matchResult.destructured
@@ -138,26 +136,44 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
         
+        // Dizi adlarını temizleyerek ana başlığa göre gruplandırma
         val groupedByCleanTitle = kanallar.items.groupBy {
             val (cleanTitle, _, _) = parseEpisodeInfo(it.title.toString())
             cleanTitle
         }
 
-        val homePageLists = groupedByCleanTitle.toSortedMap().mapNotNull { (cleanTitle, shows) ->
+        // Gruplanmış dizileri, alfabetik olarak harflere göre ayırma
+        val alphabeticGroups = groupedByCleanTitle.toSortedMap().mapNotNull { (cleanTitle, shows) ->
+            val firstChar = cleanTitle.firstOrNull()?.uppercaseChar() ?: '#'
             val firstShow = shows.firstOrNull() ?: return@mapNotNull null
-            val posterUrl = firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
-            val nation = firstShow.attributes["tvg-country"]?.toString() ?: "TR"
-
+            
+            // Her bir ana başlık (örn. "Kuruluş Osman") için tek bir SearchResponse oluşturma
             val searchResponse = newLiveSearchResponse(
                 cleanTitle,
-                LoadData(firstShow.url.toString(), cleanTitle, posterUrl, firstShow.attributes["group-title"]?.toString() ?: cleanTitle, nation).toJson(),
+                LoadData(firstShow.url.toString(), cleanTitle, firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL, cleanTitle, firstShow.attributes["tvg-country"]?.toString() ?: "TR").toJson(),
                 type = TvType.TvSeries
             ) {
-                this.posterUrl = posterUrl
-                this.lang = nation
+                this.posterUrl = firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
+                this.lang = firstShow.attributes["tvg-country"]?.toString() ?: "TR"
             }
+            
+            // Grupları harflere göre ayırma
+            val groupKey = when {
+                firstChar.isLetter() -> firstChar.toString()
+                firstChar.isDigit() -> "0-9"
+                else -> "#"
+            }
+            Pair(groupKey, searchResponse)
+        }.groupBy { it.first }.mapValues { it.value.map { it.second } }.toSortedMap()
 
-            HomePageList(cleanTitle, listOf(searchResponse), isHorizontalImages = true)
+
+        val homePageLists = alphabeticGroups.map { (groupKey, shows) ->
+            val listTitle = when (groupKey) {
+                "#" -> "# ile Başlayan Diziler"
+                "0-9" -> "0-9 ile Başlayan Diziler"
+                else -> "$groupKey ile Başlayan Diziler"
+            }
+            HomePageList(listTitle, shows, isHorizontalImages = true)
         }
 
         return newHomePageResponse(homePageLists, hasNext = false)
@@ -192,10 +208,15 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
 
     override suspend fun load(url: String): LoadResponse {
-        val groupTitle = if (url.startsWith("{")) parseJson<LoadData>(url).group else url
+        val loadData = parseJson<LoadData>(url)
+        val cleanTitle = loadData.title
 
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
-        val allShows = kanallar.items.filter { it.attributes["group-title"]?.trim() == groupTitle }
+        
+        val allShows = kanallar.items.filter { 
+            val (itemCleanTitle, _, _) = parseEpisodeInfo(it.title.toString())
+            itemCleanTitle == cleanTitle
+        }
 
         val finalPosterUrl = allShows.firstOrNull()?.attributes?.get("tvg-logo")?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
         val plot = "TMDB'den özet alınamadı."
@@ -207,7 +228,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             if (season != null && episode != null) {
                 val episodePoster = kanal.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
                 newEpisode(LoadData(kanal.url.toString(), title, episodePoster, kanal.attributes["group-title"]?.toString() ?: "Bilinmeyen Grup", kanal.attributes["tvg-country"]?.toString() ?: "TR", season, episode).toJson()) {
-                    this.name = episodeCleanTitle
+                    this.name = "$episodeCleanTitle S$season E$episode"
                     this.season = season
                     this.episode = episode
                     this.posterUrl = episodePoster
@@ -216,7 +237,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         }.sortedWith(compareBy({ it.season }, { it.episode }))
 
         return newTvSeriesLoadResponse(
-            groupTitle,
+            cleanTitle,
             url,
             TvType.TvSeries,
             currentShowEpisodes.map { episode ->
@@ -228,7 +249,7 @@ class powerDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         ) {
             this.posterUrl = finalPosterUrl
             this.plot = plot
-            this.tags = listOf(groupTitle, allShows.firstOrNull()?.attributes?.get("tvg-country")?.toString() ?: "TR")
+            this.tags = listOf(loadData.group, loadData.nation)
         }
     }
 
