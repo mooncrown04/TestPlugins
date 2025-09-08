@@ -13,7 +13,6 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.URL
 import java.net.URLEncoder
-import com.lagradost.cloudstream3.DubStatus
 
 class powerSinema(private val context: android.content.Context, private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
@@ -44,22 +43,20 @@ class powerSinema(private val context: android.content.Context, private val shar
                     val isDubbed = chGroup.contains("Türkçe Dublaj", ignoreCase = true) || channelname.contains("Dublaj", ignoreCase = true)
                     val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname.contains("Altyazı", ignoreCase = true)
 
-                    val movieTags = mutableListOf<String>()
-                    if (isDubbed) {
-                        movieTags.add(DubStatus.Dubbed.name)
-                    }
-                    if (isSubbed) {
-                        movieTags.add(DubStatus.Subbed.name)
+                    val newTitle = when {
+                        isDubbed && isSubbed -> "$channelname (Dublaj/Altyazı)"
+                        isDubbed -> "$channelname (Türkçe Dublaj)"
+                        isSubbed -> "$channelname (Altyazılı)"
+                        else -> channelname
                     }
 
                     newMovieSearchResponse(
-                        name = channelname,
-                        url = LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress, movieTags).toJson(),
+                        name = newTitle,
+                        url = LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress).toJson(),
                         type = TvType.Movie
                     ) {
                         posterUrl = posterurl
                         lang = nation
-                        tags = movieTags
                     }
                 }
 
@@ -88,24 +85,20 @@ class powerSinema(private val context: android.content.Context, private val shar
             val isDubbed = chGroup.contains("Türkçe Dublaj", ignoreCase = true) || channelname.contains("Dublaj", ignoreCase = true)
             val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname.contains("Altyazı", ignoreCase = true)
 
-
-            val movieTags = mutableListOf<String>()
-            if (isDubbed) {
-                movieTags.add(DubStatus.Dubbed.name)
+            val newTitle = when {
+                isDubbed && isSubbed -> "$channelname (Dublaj/Altyazı)"
+                isDubbed -> "$channelname (Türkçe Dublaj)"
+                isSubbed -> "$channelname (Altyazılı)"
+                else -> channelname
             }
-            if (isSubbed) {
-                movieTags.add(DubStatus.Subbed.name)
-            }
-
 
             newMovieSearchResponse(
-                name = channelname,
-                url = LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress, movieTags).toJson(),
+                name = newTitle,
+                url = LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress).toJson(),
                 type = TvType.Movie
             ) {
                 posterUrl = posterurl
                 lang = nation
-                tags = movieTags
             }
 
         }
@@ -292,7 +285,6 @@ class powerSinema(private val context: android.content.Context, private val shar
         return newMovieLoadResponse(loadData.title, url, TvType.Movie, loadData.url) {
             this.posterUrl = loadData.poster
             this.plot = plot
-            this.tags = loadData.tags
             this.recommendations = recommendations
             this.rating = (tmdbData?.optDouble("vote_average", 0.0)?.toFloat()?.times(2)?.toInt() ?: (if (isWatched) 5 else 0))
             this.duration = if (watchProgress > 0) (watchProgress / 1000).toInt() else tmdbData?.optInt("runtime", 0)
@@ -349,8 +341,7 @@ class powerSinema(private val context: android.content.Context, private val shar
         val group: String,
         val nation: String,
         val isWatched: Boolean = false,
-        val watchProgress: Long = 0L,
-        val tags: List<String> = emptyList()
+        val watchProgress: Long = 0L
     )
 
     private suspend fun fetchDataFromUrlOrJson(data: String): LoadData {
@@ -370,17 +361,7 @@ class powerSinema(private val context: android.content.Context, private val shar
             val isWatched = sharedPref?.getBoolean(watchKey, false) ?: false
             val watchProgress = sharedPref?.getLong(progressKey, 0L) ?: 0L
 
-            val isDubbed = chGroup.contains("Türkçe Dublaj", ignoreCase = true) || channelname.contains("Dublaj", ignoreCase = true)
-            val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname.contains("Altyazı", ignoreCase = true)
-            val movieTags = mutableListOf<String>()
-            if (isDubbed) {
-                movieTags.add(DubStatus.Dubbed.name)
-            }
-            if (isSubbed) {
-                movieTags.add(DubStatus.Subbed.name)
-            }
-            
-            return LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress, movieTags)
+            return LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress)
         }
     }
 }
