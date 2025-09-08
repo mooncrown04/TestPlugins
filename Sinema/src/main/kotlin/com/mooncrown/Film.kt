@@ -52,7 +52,7 @@ class powerSinema(private val context: android.content.Context, private val shar
 
                     newMovieSearchResponse(
                         name = newTitle,
-                        url = LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress).toJson(),
+                        url = LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
                         type = TvType.Movie
                     ) {
                         posterUrl = posterurl
@@ -94,7 +94,7 @@ class powerSinema(private val context: android.content.Context, private val shar
 
             newMovieSearchResponse(
                 name = newTitle,
-                url = LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress).toJson(),
+                url = LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
                 type = TvType.Movie
             ) {
                 posterUrl = posterurl
@@ -252,6 +252,13 @@ class powerSinema(private val context: android.content.Context, private val shar
                 append("<i>Film detayları alınamadı.</i><br><br>")
             }
         }
+        val displayTitle = when {
+            loadData.isDubbed && loadData.isSubbed -> "${loadData.title} (Dublaj/Altyazı)"
+            loadData.isDubbed -> "${loadData.title} (Türkçe Dublaj)"
+            loadData.isSubbed -> "${loadData.title} (Altyazılı)"
+            else -> loadData.title
+        }
+
 
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
         val recommendations = mutableListOf<LiveSearchResponse>()
@@ -265,6 +272,14 @@ class powerSinema(private val context: android.content.Context, private val shar
                 val rcPosterUrl = kanal.attributes["tvg-logo"].toString()
                 val rcChGroup = kanal.attributes["group-title"].toString()
                 val rcNation = kanal.attributes["tvg-country"].toString()
+                val isDubbedRc = rcChGroup.contains("Türkçe Dublaj", ignoreCase = true) || rcChannelName.contains("Dublaj", ignoreCase = true)
+                val isSubbedRc = rcChGroup.contains("Altyazılı", ignoreCase = true) || rcChannelName.contains("Altyazı", ignoreCase = true)
+                val rcTitle = when {
+                    isDubbedRc && isSubbedRc -> "$rcChannelName (Dublaj/Altyazı)"
+                    isDubbedRc -> "$rcChannelName (Türkçe Dublaj)"
+                    isSubbedRc -> "$rcChannelName (Altyazılı)"
+                    else -> rcChannelName
+                }
 
                 val rcWatchKey = "watch_${rcStreamUrl.hashCode()}"
                 val rcProgressKey = "progress_${rcStreamUrl.hashCode()}"
@@ -272,8 +287,8 @@ class powerSinema(private val context: android.content.Context, private val shar
                 val rcWatchProgress = sharedPref?.getLong(rcProgressKey, 0L) ?: 0L
 
                 recommendations.add(newLiveSearchResponse(
-                    rcChannelName,
-                    LoadData(rcStreamUrl, rcChannelName, rcPosterUrl, rcChGroup, rcNation, rcIsWatched, rcWatchProgress).toJson(),
+                    rcTitle,
+                    LoadData(rcStreamUrl, rcChannelName, rcPosterUrl, rcChGroup, rcNation, rcIsWatched, rcWatchProgress, isDubbedRc, isSubbedRc).toJson(),
                     type = TvType.Movie
                 ) {
                     posterUrl = rcPosterUrl
@@ -282,7 +297,7 @@ class powerSinema(private val context: android.content.Context, private val shar
             }
         }
 
-        return newMovieLoadResponse(loadData.title, url, TvType.Movie, loadData.url) {
+        return newMovieLoadResponse(displayTitle, url, TvType.Movie, loadData.url) {
             this.posterUrl = loadData.poster
             this.plot = plot
             this.recommendations = recommendations
@@ -341,7 +356,9 @@ class powerSinema(private val context: android.content.Context, private val shar
         val group: String,
         val nation: String,
         val isWatched: Boolean = false,
-        val watchProgress: Long = 0L
+        val watchProgress: Long = 0L,
+        val isDubbed: Boolean = false,
+        val isSubbed: Boolean = false
     )
 
     private suspend fun fetchDataFromUrlOrJson(data: String): LoadData {
@@ -361,7 +378,10 @@ class powerSinema(private val context: android.content.Context, private val shar
             val isWatched = sharedPref?.getBoolean(watchKey, false) ?: false
             val watchProgress = sharedPref?.getLong(progressKey, 0L) ?: 0L
 
-            return LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress)
+            val isDubbed = chGroup.contains("Türkçe Dublaj", ignoreCase = true) || channelname.contains("Dublaj", ignoreCase = true)
+            val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname.contains("Altyazı", ignoreCase = true)
+            
+            return LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress, isDubbed, isSubbed)
         }
     }
 }
