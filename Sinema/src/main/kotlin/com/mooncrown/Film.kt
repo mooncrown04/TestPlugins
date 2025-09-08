@@ -403,14 +403,6 @@ val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname
 
 
 
-fun LiveSearchResponse.addDubStatus(status: DubStatus) {
-    if (this.tags.isNullOrEmpty()) {
-        this.tags = mutableListOf()
-    }
-    this.tags?.add(status.name)
-}
-
-
 
 
 
