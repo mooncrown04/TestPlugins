@@ -16,7 +16,7 @@ import java.net.URLEncoder
 import com.lagradost.cloudstream3.DubStatus
 import com.lagradost.cloudstream3.addDubStatus
 class powerSinema(private val context: android.content.Context, private val sharedPref: SharedPreferences?) : MainAPI() {
-
+//over
  //   override var mainUrl              = "https://raw.githubusercontent.com/emrcxcx/test/refs/heads/main/filmfun.m3u"
   override var mainUrl              = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
     override var name                 = "35 Sinema 🎥"
