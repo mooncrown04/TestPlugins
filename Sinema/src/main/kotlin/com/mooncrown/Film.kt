@@ -51,7 +51,7 @@ class powerSinema(private val context: android.content.Context, private val shar
                     ) {
                         this.posterUrl = posterurl
                         this.lang = nation
-                        ddDubStatus(DubStatus.Dubbed)
+                        addDubStatus(DubStatus.Dubbed)
                     }
                 }
 
@@ -84,7 +84,7 @@ class powerSinema(private val context: android.content.Context, private val shar
             ) {
                 this.posterUrl = posterurl
                 this.lang = nation
-             ddDubStatus(DubStatus.Dubbed)
+             addDubStatus(DubStatus.Dubbed)
             }
 
         }
