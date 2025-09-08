@@ -54,8 +54,10 @@ class powerSinema(private val context: android.content.Context, private val shar
                         url = LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
                         type = TvType.Movie
                     ) {
-                        posterUrl = posterurl
-                        lang = nation
+                        this.posterUrl = posterurl
+                        this.lang = nation
+                        // Buraya etiketleri ekliyoruz
+                        addDubStatus(isDub = isDubbed, isSub = isSubbed)
                     }
                 }
 
@@ -95,8 +97,10 @@ class powerSinema(private val context: android.content.Context, private val shar
                 url = LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
                 type = TvType.Movie
             ) {
-                posterUrl = posterurl
-                lang = nation
+                this.posterUrl = posterurl
+                this.lang = nation
+                // Buraya etiketleri ekliyoruz
+                addDubStatus(isDub = isDubbed, isSub = isSubbed)
             }
 
         }
@@ -211,7 +215,7 @@ class powerSinema(private val context: android.content.Context, private val shar
                     Log.e("LocaleError", "TR Locale alınamadı, US kullanılıyor.", e)
                     java.text.NumberFormat.getNumberInstance(java.util.Locale.US)
                 }
-                
+
                 if (tagline.isNotEmpty()) append("💭 <b>Slogan:</b><br>${tagline}<br><br>")
                 if (overview.isNotEmpty()) append("📝 <b>Konu:</b><br>${overview}<br><br>")
                 if (releaseDate.isNotEmpty()) append("📅 <b>Yapım Yılı:</b> $releaseDate<br>")
@@ -291,6 +295,8 @@ class powerSinema(private val context: android.content.Context, private val shar
                 ) {
                     posterUrl = rcPosterUrl
                     lang = rcNation
+                    // Burada da öneri filmler için etiketleri ekliyoruz
+                    addDubStatus(isDub = isDubbedRc, isSub = isSubbedRc)
                 })
             }
         }
@@ -378,7 +384,7 @@ class powerSinema(private val context: android.content.Context, private val shar
 
             val isDubbed = chGroup.contains("Türkçe Dublaj", ignoreCase = true) || channelname.contains("Dublaj", ignoreCase = true)
             val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname.contains("Altyazı", ignoreCase = true)
-            
+
             return LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress, isDubbed, isSubbed)
         }
     }
