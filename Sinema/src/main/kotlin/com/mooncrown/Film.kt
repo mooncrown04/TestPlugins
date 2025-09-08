@@ -13,7 +13,8 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.URL
 import java.net.URLEncoder
-
+import com.lagradost.cloudstream3.DubStatus
+import com.lagradost.cloudstream3.addDubStatus
 class powerSinema(private val context: android.content.Context, private val sharedPref: SharedPreferences?) : MainAPI() {
 
  //   override var mainUrl              = "https://raw.githubusercontent.com/emrcxcx/test/refs/heads/main/filmfun.m3u"
@@ -50,6 +51,7 @@ class powerSinema(private val context: android.content.Context, private val shar
                     ) {
                         this.posterUrl = posterurl
                         this.lang = nation
+                         addDubStatus(isDub = true)
                     }
                 }
 
