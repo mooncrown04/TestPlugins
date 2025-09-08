@@ -353,6 +353,36 @@ class powerSinema(private val context: android.content.Context, private val shar
     }
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+fun LiveSearchResponse.addDubStatus(status: DubStatus) {
+    if (this.tags.isNullOrEmpty()) {
+        this.tags = mutableListOf()
+    }
+    this.tags?.add(status.name)
+}
+
+
+
+
+
+
+
+
+
+
 data class Playlist(
     val items: List<PlaylistItem> = emptyList()
 )
