@@ -95,7 +95,6 @@ val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname
 val isDubbed = chGroup.contains("Türkçe Dublaj", ignoreCase = true) || channelname.contains("Dublaj", ignoreCase = true)
 val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname.contains("Altyazı", ignoreCase = true)
 
-val movieTags = mutableListOf<String>()
 
   // Etiketleri burada oluşturun.
                 val movieTags = mutableListOf<String>()
