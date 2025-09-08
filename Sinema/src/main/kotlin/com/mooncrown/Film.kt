@@ -16,12 +16,12 @@ import java.net.URLEncoder
 
 class powerSinema(private val context: android.content.Context, private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
-    override var name = "35 Sinema 🎥"
+    override var name = "35 Anime 📺"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
     override val hasDownloadSupport = true
-    override val supportedTypes = setOf(TvType.Movie)
+    override val supportedTypes = setOf(TvType.Anime)
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
@@ -49,15 +49,14 @@ class powerSinema(private val context: android.content.Context, private val shar
                         else -> channelname
                     }
 
-                    newMovieSearchResponse(
+                    newAnimeSearchResponse(
                         name = newTitle,
                         url = LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
-                        type = TvType.Movie
+                        type = TvType.Anime
                     ) {
                         this.posterUrl = posterurl
                         this.lang = nation
-                        // Buraya etiketleri ekliyoruz
-                        addDubStatus(isDub = isDubbed, isSub = isSubbed)
+                        this.addDubStatus(isDub = isDubbed, isSub = isSubbed)
                     }
                 }
 
@@ -92,15 +91,14 @@ class powerSinema(private val context: android.content.Context, private val shar
                 else -> channelname
             }
 
-            newMovieSearchResponse(
+            newAnimeSearchResponse(
                 name = newTitle,
                 url = LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
-                type = TvType.Movie
+                type = TvType.Anime
             ) {
                 this.posterUrl = posterurl
                 this.lang = nation
-                // Buraya etiketleri ekliyoruz
-                addDubStatus(isDub = isDubbed, isSub = isSubbed)
+                this.addDubStatus(isDub = isDubbed, isSub = isSubbed)
             }
 
         }
@@ -291,17 +289,16 @@ class powerSinema(private val context: android.content.Context, private val shar
                 recommendations.add(newLiveSearchResponse(
                     rcTitle,
                     LoadData(rcStreamUrl, rcChannelName, rcPosterUrl, rcChGroup, rcNation, rcIsWatched, rcWatchProgress, isDubbedRc, isSubbedRc).toJson(),
-                    type = TvType.Movie
+                    type = TvType.Anime
                 ) {
                     posterUrl = rcPosterUrl
                     lang = rcNation
-                    // Burada da öneri filmler için etiketleri ekliyoruz
-                    addDubStatus(isDub = isDubbedRc, isSub = isSubbedRc)
+                    this.addDubStatus(isDub = isDubbedRc, isSub = isSubbedRc)
                 })
             }
         }
 
-        return newMovieLoadResponse(displayTitle, url, TvType.Movie, loadData.url) {
+        return newAnimeLoadResponse(displayTitle, url, TvType.Anime, loadData.url) {
             this.posterUrl = loadData.poster
             this.plot = plot
             this.recommendations = recommendations
