@@ -59,7 +59,7 @@ class powerSinema(private val context: android.content.Context, private val shar
                     ) {
                         posterUrl = posterurl
                         lang = nation
-                        tags = movieTags
+                        addDubStatus(isDubbed, isSubbed)
                     }
                 }
 
@@ -105,7 +105,7 @@ class powerSinema(private val context: android.content.Context, private val shar
             ) {
                 posterUrl = posterurl
                 lang = nation
-                tags = movieTags
+                addDubStatus(isDubbed, isSubbed)
             }
 
         }
