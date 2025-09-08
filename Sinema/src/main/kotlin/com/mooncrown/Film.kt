@@ -60,7 +60,7 @@ val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname
                    newMovieSearchResponse(
                //     newLiveSearchResponse(
                         channelname,
-                        LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress,).toJson(),
+                        LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress, movieTags).toJson(),
                         type = TvType.Movie                 
                        ){ this.posterUrl = posterurl
                        // this.lang = nation
@@ -114,7 +114,7 @@ val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname
            newMovieSearchResponse(
            // newLiveSearchResponse(
                 channelname,
-                LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress,).toJson(),
+                LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress, movieTags).toJson(),
                 type = TvType.Movie
             ){
                 this.posterUrl = posterurl
