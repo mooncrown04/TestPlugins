@@ -43,7 +43,21 @@ class powerSinema(private val context: android.content.Context, private val shar
                     val progressKey = "progress_${streamurl.hashCode()}"
                     val isWatched = sharedPref?.getBoolean(watchKey, false) ?: false
                     val watchProgress = sharedPref?.getLong(progressKey, 0L) ?: 0L
+val isDubbed = chGroup.contains("Türkçe Dublaj", ignoreCase = true) || channelname.contains("Dublaj", ignoreCase = true)
+val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname.contains("Altyazı", ignoreCase = true)
 
+val movieTags = mutableListOf<String>()
+
+if (isDubbed) {
+    movieTags.add("Dubbed")
+}
+
+if (isSubbed) {
+    movieTags.add("Subbed")
+}
+
+
+                 
                     newLiveSearchResponse(
                         channelname,
                         LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress).toJson(),
@@ -51,7 +65,7 @@ class powerSinema(private val context: android.content.Context, private val shar
                     ) {
                         this.posterUrl = posterurl
                         this.lang = nation
-                        addDubStatus(DubStatus.Dubbed)
+                         this.tags = movieTags // 👈 Oluşturduğunuz listeyi buraya atayın.
                     }
                 }
 
@@ -77,6 +91,28 @@ class powerSinema(private val context: android.content.Context, private val shar
             val isWatched = sharedPref?.getBoolean(watchKey, false) ?: false
             val watchProgress = sharedPref?.getLong(progressKey, 0L) ?: 0L
 
+
+val isDubbed = chGroup.contains("Türkçe Dublaj", ignoreCase = true) || channelname.contains("Dublaj", ignoreCase = true)
+val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname.contains("Altyazı", ignoreCase = true)
+
+val movieTags = mutableListOf<String>()
+
+if (isDubbed) {
+    movieTags.add("Dubbed")
+}
+
+if (isSubbed) {
+    movieTags.add("Subbed")
+}
+
+
+
+
+
+
+
+
+         
             newLiveSearchResponse(
                 channelname,
                 LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress).toJson(),
@@ -84,7 +120,7 @@ class powerSinema(private val context: android.content.Context, private val shar
             ) {
                 this.posterUrl = posterurl
                 this.lang = nation
-             addDubStatus(DubStatus.Dubbed)
+            this.tags = movieTags // 👈 Oluşturduğunuz listeyi buraya atayın.
             }
 
         }
