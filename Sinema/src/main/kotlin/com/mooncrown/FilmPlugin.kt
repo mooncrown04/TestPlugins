@@ -8,7 +8,7 @@ import android.content.Context
 class FilmPlugin : Plugin() {
     override fun load(context: Context) {
         // All providers should be added in this manner. Please don't edit the following list manually.
-   //     registerMainAPI(Film(context, null))
-         registerMainAPI(Film)
+       registerMainAPI(Film(context, null))
+     //    registerMainAPI(Film)
     }
 }
