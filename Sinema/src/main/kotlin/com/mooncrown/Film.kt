@@ -44,7 +44,6 @@ class powerSinema(private val context: android.content.Context, private val shar
                     val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname.contains("Altyazı", ignoreCase = true)
 
                     val newTitle = when {
-                        isDubbed && isSubbed -> "$channelname (Dublaj/Altyazı)"
                         isDubbed -> "$channelname (Türkçe Dublaj)"
                         isSubbed -> "$channelname (Altyazılı)"
                         else -> channelname
@@ -86,7 +85,6 @@ class powerSinema(private val context: android.content.Context, private val shar
             val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname.contains("Altyazı", ignoreCase = true)
 
             val newTitle = when {
-                isDubbed && isSubbed -> "$channelname (Dublaj/Altyazı)"
                 isDubbed -> "$channelname (Türkçe Dublaj)"
                 isSubbed -> "$channelname (Altyazılı)"
                 else -> channelname
@@ -156,6 +154,8 @@ class powerSinema(private val context: android.content.Context, private val shar
         val tmdbData = fetchTMDBData(loadData.title)
 
         val plot = buildString {
+            if (loadData.isDubbed) append("🔊 <b>Ses:</b> Türkçe Dublaj<br>")
+            if (loadData.isSubbed) append("📖 <b>Altyazı:</b> Var<br>")
             if (tmdbData != null) {
                 val overview = tmdbData.optString("overview", "")
                 val releaseDate = tmdbData.optString("release_date", "").split("-").firstOrNull() ?: ""
@@ -211,7 +211,7 @@ class powerSinema(private val context: android.content.Context, private val shar
                     Log.e("LocaleError", "TR Locale alınamadı, US kullanılıyor.", e)
                     java.text.NumberFormat.getNumberInstance(java.util.Locale.US)
                 }
-
+                
                 if (tagline.isNotEmpty()) append("💭 <b>Slogan:</b><br>${tagline}<br><br>")
                 if (overview.isNotEmpty()) append("📝 <b>Konu:</b><br>${overview}<br><br>")
                 if (releaseDate.isNotEmpty()) append("📅 <b>Yapım Yılı:</b> $releaseDate<br>")
@@ -253,7 +253,6 @@ class powerSinema(private val context: android.content.Context, private val shar
             }
         }
         val displayTitle = when {
-            loadData.isDubbed && loadData.isSubbed -> "${loadData.title} (Dublaj/Altyazı)"
             loadData.isDubbed -> "${loadData.title} (Türkçe Dublaj)"
             loadData.isSubbed -> "${loadData.title} (Altyazılı)"
             else -> loadData.title
@@ -275,7 +274,6 @@ class powerSinema(private val context: android.content.Context, private val shar
                 val isDubbedRc = rcChGroup.contains("Türkçe Dublaj", ignoreCase = true) || rcChannelName.contains("Dublaj", ignoreCase = true)
                 val isSubbedRc = rcChGroup.contains("Altyazılı", ignoreCase = true) || rcChannelName.contains("Altyazı", ignoreCase = true)
                 val rcTitle = when {
-                    isDubbedRc && isSubbedRc -> "$rcChannelName (Dublaj/Altyazı)"
                     isDubbedRc -> "$rcChannelName (Türkçe Dublaj)"
                     isSubbedRc -> "$rcChannelName (Altyazılı)"
                     else -> rcChannelName
