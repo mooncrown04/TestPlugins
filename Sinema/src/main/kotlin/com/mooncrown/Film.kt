@@ -48,13 +48,14 @@ val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname
 
 val movieTags = mutableListOf<String>()
 
-if (isDubbed) {
-    movieTags.add("Dubbed")
-}
-
-if (isSubbed) {
-    movieTags.add("Subbed")
-}
+   // Etiketleri burada oluşturun.
+                val movieTags = mutableListOf<String>()
+                if (isDubbed) {
+                    movieTags.add(DubStatus.Dubbed.name)
+                }
+                if (isSubbed) {
+                    movieTags.add(DubStatus.Subbed.name)
+                }
 
 
                  
@@ -97,13 +98,14 @@ val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname
 
 val movieTags = mutableListOf<String>()
 
-if (isDubbed) {
-    movieTags.add("Dubbed")
-}
-
-if (isSubbed) {
-    movieTags.add("Subbed")
-}
+  // Etiketleri burada oluşturun.
+                val movieTags = mutableListOf<String>()
+                if (isDubbed) {
+                    movieTags.add(DubStatus.Dubbed.name)
+                }
+                if (isSubbed) {
+                    movieTags.add(DubStatus.Subbed.name)
+                }
 
 
 
