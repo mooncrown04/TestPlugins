@@ -57,9 +57,9 @@ class powerSinema(private val context: android.content.Context, private val shar
                         url = LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress, movieTags).toJson(),
                         type = TvType.Movie
                     ) {
-                        this.posterUrl = posterurl
-                        this.lang = nation
-                        this.tags = movieTags
+                        posterUrl = posterurl
+                        lang = nation
+                        tags = movieTags
                     }
                 }
 
@@ -103,9 +103,9 @@ class powerSinema(private val context: android.content.Context, private val shar
                 url = LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress, movieTags).toJson(),
                 type = TvType.Movie
             ) {
-                this.posterUrl = posterurl
-                this.lang = nation
-                this.tags = movieTags
+                posterUrl = posterurl
+                lang = nation
+                tags = movieTags
             }
 
         }
@@ -283,8 +283,8 @@ class powerSinema(private val context: android.content.Context, private val shar
                     LoadData(rcStreamUrl, rcChannelName, rcPosterUrl, rcChGroup, rcNation, rcIsWatched, rcWatchProgress).toJson(),
                     type = TvType.Movie
                 ) {
-                    this.posterUrl = rcPosterUrl
-                    this.lang = rcNation
+                    posterUrl = rcPosterUrl
+                    lang = rcNation
                 })
             }
         }
