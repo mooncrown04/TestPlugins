@@ -62,7 +62,7 @@ val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname
                         channelname,
                         LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress).toJson(),
                         type = TvType.Movie
-                    ) {
+                    ).apply{
                         this.posterUrl = posterurl
                         this.lang = nation
                          this.tags = movieTags // 👈 Oluşturduğunuz listeyi buraya atayın.
@@ -117,7 +117,7 @@ val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname
                 channelname,
                 LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress).toJson(),
                 type = TvType.Movie
-            ) {
+            ).apply{
                 this.posterUrl = posterurl
                 this.lang = nation
             this.tags = movieTags // 👈 Oluşturduğunuz listeyi buraya atayın.
