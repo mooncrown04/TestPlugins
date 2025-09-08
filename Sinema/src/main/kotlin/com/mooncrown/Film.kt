@@ -65,7 +65,7 @@ val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname
                     ).apply{
                         this.posterUrl = posterurl
                         this.lang = nation
-                         this.tags = movieTags // 👈 Oluşturduğunuz listeyi buraya atayın.
+            //             this.tags = movieTags // 👈 Oluşturduğunuz listeyi buraya atayın.
                     }
                 }
 
@@ -120,7 +120,7 @@ val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname
             ).apply{
                 this.posterUrl = posterurl
                 this.lang = nation
-            this.tags = movieTags // 👈 Oluşturduğunuz listeyi buraya atayın.
+          //  this.tags = movieTags // 👈 Oluşturduğunuz listeyi buraya atayın.
             }
 
         }
