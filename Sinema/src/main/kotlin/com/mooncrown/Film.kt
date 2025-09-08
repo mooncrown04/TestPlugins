@@ -58,7 +58,6 @@ class Film(private val context: android.content.Context, private val sharedPref:
                         type = TvType.Anime
                     ) {
                         this.posterUrl = posterurl
-                        // Düzeltme burada yapıldı. isDubbed ve isSubbed değişkenleri zaten boolean tipinde.
                         this.addDubStatus(dubExist = isDubbed, subExist = isSubbed)
                     }
                 }
@@ -100,7 +99,6 @@ class Film(private val context: android.content.Context, private val sharedPref:
                 type = TvType.Anime
             ) {
                 this.posterUrl = posterurl
-                // Düzeltme burada yapıldı. isDubbed ve isSubbed değişkenleri zaten boolean tipinde.
                 this.addDubStatus(dubExist = isDubbed, subExist = isSubbed)
             }
 
