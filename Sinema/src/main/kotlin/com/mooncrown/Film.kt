@@ -14,7 +14,11 @@ import org.json.JSONObject
 import java.net.URL
 import java.net.URLEncoder
 
-class Sinema(private val context: android.content.Context, private val sharedPref: SharedPreferences?) : MainAPI() {
+// Gerekli importları ekledik
+import com.lagradost.cloudstream3.DubStatus
+import com.lagradost.cloudstream3.addDubStatus
+
+class Film(private val context: android.content.Context, private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
     override var name = "35 Anime 📺"
     override val hasMainPage = true
@@ -55,8 +59,7 @@ class Sinema(private val context: android.content.Context, private val sharedPre
                         type = TvType.Anime
                     ) {
                         this.posterUrl = posterurl
-                        this.lang = nation
-                        this.addDubStatus(isDubbed, isSubbed)
+                        this.addDubStatus(dubExist = isDubbed, subExist = isSubbed)
                     }
                 }
 
@@ -97,8 +100,7 @@ class Sinema(private val context: android.content.Context, private val sharedPre
                 type = TvType.Anime
             ) {
                 this.posterUrl = posterurl
-                this.lang = nation
-                this.addDubStatus(isDubbed, isSubbed)
+                this.addDubStatus(dubExist = isDubbed, subExist = isSubbed)
             }
 
         }
@@ -242,7 +244,9 @@ class Sinema(private val context: android.content.Context, private val sharedPre
                     try {
                         val formattedRevenue = numberFormat.format(revenue)
                         append("💵 <b>Hasılat:</b> $${formattedRevenue}<br>")
-                        Log.d("FormatError", "Hasılat formatlanırken hata (TR): $revenue", e)
+                        Log.d("FormatError", "Hasılat formatlanırken hata (TR): $revenue")
+                    } catch (e: Exception) {
+                        Log.e("FormatError", "Hasılat formatlanırken hata (TR): $revenue", e)
                         append("💵 <b>Hasılat:</b> $${revenue} (Formatlama Hatası)<br>")
                     }
                 }
