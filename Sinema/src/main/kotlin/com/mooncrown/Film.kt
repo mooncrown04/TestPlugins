@@ -45,7 +45,7 @@ class powerSinema(private val context: android.content.Context, private val shar
                     val watchProgress = sharedPref?.getLong(progressKey, 0L) ?: 0L
 val isDubbed = chGroup.contains("Türkçe Dublaj", ignoreCase = true) || channelname.contains("Dublaj", ignoreCase = true)
 val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname.contains("Altyazı", ignoreCase = true)
-
+ val tags: List<String> 
 
    // Etiketleri burada oluşturun.
                 val movieTags = mutableListOf<String>()
@@ -95,7 +95,7 @@ val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname
 val isDubbed = chGroup.contains("Türkçe Dublaj", ignoreCase = true) || channelname.contains("Dublaj", ignoreCase = true)
 val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname.contains("Altyazı", ignoreCase = true)
 
-
+ val tags: List<String> 
   // Etiketleri burada oluşturun.
                 val movieTags = mutableListOf<String>()
                 if (isDubbed) {
