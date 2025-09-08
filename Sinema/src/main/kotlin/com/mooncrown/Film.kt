@@ -365,7 +365,8 @@ val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname
     val nation: String,
     val isWatched: Boolean = false,
     val watchProgress: Long = 0L
-)
+    val tags: List<String> = emptyList()
+    )
 
     private suspend fun fetchDataFromUrlOrJson(data: String): LoadData {
         if (data.startsWith("{")) {
