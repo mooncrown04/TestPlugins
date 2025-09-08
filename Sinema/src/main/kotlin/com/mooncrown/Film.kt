@@ -14,7 +14,6 @@ import org.json.JSONObject
 import java.net.URL
 import java.net.URLEncoder
 
-// Gerekli importları ekledik
 import com.lagradost.cloudstream3.DubStatus
 import com.lagradost.cloudstream3.addDubStatus
 
@@ -59,6 +58,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
                         type = TvType.Anime
                     ) {
                         this.posterUrl = posterurl
+                        // Düzeltme burada yapıldı. isDubbed ve isSubbed değişkenleri zaten boolean tipinde.
                         this.addDubStatus(dubExist = isDubbed, subExist = isSubbed)
                     }
                 }
@@ -100,6 +100,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
                 type = TvType.Anime
             ) {
                 this.posterUrl = posterurl
+                // Düzeltme burada yapıldı. isDubbed ve isSubbed değişkenleri zaten boolean tipinde.
                 this.addDubStatus(dubExist = isDubbed, subExist = isSubbed)
             }
 
