@@ -14,7 +14,7 @@ import org.json.JSONObject
 import java.net.URL
 import java.net.URLEncoder
 
-class powerSinema(private val context: android.content.Context, private val sharedPref: SharedPreferences?) : MainAPI() {
+class Sinema(private val context: android.content.Context, private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
     override var name = "35 Anime 📺"
     override val hasMainPage = true
@@ -56,7 +56,7 @@ class powerSinema(private val context: android.content.Context, private val shar
                     ) {
                         this.posterUrl = posterurl
                         this.lang = nation
-                        this.addDubStatus(isDub = isDubbed, isSub = isSubbed)
+                        this.addDubStatus(isDubbed, isSubbed)
                     }
                 }
 
@@ -98,7 +98,7 @@ class powerSinema(private val context: android.content.Context, private val shar
             ) {
                 this.posterUrl = posterurl
                 this.lang = nation
-                this.addDubStatus(isDub = isDubbed, isSub = isSubbed)
+                this.addDubStatus(isDubbed, isSubbed)
             }
 
         }
@@ -242,13 +242,10 @@ class powerSinema(private val context: android.content.Context, private val shar
                     try {
                         val formattedRevenue = numberFormat.format(revenue)
                         append("💵 <b>Hasılat:</b> $${formattedRevenue}<br>")
-                        Log.d("FormatDebug", "Hasılat formatlandı (TR): $formattedRevenue")
-                    } catch (e: Exception) {
-                        Log.e("FormatError", "Hasılat formatlanırken hata (TR): $revenue", e)
+                        Log.d("FormatError", "Hasılat formatlanırken hata (TR): $revenue", e)
                         append("💵 <b>Hasılat:</b> $${revenue} (Formatlama Hatası)<br>")
                     }
                 }
-
                 append("<br>")
             } else {
                 append("<i>Film detayları alınamadı.</i><br><br>")
@@ -292,8 +289,6 @@ class powerSinema(private val context: android.content.Context, private val shar
                     type = TvType.Anime
                 ) {
                     posterUrl = rcPosterUrl
-                    lang = rcNation
-                    this.addDubStatus(isDub = isDubbedRc, isSub = isSubbedRc)
                 })
             }
         }
