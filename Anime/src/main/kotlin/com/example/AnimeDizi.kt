@@ -336,41 +336,25 @@ newAnimeSearchResponse(
         
         
         
-      val processedEpisodes = currentShowEpisodes.map { episode ->
+val processedEpisodes = currentShowEpisodes.map { episode ->
     episode.apply {
         val episodeLoadData = parseJson<LoadData>(this.data)
         this.posterUrl = episodeLoadData.poster
     }
-}  
-        
-        
-        
-        
-        
-        return newAnimeLoadResponse(
-    //    return newTvSeriesLoadResponse(
-            cleanTitle,
-            url,
-            TvType.TvSeries,
-     processedEpisodes
-{
+}
+
+return newAnimeLoadResponse(
+    cleanTitle,
+    url,
+    TvType.TvSeries,
+    processedEpisodes
+) {
     this.posterUrl = finalPosterUrl
     this.plot = plot
     this.tags = listOf(loadData.group, loadData.nation)
 }
     
-currentShowEpisodes.map { episode: Episode ->
-    episode.apply {
-        val episodeLoadData = parseJson<LoadData>(this.data)
-        this.posterUrl = episodeLoadData.poster
-    }
-}
-        ) {
-            this.posterUrl = finalPosterUrl
-            this.plot = plot
-            this.tags = listOf(loadData.group, loadData.nation)
-        }
-    }
+
 
     // Bölümü oynatmak için gerekli linkleri sağlar.
     override suspend fun loadLinks(
