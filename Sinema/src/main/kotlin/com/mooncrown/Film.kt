@@ -24,7 +24,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
     override var lang = "tr"
     override val hasQuickSearch = true
     override val hasDownloadSupport = true
-    override val supportedTypes = setOf(TvType.Movie)
+    override val supportedTypes = setOf(TvType.Movie,TvType.Anime)
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
@@ -59,7 +59,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
                     newAnimeSearchResponse(
                         name = newTitle,
                         url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
-                        type = TvType.Movie
+                        type = TvType.Anime
                     ) {
                         this.posterUrl = posterurl
                         this.addDubStatus(dubExist = isDubbed, subExist = isSubbed)
@@ -68,15 +68,13 @@ class Film(private val context: android.content.Context, private val sharedPref:
                     
                     
                     newMovieSearchResponse(
-                  //  newAnimeSearchResponse(
+              
                         name = newTitle,
                         url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
                         type = TvType.Movie
                     ) {
                         this.posterUrl = posterurl
-                   //     this.addDubStatus(dubExist = isDubbed, subExist = isSubbed)
-                   
-                    
+                                  
                     }
                 }
 
@@ -123,25 +121,19 @@ class Film(private val context: android.content.Context, private val sharedPref:
                     newAnimeSearchResponse(
                         name = newTitle,
                         url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
-                        type = TvType.Movie
+                        type = TvType.Anime
                     ) {
                         this.posterUrl = posterurl
                      this.addDubStatus(dubExist = isDubbed, subExist = isSubbed)                    
                     }
             
             newMovieSearchResponse(
-          //  newAnimeSearchResponse(
                 name = newTitle,
                 url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
                 type = TvType.Movie
             ) {
                 this.posterUrl = posterurl
-              //  this.addDubStatus(dubExist = isDubbed, subExist = isSubbed)
-
-
-
-
-                  
+                   
               }
 
         }
