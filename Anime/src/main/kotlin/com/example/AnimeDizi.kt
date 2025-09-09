@@ -346,12 +346,13 @@ val processedEpisodes = currentShowEpisodes.map { episode ->
 return newAnimeLoadResponse(
     cleanTitle,
     url,
-    TvType.TvSeries,
-    processedEpisodes
+    TvType.TvSeries
+
 ) {
     this.posterUrl = finalPosterUrl
     this.plot = plot
     this.tags = listOf(loadData.group, loadData.nation)
+ this.episodes = processedEpisodes
 }
     
 
@@ -383,6 +384,9 @@ return newAnimeLoadResponse(
         return true
     }
 
+
+}
+    
     // Gelen verinin URL mi yoksa JSON mu olduğunu kontrol edip ilgili LoadData nesnesini döndürür.
     private suspend fun fetchDataFromUrlOrJson(data: String): LoadData {
         if (data.startsWith("{")) {
@@ -409,4 +413,4 @@ return newAnimeLoadResponse(
         }
     }
 }
-}
+
