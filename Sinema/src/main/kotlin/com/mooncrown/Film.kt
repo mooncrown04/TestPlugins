@@ -70,10 +70,9 @@ class Film(private val context: android.content.Context, private val sharedPref:
     ) {
         this.posterUrl = posterurl
         // ✅ addDubStatus burada da çalışır
-        this.addDubStatus(
-            dubExist = isDubbed,
-            subExist = isSubbed
-        )
+        
+        addDubStatus(dubExist = isDubbed, subExist = isSubbed)
+     
     }
 }
                     
@@ -131,10 +130,8 @@ class Film(private val context: android.content.Context, private val sharedPref:
     ) {
         this.posterUrl = posterurl
         // ✅ addDubStatus burada da çalışır
-        this.addDubStatus(
-            dubExist = isDubbed,
-            subExist = isSubbed
-        )
+     addDubStatus(dubExist = isDubbed, subExist = isSubbed)
+      
     }
 }
     }
