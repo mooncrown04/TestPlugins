@@ -74,7 +74,14 @@ class Film(private val context: android.content.Context, private val sharedPref:
     override suspend fun search(query: String): List<SearchResponse> {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
 
-        return kanallar.items.filter { it.title.toString().lowercase().contains(query.lowercase()) }.map { kanal ->
+        return kanallar.items.filter {
+            val normalizedQuery = query.lowercase()
+            val normalizedTitle = it.title.toString().lowercase()
+            val normalizedLanguage = it.attributes["tvg-language"]?.lowercase() ?: ""
+            
+            // Arama sorgusu hem başlıkta hem de tvg-language etiketinde aranır
+            normalizedTitle.contains(normalizedQuery) || normalizedLanguage.contains(normalizedQuery)
+        }.map { kanal ->
             val streamurl = kanal.url.toString()
             val channelname = kanal.title.toString()
             val posterurl = kanal.attributes["tvg-logo"].toString()
