@@ -71,8 +71,8 @@ class Film(private val context: android.content.Context, private val sharedPref:
         this.posterUrl = posterurl
         // ✅ addDubStatus burada da çalışır
         
-        addDubStatus(dubExist = isDubbed, subExist = isSubbed)
-     
+      //  addDubStatus(dubExist = isDubbed, subExist = isSubbed)
+     addDubStatus(dubExist = isDub, subExist = isSub)
     }
 }
                     
@@ -130,8 +130,8 @@ class Film(private val context: android.content.Context, private val sharedPref:
     ) {
         this.posterUrl = posterurl
         // ✅ addDubStatus burada da çalışır
-     addDubStatus(dubExist = isDubbed, subExist = isSubbed)
-      
+    // addDubStatus(dubExist = isDubbed, subExist = isSubbed)
+     addDubStatus(dubExist = isDub, subExist = isSub) 
     }
 }
     }
@@ -181,13 +181,11 @@ class Film(private val context: android.content.Context, private val sharedPref:
         type = TvType.Anime
     ) {
         posterUrl = data.poster
-        episodes = listOf(
-            Episode(
-                data.url,
-                name = data.name,
-                posterUrl = data.poster
-            )
-        )
+ episodes = mutableMapOf(
+    DubStatus.SUB to listOf(
+        newEpisode(data.url, name = data.name)
+    )
+)
     }
 }
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
