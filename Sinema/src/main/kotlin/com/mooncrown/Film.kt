@@ -24,7 +24,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
     override var lang = "tr"
     override val hasQuickSearch = true
     override val hasDownloadSupport = true
-    override val supportedTypes = setOf(TvType.Anime)
+    override val supportedTypes = setOf(TvType.Movie)
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
@@ -59,7 +59,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
                         name = newTitle,
                         // Düzeltme: Header bilgisini LoadData'ya ekledik.
                         url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed, kanal.headers).toJson(),
-                        type = TvType.Anime
+                        type = TvType.Movie
                     ) {
                         this.posterUrl = posterurl
                         this.addDubStatus(dubExist = isDubbed, subExist = isSubbed)
@@ -108,7 +108,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
                 name = newTitle,
                 // Düzeltme: Header bilgisini LoadData'ya ekledik.
                 url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed, kanal.headers).toJson(),
-                type = TvType.Anime
+                type = TvType.Movie
             ) {
                 this.posterUrl = posterurl
                 this.addDubStatus(dubExist = isDubbed, subExist = isSubbed)
@@ -303,7 +303,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
                     rcTitle,
                     // Düzeltme: Header bilgisini LoadData'ya ekledik.
                     LoadData(rcStreamUrl, rcChannelName, rcPosterUrl, rcChGroup, rcLanguage, rcNation, rcIsWatched, rcWatchProgress, isDubbedRc, isSubbedRc, kanal.headers).toJson(),
-                    type = TvType.Anime
+                    type = TvType.Movie
                 ) {
                     posterUrl = rcPosterUrl
                 })
