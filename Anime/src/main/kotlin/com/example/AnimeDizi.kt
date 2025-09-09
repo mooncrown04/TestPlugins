@@ -158,7 +158,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val searchResponse = newTvSeriesSearchResponse(cleanTitle, shows.firstOrNull()?.url ?: "") {
                 posterUrl = firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
                 type = TvType.TvSeries
-                addDubStatus(isDub = true)
+               addDubStatus(dubExist = false, subExist = true)
             }
             val firstChar = cleanTitle.firstOrNull()?.uppercaseChar() ?: '#'
             val groupKey = when {
@@ -197,7 +197,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             newTvSeriesSearchResponse(cleanTitle, firstShow.url ?: "") {
                 posterUrl = firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
                 type = TvType.TvSeries
-                addDubStatus(isDub = true)
+                addDubStatus(dubExist = false, subExist = true)
             }
         }
     }
