@@ -146,15 +146,67 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val episode: Int = 0
     )
 
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        // ... (senin kodun aynı, buraya dokunmadım)
-        // sadece load ve loadLinks kısmını düzelttim
-        return newHomePageResponse(listOf(), hasNext = false)
+override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+    val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
+
+    // group-title alanına göre kategorilere ayır
+    val grouped = kanallar.items.groupBy { it.attributes["group-title"] ?: "Genel" }
+
+    val homePageLists = grouped.map { (group, items) ->
+        val shows = items.mapNotNull {
+            val title = it.title ?: return@mapNotNull null
+            val poster = it.attributes["tvg-logo"].takeIf { !it.isNullOrBlank() } ?: DEFAULT_POSTER_URL
+            val (cleanTitle, _, _) = parseEpisodeInfo(title)
+
+            TvSeriesSearchResponse(
+                name = cleanTitle,
+                url = LoadData(
+                    urls = listOf(it.url ?: ""),
+                    title = cleanTitle,
+                    poster = poster,
+                    group = group,
+                    nation = it.attributes["tvg-country"] ?: "TR"
+                ).toJson(),
+                apiName = this.name,
+                type = TvType.TvSeries,
+                posterUrl = poster,
+                year = null,
+                rating = null
+            )
+        }
+
+        HomePageList(group, shows)
     }
 
+    return newHomePageResponse(homePageLists)
+}
+
     override suspend fun search(query: String): List<SearchResponse> {
-        // ... (senin kodun aynı)
-        return listOf()
+        val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
+        
+        val groupedByCleanTitle = kanallar.items.groupBy {
+            val (cleanTitle, _, _) = parseEpisodeInfo(it.title.toString())
+            cleanTitle
+        }
+
+        return groupedByCleanTitle.filter { (cleanTitle, _) ->
+            cleanTitle.lowercase(Locale.getDefault()).contains(query.lowercase(Locale.getDefault()))
+        }.map { (cleanTitle, shows) ->
+            val firstShow = shows.firstOrNull() ?: return@map newLiveSearchResponse("", "", type = TvType.TvSeries)
+            val posterUrl = firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
+            val nation = firstShow.attributes["tvg-country"]?.toString() ?: "TR"
+
+            newLiveSearchResponse(
+                cleanTitle,
+                LoadData(listOf(firstShow.url.toString()), cleanTitle, posterUrl, firstShow.attributes["group-title"]?.toString() ?: cleanTitle, nation).toJson(),
+                type = TvType.TvSeries
+            ) {
+                this.posterUrl = posterUrl
+                this.lang = nation
+            }
+        }
+   return listOf()
+    
     }
 
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
