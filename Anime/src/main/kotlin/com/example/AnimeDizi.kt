@@ -157,7 +157,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             searchResponse.apply {
                 posterUrl = firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
                 type = TvType.TvSeries
-                addDubStatus(dubExist = false, subExist = true)
+               addDubStatus(DubStatus.Subbed)
             }
 
             val firstChar = cleanTitle.firstOrNull()?.uppercaseChar() ?: '#'
@@ -198,7 +198,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             searchResponse.apply {
                 posterUrl = firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
                 type = TvType.TvSeries
-                addDubStatus(dubExist = false, subExist = true)
+                addDubStatus(DubStatus.Subbed)
             }
         }
     }
