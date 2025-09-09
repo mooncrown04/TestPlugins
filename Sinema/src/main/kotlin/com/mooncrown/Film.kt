@@ -72,10 +72,11 @@ class Film(private val context: android.content.Context, private val sharedPref:
         // ✅ addDubStatus burada da çalışır
         
       //  addDubStatus(dubExist = isDubbed, subExist = isSubbed)
-     addDubStatus(
-    dubExist = data.dubEpisodes.isNotEmpty(),
-    subExist = data.subEpisodes.isNotEmpty()
+addDubStatus(
+    dubExist = isDubbed,
+    subExist = isSubbed
 )
+
     }
 }
                     
@@ -134,10 +135,11 @@ class Film(private val context: android.content.Context, private val sharedPref:
         this.posterUrl = posterurl
         // ✅ addDubStatus burada da çalışır
     // addDubStatus(dubExist = isDubbed, subExist = isSubbed)
-    addDubStatus(
-    dubExist = data.dubEpisodes.isNotEmpty(),
-    subExist = data.subEpisodes.isNotEmpty()
+addDubStatus(
+    dubExist = isDubbed,
+    subExist = isSubbed
 )
+
     }
 }
     }
@@ -179,8 +181,8 @@ class Film(private val context: android.content.Context, private val sharedPref:
     }
 
  override suspend fun load(url: String): LoadResponse? {
-    val animeData = parseJson<AnimeData>(url) ?: return null
 
+val loadData = parseJson<LoadData>(url) ?: return null
 return newAnimeLoadResponse(
     name = animeData.name,
     url = url,
