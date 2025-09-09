@@ -206,71 +206,74 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
 
     override suspend fun load(url: String): LoadResponse {
-        val loadData = parseJson<LoadData>(url)
-        val cleanTitle = loadData.title
-        val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
+    val loadData = parseJson<LoadData>(url)
+    val cleanTitle = loadData.title
+    val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
 
-        val allShows = kanallar.items.filter {
-            val (itemCleanTitle, _, _) = parseEpisodeInfo(it.title.toString())
-            itemCleanTitle == cleanTitle
-        }
+    val allShows = kanallar.items.filter {
+        val (itemCleanTitle, _, _) = parseEpisodeInfo(it.title.toString())
+        itemCleanTitle == cleanTitle
+    }
 
-        val finalPosterUrl = allShows.firstOrNull()?.attributes?.get("tvg-logo")?.takeIf { it.isNotBlank() }
-            ?: DEFAULT_POSTER_URL
-        val plot = "TMDB'den özet alınamadı."
+    val finalPosterUrl = allShows.firstOrNull()?.attributes?.get("tvg-logo")?.takeIf { it.isNotBlank() }
+        ?: DEFAULT_POSTER_URL
+    val plot = "TMDB'den özet alınamadı."
 
-        val groupedEpisodes = allShows.groupBy {
-            val (_, season, episode) = parseEpisodeInfo(it.title.toString())
-            Pair(season, episode)
-        }
+    val groupedEpisodes = allShows.groupBy {
+        val (_, season, episode) = parseEpisodeInfo(it.title.toString())
+        Pair(season, episode)
+    }
 
-        val currentShowEpisodes = groupedEpisodes.mapNotNull { (key, episodeItems) ->
-            val (season, episode) = key
-            if (season != null && episode != null) {
-                val episodePoster = episodeItems.firstOrNull()?.attributes?.get("tvg-logo")?.takeIf { it.isNotBlank() }
-                    ?: DEFAULT_POSTER_URL
-                val episodeTitle = episodeItems.firstOrNull()?.title.toString()
-                val (episodeCleanTitle, _, _) = parseEpisodeInfo(episodeTitle)
-                val allUrls = episodeItems.map { it.url.toString() }
+    val currentShowEpisodes = groupedEpisodes.mapNotNull { (key, episodeItems) ->
+        val (season, episode) = key
+        if (season != null && episode != null) {
+            val episodePoster = episodeItems.firstOrNull()?.attributes?.get("tvg-logo")?.takeIf { it.isNotBlank() }
+                ?: DEFAULT_POSTER_URL
+            val episodeTitle = episodeItems.firstOrNull()?.title.toString()
+            val (episodeCleanTitle, _, _) = parseEpisodeInfo(episodeTitle)
+            val allUrls = episodeItems.map { it.url.toString() }
 
-                newEpisode(
-                    LoadData(
-                        allUrls,
-                        episodeTitle,
-                        episodePoster,
-                        episodeItems.firstOrNull()?.attributes?.get("group-title") ?: "Bilinmeyen Grup",
-                        episodeItems.firstOrNull()?.attributes?.get("tvg-country") ?: "TR",
-                        season,
-                        episode
-                    ).toJson()
-                ) {
-                    this.name = "$episodeCleanTitle S$season E$episode"
-                    this.season = season
-                    this.episode = episode
-                    this.posterUrl = episodePoster
-                }
-            } else null
-        }.sortedWith(compareBy({ it.season }, { it.episode }))
-
-        val processedEpisodes = currentShowEpisodes.map { episode ->
-            episode.apply {
-                val episodeLoadData = parseJson<LoadData>(this.data)
-                this.posterUrl = episodeLoadData.poster
+            newEpisode(
+                LoadData(
+                    allUrls,
+                    episodeTitle,
+                    episodePoster,
+                    episodeItems.firstOrNull()?.attributes?.get("group-title") ?: "Bilinmeyen Grup",
+                    episodeItems.firstOrNull()?.attributes?.get("tvg-country") ?: "TR",
+                    season,
+                    episode
+                ).toJson()
+            ) {
+                this.name = "$episodeCleanTitle S$season E$episode"
+                this.season = season
+                this.episode = episode
+                this.posterUrl = episodePoster
             }
-        }
+        } else null
+    }.sortedWith(compareBy({ it.season }, { it.episode }))
 
-        return newAnimeLoadResponse(
-            cleanTitle,
-            url,
-            TvType.Anime
-        ) {
-            this.posterUrl = finalPosterUrl
-            this.plot = plot
-            this.tags = listOf(loadData.group, loadData.nation)
-            this.episodes = mutableMapOf(
-               DubStatus.Subbed to processedEpisodes  )
+    val processedEpisodes = currentShowEpisodes.map { episode ->
+        episode.apply {
+            val episodeLoadData = parseJson<LoadData>(this.data)
+            this.posterUrl = episodeLoadData.poster
         }
-  }
+    }
+
+    return newAnimeLoadResponse(
+        cleanTitle,
+        url,
+        TvType.Anime
+    ) {
+        this.posterUrl = finalPosterUrl
+        this.plot = plot
+        this.tags = listOf(loadData.group, loadData.nation)
+        this.episodes = mutableMapOf(
+            DubStatus.Subbed to processedEpisodes,
+            DubStatus.Dubbed to emptyList() // CloudStream’in bilgi ekranını açması için gerekli
+        )
+    }
+}
+
 
     override suspend fun loadLinks(
         data: String,
