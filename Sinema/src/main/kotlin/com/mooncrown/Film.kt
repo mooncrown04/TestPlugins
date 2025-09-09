@@ -24,7 +24,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
     override var lang = "tr"
     override val hasQuickSearch = true
     override val hasDownloadSupport = true
-    override val supportedTypes = setOf(TvType.Movie,TvType.Anime)
+    override val supportedTypes = setOf(TvType.Movie)
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
@@ -52,28 +52,32 @@ class Film(private val context: android.content.Context, private val sharedPref:
                
 
           
-                    newAnimeSearchResponse(
-                        name = channelname,
-                        url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
-                        type = TvType.Anime
-                    ) {
-                        this.posterUrl = posterurl
-                        this.addDubStatus(dubExist = isDubbed, subExist = isSubbed)
-                                       
-                    }
+             newMovieSearchResponse(
+        name = channelname,
+        url = LoadData(
+            streamurl,
+            channelname,
+            posterurl,
+            chGroup,
+            language,
+            nation,
+            isWatched,
+            watchProgress,
+            isDubbed,
+            isSubbed
+        ).toJson(),
+        type = TvType.Movie
+    ) {
+        this.posterUrl = posterurl
+        // ✅ addDubStatus burada da çalışır
+        this.addDubStatus(
+            dubExist = isDubbed,
+            subExist = isSubbed
+        )
+    }
+}
                     
-                    
-                    newMovieSearchResponse(
               
-                        name = channelname,
-                        url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
-                        type = TvType.Movie
-                    ) {
-                        this.posterUrl = posterurl
-                                  
-                    }
-                }
-
                 HomePageList(title, show, isHorizontalImages = false)
             },
             hasNext = false
@@ -109,26 +113,30 @@ class Film(private val context: android.content.Context, private val sharedPref:
          
              
             
-              
-                    newAnimeSearchResponse(
-                        name = channelname,
-                        url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
-                        type = TvType.Anime
-                    ) {
-                        this.posterUrl = posterurl
-                     this.addDubStatus(dubExist = isDubbed, subExist = isSubbed)                    
-                    }
-            
-            newMovieSearchResponse(
-                name =channelname,
-                url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
-                type = TvType.Movie
-            ) {
-                this.posterUrl = posterurl
-                   
-              }
-
-        }
+      newMovieSearchResponse(
+        name = channelname,
+        url = LoadData(
+            streamurl,
+            channelname,
+            posterurl,
+            chGroup,
+            language,
+            nation,
+            isWatched,
+            watchProgress,
+            isDubbed,
+            isSubbed
+        ).toJson(),
+        type = TvType.Movie
+    ) {
+        this.posterUrl = posterurl
+        // ✅ addDubStatus burada da çalışır
+        this.addDubStatus(
+            dubExist = isDubbed,
+            subExist = isSubbed
+        )
+    }
+}
     }
 
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
