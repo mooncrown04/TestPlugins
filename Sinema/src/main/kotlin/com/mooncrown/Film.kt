@@ -37,13 +37,14 @@ class Film(private val context: android.content.Context, private val sharedPref:
                     val channelname = kanal.title.toString()
                     val posterurl = kanal.attributes["tvg-logo"].toString()
                     val chGroup = kanal.attributes["group-title"].toString()
+                    val language = kanal.attributes["tvg-language"].toString()
                     val nation = kanal.attributes["tvg-country"].toString()
 
                     val watchKey = "watch_${streamurl.hashCode()}"
                     val progressKey = "progress_${streamurl.hashCode()}"
                     val isWatched = sharedPref?.getBoolean(watchKey, false) ?: false
                     val watchProgress = sharedPref?.getLong(progressKey, 0L) ?: 0L
-                    val isDubbed = chGroup.contains("Türkçe Dublaj", ignoreCase = true) || channelname.contains("Dublaj", ignoreCase = true)
+                    val isDubbed = language.lowercase() == "tr"
                     val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname.contains("Altyazı", ignoreCase = true)
 
                     val newTitle = when {
@@ -54,7 +55,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
 
                     newAnimeSearchResponse(
                         name = newTitle,
-                        url = LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
+                        url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
                         type = TvType.Anime
                     ) {
                         this.posterUrl = posterurl
@@ -76,6 +77,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
             val channelname = kanal.title.toString()
             val posterurl = kanal.attributes["tvg-logo"].toString()
             val chGroup = kanal.attributes["group-title"].toString()
+            val language = kanal.attributes["tvg-language"].toString()
             val nation = kanal.attributes["tvg-country"].toString()
 
             val watchKey = "watch_${streamurl.hashCode()}"
@@ -84,7 +86,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
             val watchProgress = sharedPref?.getLong(progressKey, 0L) ?: 0L
 
 
-            val isDubbed = chGroup.contains("Türkçe Dublaj", ignoreCase = true) || channelname.contains("Dublaj", ignoreCase = true)
+            val isDubbed = language.lowercase() == "tr"
             val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname.contains("Altyazı", ignoreCase = true)
 
             val newTitle = when {
@@ -95,7 +97,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
 
             newAnimeSearchResponse(
                 name = newTitle,
-                url = LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
+                url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
                 type = TvType.Anime
             ) {
                 this.posterUrl = posterurl
@@ -272,8 +274,9 @@ class Film(private val context: android.content.Context, private val sharedPref:
 
                 val rcPosterUrl = kanal.attributes["tvg-logo"].toString()
                 val rcChGroup = kanal.attributes["group-title"].toString()
+                val rcLanguage = kanal.attributes["tvg-language"].toString()
                 val rcNation = kanal.attributes["tvg-country"].toString()
-                val isDubbedRc = rcChGroup.contains("Türkçe Dublaj", ignoreCase = true) || rcChannelName.contains("Dublaj", ignoreCase = true)
+                val isDubbedRc = rcLanguage.lowercase() == "tr"
                 val isSubbedRc = rcChGroup.contains("Altyazılı", ignoreCase = true) || rcChannelName.contains("Altyazı", ignoreCase = true)
                 val rcTitle = when {
                     isDubbedRc -> "$rcChannelName (Türkçe Dublaj)"
@@ -288,7 +291,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
 
                 recommendations.add(newLiveSearchResponse(
                     rcTitle,
-                    LoadData(rcStreamUrl, rcChannelName, rcPosterUrl, rcChGroup, rcNation, rcIsWatched, rcWatchProgress, isDubbedRc, isSubbedRc).toJson(),
+                    LoadData(rcStreamUrl, rcChannelName, rcPosterUrl, rcChGroup, rcLanguage, rcNation, rcIsWatched, rcWatchProgress, isDubbedRc, isSubbedRc).toJson(),
                     type = TvType.Anime
                 ) {
                     posterUrl = rcPosterUrl
@@ -296,14 +299,13 @@ class Film(private val context: android.content.Context, private val sharedPref:
             }
         }
 
-   return newAnimeLoadResponse(displayTitle, url, TvType.Anime, false) {
-    this.posterUrl = loadData.poster
-    this.plot = plot
-    this.recommendations = recommendations
-    this.rating = (tmdbData?.optDouble("vote_average", 0.0)?.toFloat()?.times(2)?.toInt() ?: (if (isWatched) 5 else 0))
-    this.duration = if (watchProgress > 0) (watchProgress / 1000).toInt() else tmdbData?.optInt("runtime", 0)
-    this.comingSoon = false
-
+        return newAnimeLoadResponse(displayTitle, url, TvType.Anime, false) {
+            this.posterUrl = loadData.poster
+            this.plot = plot
+            this.recommendations = recommendations
+            this.rating = (tmdbData?.optDouble("vote_average", 0.0)?.toFloat()?.times(2)?.toInt() ?: (if (isWatched) 5 else 0))
+            this.duration = if (watchProgress > 0) (watchProgress / 1000).toInt() else tmdbData?.optInt("runtime", 0)
+            this.comingSoon = false
         }
     }
 
@@ -354,6 +356,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
         val title: String,
         val poster: String,
         val group: String,
+        val language: String,
         val nation: String,
         val isWatched: Boolean = false,
         val watchProgress: Long = 0L,
@@ -372,16 +375,17 @@ class Film(private val context: android.content.Context, private val sharedPref:
             val channelname = kanal.title.toString()
             val posterurl = kanal.attributes["tvg-logo"].toString()
             val chGroup = kanal.attributes["group-title"].toString()
+            val language = kanal.attributes["tvg-language"].toString()
             val nation = kanal.attributes["tvg-country"].toString()
             val watchKey = "watch_${data.hashCode()}"
             val progressKey = "progress_${data.hashCode()}"
             val isWatched = sharedPref?.getBoolean(watchKey, false) ?: false
             val watchProgress = sharedPref?.getLong(progressKey, 0L) ?: 0L
 
-            val isDubbed = chGroup.contains("Türkçe Dublaj", ignoreCase = true) || channelname.contains("Dublaj", ignoreCase = true)
+            val isDubbed = language.lowercase() == "tr"
             val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname.contains("Altyazı", ignoreCase = true)
 
-            return LoadData(streamurl, channelname, posterurl, chGroup, nation, isWatched, watchProgress, isDubbed, isSubbed)
+            return LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed)
         }
     }
 }
