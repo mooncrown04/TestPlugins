@@ -175,172 +175,24 @@ class Film(private val context: android.content.Context, private val sharedPref:
         }
     }
 
-    override suspend fun load(url: String): LoadResponse {
-        val watchKey = "watch_${url.hashCode()}"
-        val progressKey = "progress_${url.hashCode()}"
-        val isWatched = sharedPref?.getBoolean(watchKey, false) ?: false
-        val watchProgress = sharedPref?.getLong(progressKey, 0L) ?: 0L
-        val loadData = fetchDataFromUrlOrJson(url)
+ override suspend fun load(url: String): LoadResponse? {
+    val data = parseJson<LoadData>(url)
 
-        val nation:String = if (loadData.group == "NSFW") {
-            "⚠️🔞🔞🔞 » ${loadData.group} | ${loadData.nation} « 🔞🔞🔞⚠️"
-        } else {
-            "» ${loadData.group} | ${loadData.nation} «"
-        }
-
-        val tmdbData = fetchTMDBData(loadData.title)
-
-        val plot = buildString {
-            if (loadData.isDubbed) append("🔊 <b>Ses:</b> Türkçe Dublaj<br>")
-            if (loadData.isSubbed) append("📖 <b>Altyazı:</b> Var<br>")
-            if (tmdbData != null) {
-                val overview = tmdbData.optString("overview", "")
-                val releaseDate = tmdbData.optString("release_date", "").split("-").firstOrNull() ?: ""
-                val ratingValue = tmdbData.optDouble("vote_average", -1.0)
-                val rating = if (ratingValue >= 0) String.format("%.1f", ratingValue) else null
-                val tagline = tmdbData.optString("tagline", "")
-                val budget = tmdbData.optLong("budget", 0L)
-                val revenue = tmdbData.optLong("revenue", 0L)
-                val originalName = tmdbData.optString("original_name", "")
-                val originalLanguage = tmdbData.optString("original_language", "")
-
-                val genresArray = tmdbData.optJSONArray("genres")
-                val genreList = mutableListOf<String>()
-                if (genresArray != null) {
-                    for (i in 0 until genresArray.length()) {
-                        genreList.add(genresArray.optJSONObject(i)?.optString("name") ?: "")
-                    }
-                }
-
-                val creditsObject = tmdbData.optJSONObject("credits")
-                val castList = mutableListOf<String>()
-                var director = ""
-                if (creditsObject != null) {
-                    val castArray = creditsObject.optJSONArray("cast")
-                    if (castArray != null) {
-                        for (i in 0 until minOf(castArray.length(), 10)) {
-                            castList.add(castArray.optJSONObject(i)?.optString("name") ?: "")
-                        }
-                    }
-                    val crewArray = creditsObject.optJSONArray("crew")
-                    if (crewArray != null) {
-                        for (i in 0 until crewArray.length()) {
-                            val member = crewArray.optJSONObject(i)
-                            if (member?.optString("job") == "Director") {
-                                director = member.optString("name", "")
-                                break
-                            }
-                        }
-                    }
-                }
-
-                val companiesArray = tmdbData.optJSONArray("production_companies")
-                val companyList = mutableListOf<String>()
-                if (companiesArray != null) {
-                    for (i in 0 until companiesArray.length()) {
-                        companyList.add(companiesArray.optJSONObject(i)?.optString("name") ?: "")
-                    }
-                }
-
-                val numberFormat = try {
-                    java.text.NumberFormat.getNumberInstance(java.util.Locale("tr", "TR"))
-                } catch (e: Exception) {
-                    Log.e("LocaleError", "TR Locale alınamadı, US kullanılıyor.", e)
-                    java.text.NumberFormat.getNumberInstance(java.util.Locale.US)
-                }
-
-                if (tagline.isNotEmpty()) append("💭 <b>Slogan:</b><br>${tagline}<br><br>")
-                if (overview.isNotEmpty()) append("📝 <b>Konu:</b><br>${overview}<br><br>")
-                if (releaseDate.isNotEmpty()) append("📅 <b>Yapım Yılı:</b> $releaseDate<br>")
-                if (originalName.isNotEmpty()) append("📜 <b>Orijinal Ad:</b> $originalName<br>")
-                if (originalLanguage.isNotEmpty()) {
-                    val langCode = originalLanguage.lowercase()
-                    val turkishName = languageMap[langCode] ?: originalLanguage
-                    append("🌐 <b>Orijinal Dil:</b> $turkishName<br>")
-                }
-                if (rating != null) append("⭐ <b>TMDB Puanı:</b> $rating / 10<br>")
-                if (director.isNotEmpty()) append("🎬 <b>Yönetmen:</b> $director<br>")
-                if (genreList.isNotEmpty()) append("🎭 <b>Film Türü:</b> ${genreList.filter { it.isNotEmpty() }.joinToString(", ")}<br>")
-                if (castList.isNotEmpty()) append("👥 <b>Oyuncular:</b> ${castList.filter { it.isNotEmpty() }.joinToString(", ")}<br>")
-                if (companyList.isNotEmpty()) append("🏢 <b>Yapım Şirketleri:</b> ${companyList.filter { it.isNotEmpty() }.joinToString(", ")}<br>")
-                if (budget > 0) {
-                    try {
-                        val formattedBudget = numberFormat.format(budget)
-                        append("💰 <b>Bütçe:</b> $${formattedBudget}<br>")
-                        Log.d("FormatDebug", "Bütçe formatlandı (TR): $formattedBudget")
-                    } catch (e: Exception) {
-                        Log.e("FormatError", "Bütçe formatlanırken hata (TR): $budget", e)
-                        append("💰 <b>Bütçe:</b> $${budget} (Formatlama Hatası)<br>")
-                    }
-                }
-                if (revenue > 0) {
-                    try {
-                        val formattedRevenue = numberFormat.format(revenue)
-                        append("💵 <b>Hasılat:</b> $${formattedRevenue}<br>")
-                        Log.d("FormatError", "Hasılat formatlanırken hata (TR): $revenue")
-                    } catch (e: Exception) {
-                        Log.e("FormatError", "Hasılat formatlanırken hata (TR): $revenue", e)
-                        append("💵 <b>Hasılat:</b> $${revenue} (Formatlama Hatası)<br>")
-                    }
-                }
-                append("<br>")
-            } else {
-                append("<i>Film detayları alınamadı.</i><br><br>")
-            }
-        }
-        val displayTitle = when {
-            loadData.isDubbed -> "${loadData.title} (Türkçe Dublaj)"
-            loadData.isSubbed -> "${loadData.title} (Altyazılı)"
-            else -> loadData.title
-        }
-
-
-        val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
-        val recommendations = mutableListOf<LiveSearchResponse>()
-
-        for (kanal in kanallar.items) {
-            if (kanal.attributes["group-title"].toString() == loadData.group) {
-                val rcStreamUrl = kanal.url.toString()
-                val rcChannelName = kanal.title.toString()
-                if (rcChannelName == loadData.title) continue
-
-                val rcPosterUrl = kanal.attributes["tvg-logo"].toString()
-                val rcChGroup = kanal.attributes["group-title"].toString()
-                val rcLanguage = kanal.attributes["tvg-language"].toString()
-                val rcNation = kanal.attributes["tvg-country"].toString()
-                val isDubbedRc = rcLanguage.lowercase() == "turkish"
-                val isSubbedRc = rcChGroup.contains("Altyazılı", ignoreCase = true) || rcChannelName.contains("Altyazı", ignoreCase = true)
-                val rcTitle = when {
-                    isDubbedRc -> "$rcChannelName (Türkçe Dublaj)"
-                    isSubbedRc -> "$rcChannelName (Altyazılı)"
-                    else -> rcChannelName
-                }
-
-                val rcWatchKey = "watch_${rcStreamUrl.hashCode()}"
-                val rcProgressKey = "progress_${rcStreamUrl.hashCode()}"
-                val rcIsWatched = sharedPref?.getBoolean(rcWatchKey, false) ?: false
-                val rcWatchProgress = sharedPref?.getLong(rcProgressKey, 0L) ?: 0L
-
-                recommendations.add(newLiveSearchResponse(
-                    rcTitle,
-                    LoadData(rcStreamUrl, rcChannelName, rcPosterUrl, rcChGroup, rcLanguage, rcNation, rcIsWatched, rcWatchProgress, isDubbedRc, isSubbedRc).toJson(),
-                    type = TvType.Anime
-                ) {
-                    posterUrl = rcPosterUrl
-                })
-            }
-        }
-
-        return newAnimeLoadResponse(displayTitle, url, TvType.Anime, false) {
-            this.posterUrl = loadData.poster
-            this.plot = plot
-            this.recommendations = recommendations
-            this.rating = (tmdbData?.optDouble("vote_average", 0.0)?.toFloat()?.times(2)?.toInt() ?: (if (isWatched) 5 else 0))
-            this.duration = if (watchProgress > 0) (watchProgress / 1000).toInt() else tmdbData?.optInt("runtime", 0)
-            this.comingSoon = false
-        }
+    return newAnimeLoadResponse(
+        name = data.name,
+        url = data.url,
+        type = TvType.Anime
+    ) {
+        posterUrl = data.poster
+        episodes = listOf(
+            Episode(
+                data.url,
+                name = data.name,
+                posterUrl = data.poster
+            )
+        )
     }
-
+}
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
         try {
             val loadData = fetchDataFromUrlOrJson(data)
