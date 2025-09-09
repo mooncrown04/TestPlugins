@@ -54,14 +54,16 @@ class Film(private val context: android.content.Context, private val sharedPref:
                         isSubbed -> "$channelname (Altyazılı)"
                         else -> channelname
                     }
-                 // newMovieSearchResponse(
-                    newAnimeSearchResponse(
+
+                   fun AnimeSearchResponse.addDubStatus(dubExist = isDubbed, subExist = isSubbed)  
+                  newMovieSearchResponse(
+                  //  newAnimeSearchResponse(
                         name = newTitle,
                         url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
                         type = TvType.Movie
                     ) {
                         this.posterUrl = posterurl
-                        this.addDubStatus(dubExist = isDubbed, subExist = isSubbed)
+                   //     this.addDubStatus(dubExist = isDubbed, subExist = isSubbed)
                    
                     
                     }
@@ -107,7 +109,8 @@ class Film(private val context: android.content.Context, private val sharedPref:
              
             
             
-            
+            fun AnimeSearchResponse.addDubStatus(dubExist = isDubbed, subExist = isSubbed)
+
             
             newMovieSearchResponse(
           //  newAnimeSearchResponse(
@@ -116,7 +119,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
                 type = TvType.Movie
             ) {
                 this.posterUrl = posterurl
-                this.addDubStatus(dubExist = isDubbed, subExist = isSubbed)
+              //  this.addDubStatus(dubExist = isDubbed, subExist = isSubbed)
 
 
 
