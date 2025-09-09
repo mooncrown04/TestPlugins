@@ -156,7 +156,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val searchResponse = newAnimeSearchResponse(cleanTitle, firstShow.url ?: "")
             searchResponse.apply {
                 posterUrl = firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
-                type = TvType.TvSeries
+                type = TvType.Anime
                addDubStatus(DubStatus.Subbed)
             }
 
@@ -197,7 +197,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val searchResponse = newAnimeSearchResponse(cleanTitle, firstShow.url ?: "")
             searchResponse.apply {
                 posterUrl = firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
-                type = TvType.TvSeries
+                type = TvType.Anime
                 addDubStatus(DubStatus.Subbed)
             }
         }
@@ -259,18 +259,18 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             }
         }
 
-        return newTvSeriesLoadResponse(
+        return newAnimeLoadResponse(
             cleanTitle,
             url,
-            TvType.TvSeries
+            TvType.Anime
         ) {
             this.posterUrl = finalPosterUrl
             this.plot = plot
-       //     this.tags = listOf(loadData.group, loadData.nation)
-           // this.episodes = mutableMapOf(
-             //   DubStatus.Subbed to processedEpisodes  )
+            this.tags = listOf(loadData.group, loadData.nation)
+            this.episodes = mutableMapOf(
+               DubStatus.Subbed to processedEpisodes  )
         }
- //   }
+  }
 
     override suspend fun loadLinks(
         data: String,
