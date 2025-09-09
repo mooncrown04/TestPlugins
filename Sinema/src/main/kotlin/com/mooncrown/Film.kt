@@ -52,7 +52,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
                
 
           
-             newMovieSearchResponse(
+             newAnimeSearchResponse(
         name = channelname,
         url = LoadData(
             streamurl,
@@ -115,8 +115,7 @@ addDubStatus(
 
          
              
-            
-      newMovieSearchResponse(
+     newAnimeSearchResponse(
         name = channelname,
         url = LoadData(
             streamurl,
@@ -184,7 +183,10 @@ override suspend fun load(url: String): LoadResponse? {
     val loadData = parseJson<LoadData>(url) ?: return null
 
     // Movie tipi için animeData, SUB/DUB gibi şeyler yok
-    return newMovieLoadResponse(
+    return 
+    newAnimeLoadResponse
+    //newMovieLoadResponse
+    (
         name = loadData.title,
         url = url,
         type = TvType.Movie
