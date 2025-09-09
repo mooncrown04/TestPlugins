@@ -19,7 +19,7 @@ import com.lagradost.cloudstream3.addDubStatus
 
 class Film(private val context: android.content.Context, private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
-    override var name = "35 Anime 📺"
+    override var name = "35 sinema 📺"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -49,15 +49,11 @@ class Film(private val context: android.content.Context, private val sharedPref:
                     val isDubbed = language.lowercase() == "turkish"
                     val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname.contains("Altyazı", ignoreCase = true)
 
-                    val newTitle = when {
-                        isDubbed -> "$channelname (Türkçe Dublaj)"
-                        isSubbed -> "$channelname (Altyazılı)"
-                        else -> channelname
-                    }
+               
 
           
                     newAnimeSearchResponse(
-                        name = newTitle,
+                        name = channelname,
                         url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
                         type = TvType.Anime
                     ) {
@@ -69,7 +65,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
                     
                     newMovieSearchResponse(
               
-                        name = newTitle,
+                        name = channelname,
                         url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
                         type = TvType.Movie
                     ) {
@@ -110,16 +106,12 @@ class Film(private val context: android.content.Context, private val sharedPref:
             val isDubbed = language.lowercase() == "turkish"
             val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname.contains("Altyazı", ignoreCase = true)
 
-            val newTitle = when {
-                isDubbed -> "$channelname (Türkçe Dublaj)"
-                isSubbed -> "$channelname (Altyazılı)"
-                else -> channelname
-            }
+         
              
             
               
                     newAnimeSearchResponse(
-                        name = newTitle,
+                        name = channelname,
                         url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
                         type = TvType.Anime
                     ) {
@@ -128,7 +120,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
                     }
             
             newMovieSearchResponse(
-                name = newTitle,
+                name =channelname,
                 url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
                 type = TvType.Movie
             ) {
