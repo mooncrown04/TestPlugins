@@ -183,7 +183,7 @@ addDubStatus(
 override suspend fun load(url: String): LoadResponse? {
     val loadData = parseJson<LoadData>(url) ?: return null
 
-    // Movie kanalı
+    // Movie tipi için animeData, SUB/DUB gibi şeyler yok
     return newMovieLoadResponse(
         name = loadData.title,
         url = url,
@@ -191,12 +191,15 @@ override suspend fun load(url: String): LoadResponse? {
     ) {
         posterUrl = loadData.poster
         description = "Grup: ${loadData.group}, Dil: ${loadData.language}"
+        
+        // Dub/Sub bilgisi Movie tipine uygun şekilde eklenir
         addDubStatus(
             dubExist = loadData.isDubbed,
             subExist = loadData.isSubbed
         )
     }
 }
+
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
         try {
             val loadData = fetchDataFromUrlOrJson(data)
