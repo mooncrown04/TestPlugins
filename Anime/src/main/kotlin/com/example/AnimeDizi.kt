@@ -13,6 +13,10 @@ import java.io.InputStream
 import java.util.Locale
 import java.util.regex.Pattern
 
+
+import com.lagradost.cloudstream3.DubStatus
+import com.lagradost.cloudstream3.addDubStatus
+
 // Bu dosya, Cloudstream için bir dizi eklentisi (provider) oluşturmak amacıyla yazılmıştır.
 // Ana amaç, bir M3U dosyasını parse etmek ve içindeki dizileri düzenli bir şekilde listelemektir.
 
@@ -185,13 +189,15 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val firstChar = cleanTitle.firstOrNull()?.uppercaseChar() ?: '#'
             val firstShow = shows.firstOrNull() ?: return@mapNotNull null
             
-            val searchResponse = newLiveSearchResponse(
+            val searchResponse = newAnimeSearchResponse(
                 cleanTitle,
                 LoadData(listOf(firstShow.url.toString()), cleanTitle, firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL, cleanTitle, firstShow.attributes["tvg-country"]?.toString() ?: "TR").toJson(),
                 type = TvType.TvSeries
             ) {
                 this.posterUrl = firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
                 this.lang = firstShow.attributes["tvg-country"]?.toString() ?: "TR"
+           addDubStatus(isDub = true)
+            
             }
             
             // Gruplama anahtarını belirler: harf, sayı veya özel karakter.
@@ -270,14 +276,15 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val firstShow = shows.firstOrNull() ?: return@map newLiveSearchResponse("", "", type = TvType.TvSeries)
             val posterUrl = firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
             val nation = firstShow.attributes["tvg-country"]?.toString() ?: "TR"
-
-            newLiveSearchResponse(
+newAnimeSearchResponse(
+         //   newLiveSearchResponse(
                 cleanTitle,
                 LoadData(listOf(firstShow.url.toString()), cleanTitle, posterUrl, firstShow.attributes["group-title"]?.toString() ?: cleanTitle, nation).toJson(),
                 type = TvType.TvSeries
             ) {
                 this.posterUrl = posterUrl
                 this.lang = nation
+    addDubStatus(isDub = true)
             }
         }
     }
@@ -324,8 +331,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 }
             } else null
         }.sortedWith(compareBy({ it.season }, { it.episode }))
-
-        return newTvSeriesLoadResponse(
+return newAnimeLoadResponse(
+    //    return newTvSeriesLoadResponse(
             cleanTitle,
             url,
             TvType.TvSeries,
