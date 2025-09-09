@@ -336,9 +336,10 @@ return newAnimeLoadResponse(
             cleanTitle,
             url,
             TvType.TvSeries,
-         val episodes = currentShowEpisodes.map { episode ->
+     true
+currentShowEpisodes.map { episode: Episode ->
     episode.apply {
-        val episodeLoadData = parseJson<LoadData>(episode.data)
+        val episodeLoadData = parseJson<LoadData>(this.data)
         this.posterUrl = episodeLoadData.poster
     }
 }
