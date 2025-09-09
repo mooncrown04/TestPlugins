@@ -259,7 +259,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             }
         }
 
-        return newAnimeLoadResponse(
+        return newTvSeriesLoadResponse(
             cleanTitle,
             url,
             TvType.TvSeries
@@ -267,9 +267,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             this.posterUrl = finalPosterUrl
             this.plot = plot
             this.tags = listOf(loadData.group, loadData.nation)
-            this.episodes = mutableMapOf(
-                DubStatus.Subbed to processedEpisodes
-            )
+           // this.episodes = mutableMapOf(
+             //   DubStatus.Subbed to processedEpisodes  )
         }
     }
 
