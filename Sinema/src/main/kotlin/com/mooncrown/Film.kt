@@ -93,7 +93,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
                             type = type
                         ) {
                             this.posterUrl = posterurl
-                            description = "Grup: $chGroup, Dil: $language"
+                          
                         }
                     }
                 }
@@ -172,7 +172,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
                     type = type
                 ) {
                     this.posterUrl = posterurl
-                    description = "Grup: $chGroup, Dil: $language"
+                
                 }
             }
         }
