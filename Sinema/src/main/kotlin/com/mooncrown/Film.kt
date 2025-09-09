@@ -62,6 +62,8 @@ class Film(private val context: android.content.Context, private val sharedPref:
                     ) {
                         this.posterUrl = posterurl
                         this.addDubStatus(dubExist = isDubbed, subExist = isSubbed)
+                   
+                    
                     }
                 }
 
@@ -109,8 +111,16 @@ class Film(private val context: android.content.Context, private val sharedPref:
                 type = TvType.Anime
             ) {
                 this.posterUrl = posterurl
-                this.addDubStatus(dubExist = isDubbed, subExist = isSubbed)
-            }
+             //   this.addDubStatus(dubExist = isDubbed, subExist = isSubbed)
+
+this.addDubStatus(
+    dubExist = isDubbed.contains("dub", ignoreCase = true),
+    subExist = isSubbed.contains("sub", ignoreCase = true)
+)
+
+
+                  
+              }
 
         }
     }
