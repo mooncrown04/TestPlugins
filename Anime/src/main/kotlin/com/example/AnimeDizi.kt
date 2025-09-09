@@ -331,12 +331,34 @@ newAnimeSearchResponse(
                 }
             } else null
         }.sortedWith(compareBy({ it.season }, { it.episode }))
-return newAnimeLoadResponse(
+
+        
+        
+        
+        
+      val processedEpisodes = currentShowEpisodes.map { episode ->
+    episode.apply {
+        val episodeLoadData = parseJson<LoadData>(this.data)
+        this.posterUrl = episodeLoadData.poster
+    }
+}  
+        
+        
+        
+        
+        
+        return newAnimeLoadResponse(
     //    return newTvSeriesLoadResponse(
             cleanTitle,
             url,
             TvType.TvSeries,
-     true
+     processedEpisodes
+{
+    this.posterUrl = finalPosterUrl
+    this.plot = plot
+    this.tags = listOf(loadData.group, loadData.nation)
+}
+    
 currentShowEpisodes.map { episode: Episode ->
     episode.apply {
         val episodeLoadData = parseJson<LoadData>(this.data)
