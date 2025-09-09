@@ -195,7 +195,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 type = TvType.TvSeries
             ) {
                 this.posterUrl = firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
-                this.lang = firstShow.attributes["tvg-country"]?.toString() ?: "TR"
+               // this.lang = firstShow.attributes["tvg-country"]?.toString() ?: "TR"
            addDubStatus(isDub = true)
             
             }
@@ -283,7 +283,7 @@ newAnimeSearchResponse(
                 type = TvType.TvSeries
             ) {
                 this.posterUrl = posterUrl
-                this.lang = nation
+        //        this.lang = nation
     addDubStatus(isDub = true)
             }
         }
