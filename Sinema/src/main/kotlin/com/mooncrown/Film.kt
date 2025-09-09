@@ -106,7 +106,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
 
             newAnimeSearchResponse(
                 name = newTitle,
-                 // Düzeltme: Header bilgisini LoadData'ya ekledik.
+                // Düzeltme: Header bilgisini LoadData'ya ekledik.
                 url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed, kanal.headers).toJson(),
                 type = TvType.Anime
             ) {
@@ -325,21 +325,26 @@ class Film(private val context: android.content.Context, private val sharedPref:
             val loadData = fetchDataFromUrlOrJson(data)
             Log.d("IPTV", "loadData » $loadData")
 
-            // Düzeltme: M3U dosyasını tekrar okumaya gerek yok, tüm bilgiler LoadData içinde zaten var.
-            // val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
-            // val kanal = kanallar.items.firstOrNull { it.url == loadData.url } ?: return false
-            // Log.d("IPTV", "kanal » $kanal")
-            
             val watchKey = "watch_${data.hashCode()}"
-            val progressKey = "progress_${data.hashCode()}"
             sharedPref?.edit()?.putBoolean(watchKey, true)?.apply()
 
             val videoUrl = loadData.url
             val videoType = when {
-
                 videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.VIDEO
                 else -> ExtractorLinkType.M3U8
+            }
 
+            // Düzeltme: Başlıkları daha sağlam bir şekilde yönetiyoruz.
+            val finalHeaders = loadData.headers.toMutableMap()
+
+            // Eğer M3U dosyasında User-Agent tanımlı değilse, varsayılan bir değer ekleyin.
+            if (finalHeaders.keys.none { it.equals("User-Agent", ignoreCase = true) }) {
+                finalHeaders["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+            }
+            
+            // Eğer M3U dosyasında Referer tanımlı değilse, referrer'ı kullanın.
+            if (finalHeaders.keys.none { it.equals("Referer", ignoreCase = true) }) {
+                finalHeaders["Referer"] = loadData.headers["referrer"] ?: ""
             }
 
             callback.invoke(
@@ -347,11 +352,8 @@ class Film(private val context: android.content.Context, private val sharedPref:
                     source = this.name,
                     name = loadData.title,
                     url = videoUrl,
-                    // Düzeltme: Header bilgisini doğrudan LoadData'dan kullanıyoruz.
-                    headers = loadData.headers + mapOf(
-                        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-                    ),
-                    referer = loadData.headers["referrer"] ?: "",
+                    headers = finalHeaders,
+                    referer = loadData.headers["referrer"] ?: "", // Yönlendiren URL'yi buradan alıyoruz.
                     quality = Qualities.Unknown.value,
                     type = videoType
                 )
@@ -602,7 +604,6 @@ class IptvPlaylistParser {
 }
 
 sealed class PlaylistParserException(message: String) : Exception(message) {
-
     class InvalidHeader : PlaylistParserException("Invalid file header. Header doesn't start with #EXTM3U")
 }
 
