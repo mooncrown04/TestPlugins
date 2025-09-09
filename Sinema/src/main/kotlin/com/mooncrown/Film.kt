@@ -72,7 +72,10 @@ class Film(private val context: android.content.Context, private val sharedPref:
         // ✅ addDubStatus burada da çalışır
         
       //  addDubStatus(dubExist = isDubbed, subExist = isSubbed)
-     addDubStatus(dubExist = isDub, subExist = isSub)
+     addDubStatus(
+    dubExist = data.dubEpisodes.isNotEmpty(),
+    subExist = data.subEpisodes.isNotEmpty()
+)
     }
 }
                     
@@ -131,7 +134,10 @@ class Film(private val context: android.content.Context, private val sharedPref:
         this.posterUrl = posterurl
         // ✅ addDubStatus burada da çalışır
     // addDubStatus(dubExist = isDubbed, subExist = isSubbed)
-     addDubStatus(dubExist = isDub, subExist = isSub) 
+    addDubStatus(
+    dubExist = data.dubEpisodes.isNotEmpty(),
+    subExist = data.subEpisodes.isNotEmpty()
+)
     }
 }
     }
@@ -182,9 +188,24 @@ class Film(private val context: android.content.Context, private val sharedPref:
     ) {
         posterUrl = data.poster
  episodes = mutableMapOf(
-    DubStatus.SUB to listOf(
-        newEpisode(data.url, name = data.name)
-    )
+    DubStatus.SUB to data.subEpisodes.map { ep ->
+        newEpisode(ep.url) {
+            name = ep.name
+            season = ep.season
+            episode = ep.episode
+            posterUrl = data.poster
+            description = ep.description
+        }
+    },
+    DubStatus.DUB to data.dubEpisodes.map { ep ->
+        newEpisode(ep.url) {
+            name = ep.name
+            season = ep.season
+            episode = ep.episode
+            posterUrl = data.poster
+            description = ep.description
+        }
+    }
 )
     }
 }
