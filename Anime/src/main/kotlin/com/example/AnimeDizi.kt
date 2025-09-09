@@ -266,7 +266,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         ) {
             this.posterUrl = finalPosterUrl
             this.plot = plot
-            this.tags = listOf(loadData.group, loadData.nation)
+       //     this.tags = listOf(loadData.group, loadData.nation)
            // this.episodes = mutableMapOf(
              //   DubStatus.Subbed to processedEpisodes  )
         }
