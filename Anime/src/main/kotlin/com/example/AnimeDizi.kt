@@ -178,32 +178,38 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         return newHomePageResponse(homePageLists)
     }
 
-    override suspend fun search(query: String): List<SearchResponse> {
-        val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
+  
+  override suspend fun search(query: String): List<SearchResponse> {
+    val playlist = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
 
-        return kanallar.items.mapNotNull {
-            val title = it.title ?: return@mapNotNull null
-            if (!title.contains(query, ignoreCase = true)) return@mapNotNull null
-            val poster = it.attributes["tvg-logo"].takeIf { !it.isNullOrBlank() } ?: DEFAULT_POSTER_URL
-            val (cleanTitle, _, _) = parseEpisodeInfo(title)
+    return playlist.items.mapNotNull { item ->
+        val title = item.title ?: return@mapNotNull null
+        val (cleanTitle, season, episode) = parseEpisodeInfo(title)
 
-            newTvSeriesSearchResponse(
-                name = cleanTitle,
-                url = LoadData(
-                    urls = listOf(it.url ?: ""),
-                    title = cleanTitle,
-                    poster = poster,
-                    group = it.attributes["group-title"] ?: "Genel",
-                    nation = it.attributes["tvg-country"] ?: "TR"
-                ).toJson(),
-                apiName = this.name,
-                type = TvType.TvSeries,
-                posterUrl = poster,
-                year = null
-                
-            )
+        val poster = item.attributes["tvg-logo"].takeIf { !it.isNullOrBlank() }
+            ?: DEFAULT_POSTER_URL
+
+        val loadData = LoadData(
+            urls = listOfNotNull(item.url),
+            title = cleanTitle,
+            poster = poster,
+            group = item.attributes["group-title"] ?: "Bilinmeyen Grup",
+            nation = item.attributes["tvg-country"] ?: "TR",
+            season = season ?: 1,
+            episode = episode ?: 1
+        )
+
+        newTvSeriesSearchResponse(
+            name = cleanTitle,
+            url = loadData.toJson(),
+            type = TvType.TvSeries
+        ) {
+            this.posterUrl = poster
+            this.quality = SearchQuality.HD
         }
     }
+}
+
 
    override suspend fun search(query: String): List<SearchResponse> {
     val playlist = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
