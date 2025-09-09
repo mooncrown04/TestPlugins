@@ -9,10 +9,10 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
-import java.io.InputStream
-import java.util.Locale
 import com.lagradost.cloudstream3.DubStatus
 import com.lagradost.cloudstream3.addDubStatus
+import java.io.InputStream
+import java.util.Locale
 
 // --- Yardımcı Sınıflar ---
 data class Playlist(val items: List<PlaylistItem> = emptyList())
@@ -36,9 +36,7 @@ class IptvPlaylistParser {
 
     fun parseM3U(input: InputStream): Playlist {
         val reader = input.bufferedReader()
-        if (!reader.readLine().isExtendedM3u()) {
-            throw PlaylistParserException.InvalidHeader()
-        }
+        if (!reader.readLine().isExtendedM3u()) throw PlaylistParserException.InvalidHeader()
 
         val playlistItems: MutableList<PlaylistItem> = mutableListOf()
         var currentIndex = 0
@@ -133,7 +131,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(TvType.TvSeries)
 
-    private val DEFAULT_POSTER_URL = "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
+    private val DEFAULT_POSTER_URL =
+        "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
 
     data class LoadData(
         val urls: List<String>,
@@ -147,7 +146,6 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
-
         val groupedByCleanTitle = kanallar.items.groupBy {
             val (cleanTitle, _, _) = parseEpisodeInfo(it.title.toString())
             cleanTitle
@@ -155,11 +153,13 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
         val alphabeticGroups = groupedByCleanTitle.toSortedMap().mapNotNull { (cleanTitle, shows) ->
             val firstShow = shows.firstOrNull() ?: return@mapNotNull null
-            val searchResponse = newTvSeriesSearchResponse(cleanTitle, shows.firstOrNull()?.url ?: "") {
+            val searchResponse = newTvSeriesSearchResponse(cleanTitle, firstShow.url ?: "")
+            searchResponse.apply {
                 posterUrl = firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
                 type = TvType.TvSeries
-               addDubStatus(dubExist = false, subExist = true)
+                addDubStatus(dubExist = false, subExist = true)
             }
+
             val firstChar = cleanTitle.firstOrNull()?.uppercaseChar() ?: '#'
             val groupKey = when {
                 firstChar.isLetter() -> firstChar.toString()
@@ -173,7 +173,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val turkishAlphabet = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUVYZ".split("").filter { it.isNotBlank() }
         val fullAlphabet = mutableListOf<String>().apply { addAll(turkishAlphabet) }
 
-        if (alphabeticGroups.containsKey("0-9")) finalHomePageLists.add(HomePageList("🔢 0-9", alphabeticGroups["0-9"] ?: emptyList(), isHorizontalImages = true))
+        if (alphabeticGroups.containsKey("0-9"))
+            finalHomePageLists.add(HomePageList("🔢 0-9", alphabeticGroups["0-9"] ?: emptyList(), isHorizontalImages = true))
         fullAlphabet.forEach { char ->
             alphabeticGroups[char]?.let { finalHomePageLists.add(HomePageList("🎬 $char", it, isHorizontalImages = true)) }
         }
@@ -184,7 +185,6 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
-
         val groupedByCleanTitle = kanallar.items.groupBy {
             val (cleanTitle, _, _) = parseEpisodeInfo(it.title.toString())
             cleanTitle
@@ -194,7 +194,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             cleanTitle.lowercase(Locale.getDefault()).contains(query.lowercase(Locale.getDefault()))
         }.map { (cleanTitle, shows) ->
             val firstShow = shows.firstOrNull() ?: return@map newTvSeriesSearchResponse(cleanTitle, "")
-            newTvSeriesSearchResponse(cleanTitle, firstShow.url ?: "") {
+            val searchResponse = newTvSeriesSearchResponse(cleanTitle, firstShow.url ?: "")
+            searchResponse.apply {
                 posterUrl = firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
                 type = TvType.TvSeries
                 addDubStatus(dubExist = false, subExist = true)
@@ -214,7 +215,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             itemCleanTitle == cleanTitle
         }
 
-        val finalPosterUrl = allShows.firstOrNull()?.attributes?.get("tvg-logo")?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
+        val finalPosterUrl = allShows.firstOrNull()?.attributes?.get("tvg-logo")?.takeIf { it.isNotBlank() }
+            ?: DEFAULT_POSTER_URL
         val plot = "TMDB'den özet alınamadı."
 
         val groupedEpisodes = allShows.groupBy {
@@ -225,12 +227,23 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val currentShowEpisodes = groupedEpisodes.mapNotNull { (key, episodeItems) ->
             val (season, episode) = key
             if (season != null && episode != null) {
-                val episodePoster = episodeItems.firstOrNull()?.attributes?.get("tvg-logo")?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
+                val episodePoster = episodeItems.firstOrNull()?.attributes?.get("tvg-logo")?.takeIf { it.isNotBlank() }
+                    ?: DEFAULT_POSTER_URL
                 val episodeTitle = episodeItems.firstOrNull()?.title.toString()
                 val (episodeCleanTitle, _, _) = parseEpisodeInfo(episodeTitle)
                 val allUrls = episodeItems.map { it.url.toString() }
 
-                newEpisode(LoadData(allUrls, episodeTitle, episodePoster, episodeItems.firstOrNull()?.attributes?.get("group-title") ?: "Bilinmeyen Grup", episodeItems.firstOrNull()?.attributes?.get("tvg-country") ?: "TR", season, episode).toJson()) {
+                newEpisode(
+                    LoadData(
+                        allUrls,
+                        episodeTitle,
+                        episodePoster,
+                        episodeItems.firstOrNull()?.attributes?.get("group-title") ?: "Bilinmeyen Grup",
+                        episodeItems.firstOrNull()?.attributes?.get("tvg-country") ?: "TR",
+                        season,
+                        episode
+                    ).toJson()
+                ) {
                     this.name = "$episodeCleanTitle S$season E$episode"
                     this.season = season
                     this.episode = episode
@@ -260,7 +273,6 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         }
     }
 
-    
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
