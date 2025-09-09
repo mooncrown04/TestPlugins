@@ -153,7 +153,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
         val alphabeticGroups = groupedByCleanTitle.toSortedMap().mapNotNull { (cleanTitle, shows) ->
             val firstShow = shows.firstOrNull() ?: return@mapNotNull null
-            val searchResponse = newTvSeriesSearchResponse(cleanTitle, firstShow.url ?: "")
+            val searchResponse = newAnimeSearchResponse(cleanTitle, firstShow.url ?: "")
             searchResponse.apply {
                 posterUrl = firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
                 type = TvType.TvSeries
@@ -193,8 +193,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         return groupedByCleanTitle.filter { (cleanTitle, _) ->
             cleanTitle.lowercase(Locale.getDefault()).contains(query.lowercase(Locale.getDefault()))
         }.map { (cleanTitle, shows) ->
-            val firstShow = shows.firstOrNull() ?: return@map newTvSeriesSearchResponse(cleanTitle, "")
-            val searchResponse = newTvSeriesSearchResponse(cleanTitle, firstShow.url ?: "")
+            val firstShow = shows.firstOrNull() ?: return@map newAnimeSearchResponse(cleanTitle, "")
+            val searchResponse = newAnimeSearchResponse(cleanTitle, firstShow.url ?: "")
             searchResponse.apply {
                 posterUrl = firstShow.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: DEFAULT_POSTER_URL
                 type = TvType.TvSeries
