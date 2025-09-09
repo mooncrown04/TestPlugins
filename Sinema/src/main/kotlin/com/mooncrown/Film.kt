@@ -54,12 +54,11 @@ class Film(private val context: android.content.Context, private val sharedPref:
                         isSubbed -> "$channelname (Altyazılı)"
                         else -> channelname
                     }
-
+                 // newMovieSearchResponse(
                     newAnimeSearchResponse(
                         name = newTitle,
-                        // Düzeltme: Header bilgisini LoadData'ya ekledik.
-                        url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed, kanal.headers).toJson(),
-                        type = TvType.Movie
+                        url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
+                        type = TvType.Anime
                     ) {
                         this.posterUrl = posterurl
                         this.addDubStatus(dubExist = isDubbed, subExist = isSubbed)
@@ -103,12 +102,11 @@ class Film(private val context: android.content.Context, private val sharedPref:
                 isSubbed -> "$channelname (Altyazılı)"
                 else -> channelname
             }
-
-            newAnimeSearchResponse(
+              newMovieSearchResponse(
+          //  newAnimeSearchResponse(
                 name = newTitle,
-                // Düzeltme: Header bilgisini LoadData'ya ekledik.
-                url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed, kanal.headers).toJson(),
-                type = TvType.Movie
+                url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
+                type = TvType.Anime
             ) {
                 this.posterUrl = posterurl
                 this.addDubStatus(dubExist = isDubbed, subExist = isSubbed)
@@ -301,9 +299,8 @@ class Film(private val context: android.content.Context, private val sharedPref:
 
                 recommendations.add(newLiveSearchResponse(
                     rcTitle,
-                    // Düzeltme: Header bilgisini LoadData'ya ekledik.
-                    LoadData(rcStreamUrl, rcChannelName, rcPosterUrl, rcChGroup, rcLanguage, rcNation, rcIsWatched, rcWatchProgress, isDubbedRc, isSubbedRc, kanal.headers).toJson(),
-                    type = TvType.Movie
+                    LoadData(rcStreamUrl, rcChannelName, rcPosterUrl, rcChGroup, rcLanguage, rcNation, rcIsWatched, rcWatchProgress, isDubbedRc, isSubbedRc).toJson(),
+                    type = TvType.Anime
                 ) {
                     posterUrl = rcPosterUrl
                 })
@@ -325,26 +322,20 @@ class Film(private val context: android.content.Context, private val sharedPref:
             val loadData = fetchDataFromUrlOrJson(data)
             Log.d("IPTV", "loadData » $loadData")
 
+            val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
+            val kanal = kanallar.items.firstOrNull { it.url == loadData.url } ?: return false
+            Log.d("IPTV", "kanal » $kanal")
+
             val watchKey = "watch_${data.hashCode()}"
+            val progressKey = "progress_${data.hashCode()}"
             sharedPref?.edit()?.putBoolean(watchKey, true)?.apply()
 
             val videoUrl = loadData.url
             val videoType = when {
+
                 videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.VIDEO
                 else -> ExtractorLinkType.M3U8
-            }
 
-            // Düzeltme: Başlıkları daha sağlam bir şekilde yönetiyoruz.
-            val finalHeaders = loadData.headers.toMutableMap()
-
-            // Eğer M3U dosyasında User-Agent tanımlı değilse, varsayılan bir değer ekleyin.
-            if (finalHeaders.keys.none { it.equals("User-Agent", ignoreCase = true) }) {
-                finalHeaders["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-            }
-            
-            // Eğer M3U dosyasında Referer tanımlı değilse, referrer'ı kullanın.
-            if (finalHeaders.keys.none { it.equals("Referer", ignoreCase = true) }) {
-                finalHeaders["Referer"] = loadData.headers["referrer"] ?: ""
             }
 
             callback.invoke(
@@ -352,8 +343,10 @@ class Film(private val context: android.content.Context, private val sharedPref:
                     source = this.name,
                     name = loadData.title,
                     url = videoUrl,
-                    headers = finalHeaders,
-                    referer = loadData.headers["referrer"] ?: "", // Yönlendiren URL'yi buradan alıyoruz.
+                    headers = kanal.headers + mapOf(
+                        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+                    ),
+                    referer = kanal.headers["referrer"] ?: "",
                     quality = Qualities.Unknown.value,
                     type = videoType
                 )
@@ -365,8 +358,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
             return false
         }
     }
-    
-    // Düzeltme: Headers bilgisini tutmak için LoadData'ya yeni bir parametre ekledik.
+
     data class LoadData(
         val url: String,
         val title: String,
@@ -377,8 +369,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
         val isWatched: Boolean = false,
         val watchProgress: Long = 0L,
         val isDubbed: Boolean = false,
-        val isSubbed: Boolean = false,
-        val headers: Map<String, String> = emptyMap()
+        val isSubbed: Boolean = false
     )
 
     private suspend fun fetchDataFromUrlOrJson(data: String): LoadData {
@@ -402,8 +393,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
             val isDubbed = language.lowercase() == "turkish"
             val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname.contains("Altyazı", ignoreCase = true)
 
-            // Düzeltme: Headers bilgisini burada da alıp LoadData'ya ekliyoruz.
-            return LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed, kanal.headers)
+            return LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed)
         }
     }
 }
@@ -534,7 +524,7 @@ class IptvPlaylistParser {
 
     private fun String.getUrlParameter(key: String): String? {
         val urlRegex = Regex("^(.*)\\|", RegexOption.IGNORE_CASE)
-        val keyRegex = Regex("$key=([^&]*)", RegexOption.IGNORE_CASE)
+        val keyRegex = Regex("$key=(\\w[^&]*)", RegexOption.IGNORE_CASE)
         val paramsString = replace(urlRegex, "").replaceQuotesAndTrim()
 
         return keyRegex.find(paramsString)?.groups?.get(1)?.value
@@ -604,6 +594,7 @@ class IptvPlaylistParser {
 }
 
 sealed class PlaylistParserException(message: String) : Exception(message) {
+
     class InvalidHeader : PlaylistParserException("Invalid file header. Header doesn't start with #EXTM3U")
 }
 
