@@ -323,14 +323,15 @@ class Film(private val context: android.content.Context, private val sharedPref:
             val loadData = fetchDataFromUrlOrJson(data)
             Log.d("IPTV", "loadData oluşturuldu: $loadData")
     
-            if (loadData.url.isNullOrEmpty()) {
-                Log.e("IPTV", "loadData URL'si boş veya null, bağlantı sağlanamıyor.")
+            val videoUrl = loadData.url
+            if (videoUrl.isNullOrEmpty()) {
+                Log.e("IPTV", "Video URL'si boş veya null, bağlantı sağlanamıyor.")
                 return false
             }
-            Log.d("IPTV", "Video URL'si bulundu: ${loadData.url}")
+            Log.d("IPTV", "Video URL'si bulundu: $videoUrl")
             
             val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
-            val kanal = kanallar.items.firstOrNull { it.url == loadData.url }
+            val kanal = kanallar.items.firstOrNull { it.url == videoUrl }
             if (kanal == null) {
                 Log.e("IPTV", "Kanal M3U listesinde bulunamadı, bağlantı sağlanamıyor.")
                 return false
@@ -340,12 +341,9 @@ class Film(private val context: android.content.Context, private val sharedPref:
             val progressKey = "progress_${data.hashCode()}"
             sharedPref?.edit()?.putBoolean(watchKey, true)?.apply()
 
-            val videoUrl = loadData.url
             val videoType = when {
-
                 videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.VIDEO
                 else -> ExtractorLinkType.M3U8
-
             }
 
             callback.invoke(
@@ -421,7 +419,6 @@ data class PlaylistItem(
 )
 
 class IptvPlaylistParser {
-
     fun parseM3U(content: String): Playlist {
         val lines = content.lines()
         val playlistItems = mutableListOf<PlaylistItem>()
@@ -434,16 +431,19 @@ class IptvPlaylistParser {
                 if (parts.size > 1) {
                     val attributesString = parts[0]
                         .removePrefix("#EXTINF:")
-                        .replace(Regex("\\s*-1\\s*,"), "") // -1, kaldırıldı
+                        .replace(Regex("\\s*-1\\s*,"), "")
                         .trim()
+                    
+                    val attributeRegex = Regex("([a-zA-Z0-9-]+)=\"([^\"]*)\"")
+                    lastAttributes = attributeRegex.findAll(attributesString).associate {
+                        it.destructured.let { (key, value) -> key to value }
+                    }
 
                     lastTitle = parts[1].trim()
-                    lastAttributes = parseAttributes(attributesString)
-
                 }
             } else if (line.isNotBlank() && !line.startsWith("#")) {
                 val url = line.trim()
-                if (lastTitle != null && lastAttributes.isNotEmpty() && url.isNotEmpty()) {
+                if (lastTitle != null && url.isNotEmpty()) {
                     playlistItems.add(
                         PlaylistItem(
                             title = lastTitle,
@@ -457,16 +457,6 @@ class IptvPlaylistParser {
             }
         }
         return Playlist(playlistItems)
-    }
-
-    private fun parseAttributes(attributesString: String): Map<String, String> {
-        val attributes = mutableMapOf<String, String>()
-        val regex = Regex("([a-zA-Z0-9-]+)=\"([^\"]*)\"")
-        regex.findAll(attributesString).forEach { matchResult ->
-            val (key, value) = matchResult.destructured
-            attributes[key] = value
-        }
-        return attributes
     }
 }
 
