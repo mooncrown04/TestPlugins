@@ -127,7 +127,7 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
-    override var name = "35 MoOnCrOwN Dizi 🎬"
+    override var name = "35  AnimeDizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
