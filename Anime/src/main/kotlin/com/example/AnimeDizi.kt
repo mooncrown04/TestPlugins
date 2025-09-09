@@ -157,7 +157,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 val poster = it.attributes["tvg-logo"].takeIf { !it.isNullOrBlank() } ?: DEFAULT_POSTER_URL
                 val (cleanTitle, _, _) = parseEpisodeInfo(title)
 
-                TvSeriesSearchResponse(
+                newTvSeriesSearchResponse(
                     name = cleanTitle,
                     url = LoadData(
                         urls = listOf(it.url ?: ""),
@@ -169,8 +169,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                     apiName = this.name,
                     type = TvType.TvSeries,
                     posterUrl = poster,
-                    year = null,
-                    rating = null
+                    year = null
                 )
             }
             HomePageList(group, shows)
@@ -188,7 +187,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val poster = it.attributes["tvg-logo"].takeIf { !it.isNullOrBlank() } ?: DEFAULT_POSTER_URL
             val (cleanTitle, _, _) = parseEpisodeInfo(title)
 
-            TvSeriesSearchResponse(
+            newTvSeriesSearchResponse(
                 name = cleanTitle,
                 url = LoadData(
                     urls = listOf(it.url ?: ""),
@@ -200,13 +199,43 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 apiName = this.name,
                 type = TvType.TvSeries,
                 posterUrl = poster,
-                year = null,
-                rating = null
+                year = null
+                
             )
         }
     }
 
-    override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
+   override suspend fun search(query: String): List<SearchResponse> {
+    val playlist = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
+
+    return playlist.items.mapNotNull { item ->
+        val title = item.title ?: return@mapNotNull null
+        val (cleanTitle, season, episode) = parseEpisodeInfo(title)
+
+        val poster = item.attributes["tvg-logo"].takeIf { !it.isNullOrBlank() }
+            ?: DEFAULT_POSTER_URL
+
+        // LoadData paketleyelim
+        val loadData = LoadData(
+            urls = listOfNotNull(item.url),
+            title = cleanTitle,
+            poster = poster,
+            group = item.attributes["group-title"] ?: "Bilinmeyen Grup",
+            nation = item.attributes["tvg-country"] ?: "TR",
+            season = season ?: 1,
+            episode = episode ?: 1
+        )
+
+        newTvSeriesSearchResponse(
+            cleanTitle,
+            loadData.toJson(),
+            TvType.TvSeries
+        ) {
+            posterUrl = poster
+            // ✅ rating kaldırıldı, ekleme yok
+        }
+    }
+}
 
     override suspend fun load(url: String): LoadResponse {
         val loadData = parseJson<LoadData>(url)
