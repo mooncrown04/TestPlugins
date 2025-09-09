@@ -57,7 +57,8 @@ class Film(private val context: android.content.Context, private val sharedPref:
 
                     newAnimeSearchResponse(
                         name = newTitle,
-                        url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
+                        // Düzeltme: Header bilgisini LoadData'ya ekledik.
+                        url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed, kanal.headers).toJson(),
                         type = TvType.Anime
                     ) {
                         this.posterUrl = posterurl
@@ -105,7 +106,8 @@ class Film(private val context: android.content.Context, private val sharedPref:
 
             newAnimeSearchResponse(
                 name = newTitle,
-                url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed).toJson(),
+                 // Düzeltme: Header bilgisini LoadData'ya ekledik.
+                url = LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed, kanal.headers).toJson(),
                 type = TvType.Anime
             ) {
                 this.posterUrl = posterurl
@@ -299,7 +301,8 @@ class Film(private val context: android.content.Context, private val sharedPref:
 
                 recommendations.add(newLiveSearchResponse(
                     rcTitle,
-                    LoadData(rcStreamUrl, rcChannelName, rcPosterUrl, rcChGroup, rcLanguage, rcNation, rcIsWatched, rcWatchProgress, isDubbedRc, isSubbedRc).toJson(),
+                    // Düzeltme: Header bilgisini LoadData'ya ekledik.
+                    LoadData(rcStreamUrl, rcChannelName, rcPosterUrl, rcChGroup, rcLanguage, rcNation, rcIsWatched, rcWatchProgress, isDubbedRc, isSubbedRc, kanal.headers).toJson(),
                     type = TvType.Anime
                 ) {
                     posterUrl = rcPosterUrl
@@ -318,32 +321,25 @@ class Film(private val context: android.content.Context, private val sharedPref:
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        Log.d("IPTV", "loadLinks çağrıldı, veri: $data")
         try {
             val loadData = fetchDataFromUrlOrJson(data)
-            Log.d("IPTV", "loadData oluşturuldu: $loadData")
-    
-            val videoUrl = loadData.url
-            if (videoUrl.isNullOrEmpty()) {
-                Log.e("IPTV", "Video URL'si boş veya null, bağlantı sağlanamıyor.")
-                return false
-            }
-            Log.d("IPTV", "Video URL'si bulundu: $videoUrl")
-            
-            val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
-            val kanal = kanallar.items.firstOrNull { it.url == videoUrl }
-            if (kanal == null) {
-                Log.e("IPTV", "Kanal M3U listesinde bulunamadı, bağlantı sağlanamıyor.")
-                return false
-            }
+            Log.d("IPTV", "loadData » $loadData")
 
+            // Düzeltme: M3U dosyasını tekrar okumaya gerek yok, tüm bilgiler LoadData içinde zaten var.
+            // val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
+            // val kanal = kanallar.items.firstOrNull { it.url == loadData.url } ?: return false
+            // Log.d("IPTV", "kanal » $kanal")
+            
             val watchKey = "watch_${data.hashCode()}"
             val progressKey = "progress_${data.hashCode()}"
             sharedPref?.edit()?.putBoolean(watchKey, true)?.apply()
 
+            val videoUrl = loadData.url
             val videoType = when {
+
                 videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.VIDEO
                 else -> ExtractorLinkType.M3U8
+
             }
 
             callback.invoke(
@@ -351,10 +347,11 @@ class Film(private val context: android.content.Context, private val sharedPref:
                     source = this.name,
                     name = loadData.title,
                     url = videoUrl,
-                    headers = kanal.headers + mapOf(
+                    // Düzeltme: Header bilgisini doğrudan LoadData'dan kullanıyoruz.
+                    headers = loadData.headers + mapOf(
                         "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
                     ),
-                    referer = kanal.headers["referrer"] ?: "",
+                    referer = loadData.headers["referrer"] ?: "",
                     quality = Qualities.Unknown.value,
                     type = videoType
                 )
@@ -362,11 +359,12 @@ class Film(private val context: android.content.Context, private val sharedPref:
 
             return true
         } catch (e: Exception) {
-            Log.e("IPTV", "loadLinks'te hata oluştu: ${e.message}", e)
+            Log.e("IPTV", "Error in loadLinks: ${e.message}", e)
             return false
         }
     }
-
+    
+    // Düzeltme: Headers bilgisini tutmak için LoadData'ya yeni bir parametre ekledik.
     data class LoadData(
         val url: String,
         val title: String,
@@ -377,7 +375,8 @@ class Film(private val context: android.content.Context, private val sharedPref:
         val isWatched: Boolean = false,
         val watchProgress: Long = 0L,
         val isDubbed: Boolean = false,
-        val isSubbed: Boolean = false
+        val isSubbed: Boolean = false,
+        val headers: Map<String, String> = emptyMap()
     )
 
     private suspend fun fetchDataFromUrlOrJson(data: String): LoadData {
@@ -401,7 +400,8 @@ class Film(private val context: android.content.Context, private val sharedPref:
             val isDubbed = language.lowercase() == "turkish"
             val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname.contains("Altyazı", ignoreCase = true)
 
-            return LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed)
+            // Düzeltme: Headers bilgisini burada da alıp LoadData'ya ekliyoruz.
+            return LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed, kanal.headers)
         }
     }
 }
@@ -419,47 +419,187 @@ data class PlaylistItem(
 )
 
 class IptvPlaylistParser {
-    fun parseM3U(content: String): Playlist {
-        val lines = content.lines()
-        val playlistItems = mutableListOf<PlaylistItem>()
-        var lastAttributes: Map<String, String> = emptyMap()
-        var lastTitle: String? = null
 
-        for (line in lines) {
-            if (line.startsWith("#EXTINF")) {
-                val parts = line.split(",")
-                if (parts.size > 1) {
-                    val attributesString = parts[0]
-                        .removePrefix("#EXTINF:")
-                        .replace(Regex("\\s*-1\\s*,"), "")
-                        .trim()
-                    
-                    val attributeRegex = Regex("([a-zA-Z0-9-]+)=\"([^\"]*)\"")
-                    lastAttributes = attributeRegex.findAll(attributesString).associate {
-                        it.destructured.let { (key, value) -> key to value }
+    /**
+     * Parse M3U8 string into [Playlist]
+     *
+     * @param content M3U8 content string.
+     * @throws PlaylistParserException if an error occurs.
+     */
+    fun parseM3U(content: String): Playlist {
+        return parseM3U(content.byteInputStream())
+    }
+
+    /**
+     * Parse M3U8 content [InputStream] into [Playlist]
+     *
+     * @param input Stream of input data.
+     * @throws PlaylistParserException if an error occurs.
+     */
+    @Throws(PlaylistParserException::class)
+    fun parseM3U(input: InputStream): Playlist {
+        val reader = input.bufferedReader()
+
+        if (!reader.readLine().isExtendedM3u()) {
+            throw PlaylistParserException.InvalidHeader()
+        }
+
+        val playlistItems: MutableList<PlaylistItem> = mutableListOf()
+        var currentIndex = 0
+
+        var line: String? = reader.readLine()
+
+        while (line != null) {
+            if (line.isNotEmpty()) {
+                if (line.startsWith(EXT_INF)) {
+                    val title = line.getTitle()
+                    val attributes = line.getAttributes()
+
+                    playlistItems.add(PlaylistItem(title, attributes))
+                } else if (line.startsWith(EXT_VLC_OPT)) {
+                    val item = playlistItems[currentIndex]
+                    val userAgent = item.userAgent ?: line.getTagValue("http-user-agent")
+                    val referrer = line.getTagValue("http-referrer")
+
+                    val headers = mutableMapOf<String, String>()
+
+                    if (userAgent != null) {
+                        headers["user-agent"] = userAgent
                     }
 
-                    lastTitle = parts[1].trim()
-                }
-            } else if (line.isNotBlank() && !line.startsWith("#")) {
-                val url = line.trim()
-                if (lastTitle != null && url.isNotEmpty()) {
-                    playlistItems.add(
-                        PlaylistItem(
-                            title = lastTitle,
-                            attributes = lastAttributes,
-                            url = url
-                        )
+                    if (referrer != null) {
+                        headers["referrer"] = referrer
+                    }
+
+                    playlistItems[currentIndex] = item.copy(
+                        userAgent = userAgent,
+                        headers = headers
                     )
-                    lastTitle = null
-                    lastAttributes = emptyMap()
+                } else {
+                    if (!line.startsWith("#")) {
+                        val item = playlistItems[currentIndex]
+                        val url = line.getUrl()
+                        val userAgent = line.getUrlParameter("user-agent")
+                        val referrer = line.getUrlParameter("referer")
+                        val urlHeaders = if (referrer != null) { item.headers + mapOf("referrer" to referrer) } else item.headers
+
+                        playlistItems[currentIndex] = item.copy(
+                            url = url,
+                            headers = item.headers + urlHeaders,
+                            userAgent = userAgent ?: item.userAgent
+                        )
+                        currentIndex++
+                    }
                 }
             }
+
+            line = reader.readLine()
         }
         return Playlist(playlistItems)
     }
-}
 
+    private fun String.replaceQuotesAndTrim(): String {
+        return replace("\"", "").trim()
+    }
+
+    private fun String.isExtendedM3u(): Boolean = startsWith(EXT_M3U)
+
+    private fun String.getTitle(): String? {
+        val commaIndex = lastIndexOf(",")
+        return if (commaIndex >= 0) {
+            substring(commaIndex + 1).trim().let { title ->
+                val unquotedTitle = if (title.startsWith("\"") && title.endsWith("\"")) {
+                    title.substring(1, title.length - 1)
+                } else {
+                    title
+                }
+                unquotedTitle.trim().takeIf { it.isNotEmpty() }?.let { rawTitle ->
+                    rawTitle.replace("&amp;", "&")
+                        .replace("&lt;", "<")
+                        .replace("&gt;", ">")
+                        .replace("&quot;", "\"")
+                        .replace("&#39;", "'")
+                } ?: unquotedTitle
+            }
+        } else {
+            null
+        }
+    }
+
+    private fun String.getUrl(): String? {
+        return split("|").firstOrNull()?.replaceQuotesAndTrim()
+    }
+
+    private fun String.getUrlParameter(key: String): String? {
+        val urlRegex = Regex("^(.*)\\|", RegexOption.IGNORE_CASE)
+        val keyRegex = Regex("$key=([^&]*)", RegexOption.IGNORE_CASE)
+        val paramsString = replace(urlRegex, "").replaceQuotesAndTrim()
+
+        return keyRegex.find(paramsString)?.groups?.get(1)?.value
+    }
+
+    private fun String.getAttributes(): Map<String, String> {
+        val extInfRegex = Regex("(#EXTINF:.?[0-9]+)", RegexOption.IGNORE_CASE)
+        val attributesString = replace(extInfRegex, "").trim()
+
+        val attributes = mutableMapOf<String, String>()
+        var currentKey = ""
+        var currentValue = StringBuilder()
+        var inQuotes = false
+        var i = 0
+
+        while (i < attributesString.length) {
+            val char = attributesString[i]
+            when {
+                char == '"' -> inQuotes = !inQuotes
+                char == '=' && !inQuotes -> {
+                    currentKey = currentValue.toString().trim()
+                    currentValue.clear()
+                }
+                char == ' ' && !inQuotes && currentKey.isNotEmpty() && currentValue.isNotEmpty() -> {
+                    val cleanValue = currentValue.toString().trim().removeSurrounding("\"").trim()
+                    if (cleanValue.isNotEmpty()) {
+                        attributes[currentKey] = cleanValue
+                    }
+                    currentKey = ""
+                    currentValue.clear()
+                }
+                char == ',' && !inQuotes -> {
+                    if (currentKey.isNotEmpty() && currentValue.isNotEmpty()) {
+                        val cleanValue = currentValue.toString().trim().removeSurrounding("\"").trim()
+                        if (cleanValue.isNotEmpty()) {
+                            attributes[currentKey] = cleanValue
+                        }
+                    }
+                    break
+                }
+                else -> currentValue.append(char)
+            }
+            i++
+        }
+
+        if (currentKey.isNotEmpty() && currentValue.isNotEmpty()) {
+            val cleanValue = currentValue.toString().trim().removeSurrounding("\"").trim()
+            if (cleanValue.isNotEmpty()) {
+                attributes[currentKey] = cleanValue
+            }
+        }
+
+        return attributes
+    }
+
+    private fun String.getTagValue(key: String): String? {
+        val keyRegex = Regex("$key=(.*)", RegexOption.IGNORE_CASE)
+
+        return keyRegex.find(this)?.groups?.get(1)?.value?.replaceQuotesAndTrim()
+    }
+
+    companion object {
+        const val EXT_M3U = "#EXTM3U"
+        const val EXT_INF = "#EXTINF"
+        const val EXT_VLC_OPT = "#EXTVLCOPT"
+    }
+}
 
 sealed class PlaylistParserException(message: String) : Exception(message) {
 
