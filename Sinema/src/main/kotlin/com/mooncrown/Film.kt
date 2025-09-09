@@ -44,7 +44,9 @@ class Film(private val context: android.content.Context, private val sharedPref:
                     val progressKey = "progress_${streamurl.hashCode()}"
                     val isWatched = sharedPref?.getBoolean(watchKey, false) ?: false
                     val watchProgress = sharedPref?.getLong(progressKey, 0L) ?: 0L
-                    val isDubbed = language.lowercase() == "tr"
+
+                    // Yeni ve daha sağlam dublaj kontrol mantığı: Sadece başlıkta "Dublaj" anahtar kelimesini arayın.
+                    val isDubbed = channelname.contains("Dublaj", ignoreCase = true)
                     val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname.contains("Altyazı", ignoreCase = true)
 
                     val newTitle = when {
@@ -85,8 +87,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
             val isWatched = sharedPref?.getBoolean(watchKey, false) ?: false
             val watchProgress = sharedPref?.getLong(progressKey, 0L) ?: 0L
 
-
-            val isDubbed = language.lowercase() == "tr"
+            val isDubbed = channelname.contains("Dublaj", ignoreCase = true)
             val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname.contains("Altyazı", ignoreCase = true)
 
             val newTitle = when {
@@ -276,7 +277,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
                 val rcChGroup = kanal.attributes["group-title"].toString()
                 val rcLanguage = kanal.attributes["tvg-language"].toString()
                 val rcNation = kanal.attributes["tvg-country"].toString()
-                val isDubbedRc = rcLanguage.lowercase() == "tr"
+                val isDubbedRc = rcChannelName.contains("Dublaj", ignoreCase = true)
                 val isSubbedRc = rcChGroup.contains("Altyazılı", ignoreCase = true) || rcChannelName.contains("Altyazı", ignoreCase = true)
                 val rcTitle = when {
                     isDubbedRc -> "$rcChannelName (Türkçe Dublaj)"
@@ -382,7 +383,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
             val isWatched = sharedPref?.getBoolean(watchKey, false) ?: false
             val watchProgress = sharedPref?.getLong(progressKey, 0L) ?: 0L
 
-            val isDubbed = language.lowercase() == "tr"
+            val isDubbed = channelname.contains("Dublaj", ignoreCase = true)
             val isSubbed = chGroup.contains("Altyazılı", ignoreCase = true) || channelname.contains("Altyazı", ignoreCase = true)
 
             return LoadData(streamurl, channelname, posterurl, chGroup, language, nation, isWatched, watchProgress, isDubbed, isSubbed)
