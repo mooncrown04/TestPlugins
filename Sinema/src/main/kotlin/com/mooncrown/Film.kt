@@ -179,36 +179,43 @@ class Film(private val context: android.content.Context, private val sharedPref:
     }
 
  override suspend fun load(url: String): LoadResponse? {
-    val data = parseJson<LoadData>(url)
+    val animeData = parseJson<AnimeData>(url) ?: return null
 
-    return newAnimeLoadResponse(
-        name = data.name,
-        url = data.url,
-        type = TvType.Anime
-    ) {
-        posterUrl = data.poster
- episodes = mutableMapOf(
-    DubStatus.SUB to data.subEpisodes.map { ep ->
-        newEpisode(ep.url) {
-            name = ep.name
-            season = ep.season
-            episode = ep.episode
-            posterUrl = data.poster
-            description = ep.description
+return newAnimeLoadResponse(
+    name = animeData.name,
+    url = url,
+    type = TvType.Anime
+) {
+    posterUrl = animeData.poster
+    description = animeData.description
+
+    episodes = mutableMapOf(
+        DubStatus.SUB to animeData.subEpisodes.map { ep ->
+            newEpisode(ep.url) {
+                name = ep.name
+                season = ep.season
+                episode = ep.episode
+                posterUrl = animeData.poster
+                description = ep.description
+            }
+        },
+        DubStatus.DUB to animeData.dubEpisodes.map { ep ->
+            newEpisode(ep.url) {
+                name = ep.name
+                season = ep.season
+                episode = ep.episode
+                posterUrl = animeData.poster
+                description = ep.description
+            }
         }
-    },
-    DubStatus.DUB to data.dubEpisodes.map { ep ->
-        newEpisode(ep.url) {
-            name = ep.name
-            season = ep.season
-            episode = ep.episode
-            posterUrl = data.poster
-            description = ep.description
-        }
-    }
-)
-    }
+    )
+
+    addDubStatus(
+        dubExist = animeData.dubEpisodes.isNotEmpty(),
+        subExist = animeData.subEpisodes.isNotEmpty()
+    )
 }
+
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
         try {
             val loadData = fetchDataFromUrlOrJson(data)
