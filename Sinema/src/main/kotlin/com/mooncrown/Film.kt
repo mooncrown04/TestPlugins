@@ -180,43 +180,22 @@ addDubStatus(
         }
     }
 
- override suspend fun load(url: String): LoadResponse? {
+override suspend fun load(url: String): LoadResponse? {
+    val loadData = parseJson<LoadData>(url) ?: return null
 
-val loadData = parseJson<LoadData>(url) ?: return null
-return newAnimeLoadResponse(
-    name = animeData.name,
-    url = url,
-    type = TvType.Anime
-) {
-    posterUrl = animeData.poster
-    description = animeData.description
-
-    episodes = mutableMapOf(
-        DubStatus.SUB to animeData.subEpisodes.map { ep ->
-            newEpisode(ep.url) {
-                name = ep.name
-                season = ep.season
-                episode = ep.episode
-                posterUrl = animeData.poster
-                description = ep.description
-            }
-        },
-        DubStatus.DUB to animeData.dubEpisodes.map { ep ->
-            newEpisode(ep.url) {
-                name = ep.name
-                season = ep.season
-                episode = ep.episode
-                posterUrl = animeData.poster
-                description = ep.description
-            }
-        }
-    )
-
-    addDubStatus(
-        dubExist = animeData.dubEpisodes.isNotEmpty(),
-        subExist = animeData.subEpisodes.isNotEmpty()
-    )
-}
+    // Movie kanalı
+    return newMovieLoadResponse(
+        name = loadData.title,
+        url = url,
+        type = TvType.Movie
+    ) {
+        posterUrl = loadData.poster
+        description = "Grup: ${loadData.group}, Dil: ${loadData.language}"
+        addDubStatus(
+            dubExist = loadData.isDubbed,
+            subExist = loadData.isSubbed
+        )
+    }
 }
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
         try {
