@@ -167,6 +167,10 @@ val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
 val isDubbed = dubbedKeywords.any { keyword -> language?.contains(keyword) == true }
 val dubStatus = if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed
 
+
+
+
+            
             val searchResponse = newAnimeSearchResponse(cleanTitle, loadData.toJson())
             searchResponse.apply {
                 posterUrl = loadData.poster
@@ -287,7 +291,12 @@ val dubStatus = if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed
             }
         }
 
-     
+     val language = firstShow.attributes["tvg-language"]?.lowercase()
+val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
+val isDubbed = dubbedKeywords.any { keyword -> language?.contains(keyword) == true }
+val dubStatus = if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed
+
+addDubStatus(dubStatus)
 
 
         return newAnimeLoadResponse(
