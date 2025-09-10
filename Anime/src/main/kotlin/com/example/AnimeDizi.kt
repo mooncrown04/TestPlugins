@@ -125,7 +125,7 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     //override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 animemm Dizi 🎬"
+    override var name = "35 animeler Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -293,35 +293,13 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             episodesMap[languageStatus] = processedEpisodes
         }
         
-        // ÖNERİLENLER KISMI BAŞLANGIÇ
-        // NOT: Bu kısım, önbellekteki veriyi kullanarak çalışır.
-        // Bu yüzden ağ bağlantısı yavaş olsa bile, ilk yüklemeden sonra daha hızlı çalışır.
-        val allShows = getOrFetchPlaylist().items
-        val currentTitleClean = parseEpisodeInfo(loadData.title).first
-
-        val recommendedList = allShows.filter {
-            val (itemCleanTitle, _, _) = parseEpisodeInfo(it.title.toString())
-            itemCleanTitle != currentTitleClean && 
-            (it.attributes["group-title"] == loadData.group || it.attributes["tvg-country"] == loadData.nation)
-        }.groupBy {
-            parseEpisodeInfo(it.title.toString()).first
-        }.values.shuffled().take(10).mapNotNull { shows ->
-            val firstShow = shows.firstOrNull() ?: return@mapNotNull null
-            val cleanTitle = parseEpisodeInfo(firstShow.title.toString()).first
-            val recomendedData = LoadData(
-                urls = shows.mapNotNull { it.url },
-                title = cleanTitle,
-                poster = firstShow.attributes["tvg-logo"] ?: DEFAULT_POSTER_URL,
-                group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
-                nation = firstShow.attributes["tvg-country"] ?: "TR"
-            )
-            val language = firstShow.attributes["tvg-language"]?.lowercase()
-            val isDubbedRec = dubbedKeywords.any { keyword -> language?.contains(keyword) == true }
-            newAnimeSearchResponse(cleanTitle, recomendedData.toJson()).apply {
-                posterUrl = recomendedData.poster
+        // ÖNERİLENLER KISMI BAŞLANGIÇ: DİĞER BÖLÜMLERİ GÖSTERİYOR
+        val recommendedList = processedEpisodes.map { episode ->
+             newAnimeSearchResponse(episode.name ?: "", episode.data).apply {
+                posterUrl = episode.posterUrl
                 type = TvType.Anime
-                addDubStatus(if (isDubbedRec) DubStatus.Dubbed else DubStatus.Subbed)
-            }
+                addDubStatus(if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed)
+             }
         }
         // ÖNERİLENLER KISMI BİTİŞ
 
@@ -334,7 +312,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             this.plot = plot
             this.tags = listOf(loadData.group, loadData.nation) + (if (isDubbed) "Türkçe Dublaj" else "Türkçe Altyazılı")
             this.episodes = episodesMap
-            this.recommendations = recommendedList
+            this.recommendations = recommendedList.shuffled().take(10)
         }
         
         return response
