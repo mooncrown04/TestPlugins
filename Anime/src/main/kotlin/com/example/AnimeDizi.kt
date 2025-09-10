@@ -139,7 +139,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     private val CACHE_KEY = "iptv_playlist_cache"
 
     data class LoadData(
-        val urls: List<String>,
+        val items: List<PlaylistItem>,
         val title: String,
         val poster: String,
         val group: String,
@@ -177,7 +177,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val alphabeticGroups = groupedByCleanTitle.toSortedMap().mapNotNull { (cleanTitle, shows) ->
             val firstShow = shows.firstOrNull() ?: return@mapNotNull null
             val loadData = LoadData(
-                urls = shows.mapNotNull { it.url },
+                items = shows,
                 title = cleanTitle,
                 poster = firstShow.attributes["tvg-logo"] ?: DEFAULT_POSTER_URL,
                 group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
@@ -229,7 +229,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         }.map { (cleanTitle, shows) ->
             val firstShow = shows.firstOrNull() ?: return@map newAnimeSearchResponse(cleanTitle, "")
             val loadData = LoadData(
-                urls = shows.mapNotNull { it.url },
+                items = shows,
                 title = cleanTitle,
                 poster = firstShow.attributes["tvg-logo"] ?: DEFAULT_POSTER_URL,
                 group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
@@ -259,20 +259,27 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
         val isDubbed = dubbedKeywords.any { keyword -> loadData.title.lowercase().contains(keyword) }
         
-        val processedEpisodes = loadData.urls.mapIndexed { index, videoUrl ->
-            val (itemCleanTitle, season, episode) = parseEpisodeInfo(loadData.title)
+        // Önce bölümleri bölüm numaralarına göre sıralıyoruz
+        val sortedItems = loadData.items.sortedWith(compareBy { item ->
+            val (_, _, episode) = parseEpisodeInfo(item.title.toString())
+            episode
+        })
+
+        val processedEpisodes = sortedItems.mapIndexed { index, item ->
+            val (itemCleanTitle, season, episode) = parseEpisodeInfo(item.title.toString())
             val finalSeason = season ?: 1
             val finalEpisode = episode ?: (index + 1)
             
             newEpisode(
+                // loadLinks'e sadece o bölüme ait veriyi gönderiyoruz
                 LoadData(
-                    listOf(videoUrl),
-                    loadData.title,
-                    loadData.poster,
-                    loadData.group,
-                    loadData.nation,
-                    finalSeason,
-                    finalEpisode
+                    items = listOf(item),
+                    title = itemCleanTitle,
+                    poster = loadData.poster,
+                    group = loadData.group,
+                    nation = loadData.nation,
+                    season = finalSeason,
+                    episode = finalEpisode
                 ).toJson()
             ) {
                 this.name = if (season != null && episode != null) {
@@ -293,7 +300,6 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             episodesMap[languageStatus] = processedEpisodes
         }
         
-        // ÖNERİLENLER KISMI BAŞLANGIÇ: "Bölüm No. Dizi Adı" formatı
         val recommendedList = processedEpisodes
              .filter { it.season != loadData.season || it.episode != loadData.episode }
              .mapNotNull { episode ->
@@ -309,8 +315,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                     addDubStatus(if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed)
                  }
             }
-        // ÖNERİLENLER KISMI BİTİŞ
-
+        
         val response = newAnimeLoadResponse(
             loadData.title,
             url,
@@ -333,7 +338,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val loadData = parseJson<LoadData>(data)
-        loadData.urls.forEachIndexed { index, videoUrl ->
+        loadData.items.forEach { item ->
             val linkQuality = Qualities.Unknown.value
             
             val titleText = loadData.title
@@ -342,7 +347,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 newExtractorLink(
                     source = this.name,
                     name = titleText,
-                    url = videoUrl,
+                    url = item.url.toString(),
                     type = ExtractorLinkType.M3U8
                 ) {
                     quality = linkQuality
