@@ -215,7 +215,7 @@ addDubStatus(if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed)
                 poster = firstShow.attributes["tvg-logo"] ?: DEFAULT_POSTER_URL,
                 group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
                 nation = firstShow.attributes["tvg-country"] ?: "TR",
-                dublaj = firstShow.attributes["tvg-language"] ?: "TURKCE"
+               
             )
                val language = firstShow.attributes["tvg-language"]?.lowercase()
 
@@ -247,7 +247,9 @@ val isDubbed = dubbedKeywords.any { keyword -> language?.contains(keyword) == tr
         val finalPosterUrl = allShows.firstOrNull()?.attributes?.get("tvg-logo")?.takeIf { it.isNotBlank() }
             ?: DEFAULT_POSTER_URL
         val plot = "TMDB'den özet alınamadı."
-
+        
+        val dublaj = firstShow.attributes["tvg-language"] ?: "TURKCE"
+        
         val groupedEpisodes = allShows.groupBy {
             val (_, season, episode) = parseEpisodeInfo(it.title.toString())
             Pair(season, episode)
@@ -293,8 +295,8 @@ val isDubbed = dubbedKeywords.any { keyword -> language?.contains(keyword) == tr
             TvType.Anime
         ) {
             this.posterUrl = finalPosterUrl
-            this.plot = plot
-            this.tags = listOf(loadData.group, loadData.nation,loadData.dublaj)
+            this.plot = plot+dublaj
+            this.tags = listOf(loadData.group, loadData.nation)+dublaj
            this.episodes = mutableMapOf(
     DubStatus.Subbed to processedEpisodes,
     DubStatus.Dubbed to processedEpisodes // veya ayrı bir filtreleme ile sadece dublajlılar
