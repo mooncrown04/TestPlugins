@@ -264,7 +264,6 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val plot = "TMDB'den özet alınamadı."
         val languageStatus = loadData.dubStatus ?: DubStatus.Subbed
         
-        // Önce tüm öğeleri sezonlarına göre gruplandırıyoruz
         val seasonsMap = mutableMapOf<Int, MutableList<PlaylistItem>>()
         
         loadData.items.forEach { item ->
@@ -276,18 +275,16 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             seasonsMap[finalSeason]?.add(item)
         }
         
-        // Her sezonun kendi içinde bölümlerini sıralıyoruz
         val episodesBySeason = seasonsMap.toSortedMap().mapValues { (_, items) ->
             val parsedItems = items.map { item ->
                 val (itemCleanTitle, season, episode) = parseEpisodeInfo(item.title.toString())
                 ParsedEpisode(item, itemCleanTitle, season, episode)
-            }
-            
-            val sortedEpisodes = parsedItems.sortedWith(
-                compareBy<ParsedEpisode>(nullsLast()) { it.episode }
+            }.sortedWith(
+                compareBy<ParsedEpisode>(nullsLast()) { it.season }
+                    .thenBy(nullsLast()) { it.episode }
             )
             
-            sortedEpisodes.mapIndexed { index, parsedItem ->
+            parsedItems.mapIndexed { index, parsedItem ->
                 val finalSeason = parsedItem.season ?: 1
                 val finalEpisode = parsedItem.episode ?: (index + 1)
                 
