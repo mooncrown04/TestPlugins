@@ -141,7 +141,6 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val poster: String,
         val group: String,
         val nation: String,
-        val dublaj: String,
         val season: Int = 1,
         val episode: Int = 0
     )
@@ -160,8 +159,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 title = cleanTitle,
                 poster = firstShow.attributes["tvg-logo"] ?: DEFAULT_POSTER_URL,
                 group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
-                nation = firstShow.attributes["tvg-country"] ?: "TR",
-                dublaj = firstShow.attributes["tvg-language"] ?: "TURKCE"
+                nation = firstShow.attributes["tvg-country"] ?: "TR"
+                
             )
 
              val language = firstShow.attributes["tvg-language"]?.lowercase()
