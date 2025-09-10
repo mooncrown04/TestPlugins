@@ -290,6 +290,10 @@ addDubStatus(if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed)
             }
         }
 
+        val dubTags = episodes.keys.map { it.name } // örn: ["Subbed", "Dubbed"]
+
+
+
         return newAnimeLoadResponse(
             cleanTitle,
             url,
@@ -297,8 +301,9 @@ addDubStatus(if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed)
         ) {
             this.posterUrl = finalPosterUrl
             this.plot = plot
-            this.tags = listOf(loadData.group, loadData.nation)
-           this.episodes = mutableMapOf(
+  //          this.tags = listOf(loadData.group, loadData.nation)
+          this.tags = listOf(loadData.group, loadData.nation) + dubTags
+            this.episodes = mutableMapOf(
     DubStatus.Subbed to processedEpisodes,
     DubStatus.Dubbed to processedEpisodes // veya ayrı bir filtreleme ile sadece dublajlılar
 )
