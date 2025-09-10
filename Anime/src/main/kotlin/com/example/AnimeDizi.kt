@@ -302,15 +302,12 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         episodesMap[languageStatus] = processedEpisodes
     }
 
-    // ÖNERİLENLER KISMI İÇİN BAŞLANGIÇ
     val allShows = getOrFetchPlaylist().items
     val currentTitleClean = parseEpisodeInfo(loadData.title).first
 
     val recommendedList = allShows.filter {
-        // Aynı başlığa sahip olmayanları filtrele
         val (itemCleanTitle, _, _) = parseEpisodeInfo(it.title.toString())
         itemCleanTitle != currentTitleClean && 
-        // Aynı gruba ait olanları veya aynı ülkeden olanları seç
         (it.attributes["group-title"] == loadData.group || it.attributes["tvg-country"] == loadData.nation)
     }.groupBy {
         parseEpisodeInfo(it.title.toString()).first
@@ -332,9 +329,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             addDubStatus(if (isDubbedRec) DubStatus.Dubbed else DubStatus.Subbed)
         }
     }
-    // ÖNERİLENLER KISMI İÇİN BİTİŞ
 
-    return newAnimeLoadResponse(
+    val response = newAnimeLoadResponse(
         loadData.title,
         url,
         TvType.Anime
@@ -343,9 +339,10 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         this.plot = plot
         this.tags = listOf(loadData.group, loadData.nation) + (if (isDubbed) "Türkçe Dublaj" else "Türkçe Altyazılı")
         this.episodes = episodesMap
-        this.recommended = recommendedList // Önerilenler listesini ekliyoruz
-
     }
+    
+    response.addRecommended(recommendedList)
+    return response
 }
     override suspend fun loadLinks(
         data: String,
