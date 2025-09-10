@@ -162,18 +162,16 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 nation = firstShow.attributes["tvg-country"] ?: "TR"
             )
 
-             val language = firstShow.attributes["tvg-language"]?.lowercase()
-
+  val language = firstShow.attributes["tvg-language"]?.lowercase()
 val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
-
 val isDubbed = dubbedKeywords.any { keyword -> language?.contains(keyword) == true }
+val dubStatus = if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed
+
             val searchResponse = newAnimeSearchResponse(cleanTitle, loadData.toJson())
             searchResponse.apply {
                 posterUrl = loadData.poster
                 type = TvType.Anime
-
-addDubStatus(if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed)
-
+addDubStatus(dubStatus)
             }
 
             val firstChar = cleanTitle.firstOrNull()?.uppercaseChar() ?: '#'
@@ -217,18 +215,17 @@ addDubStatus(if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed)
                 group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
                 nation = firstShow.attributes["tvg-country"] ?: "TR"
             )
-               val language = firstShow.attributes["tvg-language"]?.lowercase()
-
+      val language = firstShow.attributes["tvg-language"]?.lowercase()
 val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
-
 val isDubbed = dubbedKeywords.any { keyword -> language?.contains(keyword) == true }
+val dubStatus = if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed
 
             val searchResponse = newAnimeSearchResponse(cleanTitle, loadData.toJson())
             searchResponse.apply {
                 posterUrl = loadData.poster
                 type = TvType.Anime
-       
-addDubStatus(if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed)
+       addDubStatus(dubStatus)
+
 
             }
         }
@@ -290,8 +287,7 @@ addDubStatus(if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed)
             }
         }
 
-        val dubTags = episodes.keys.map { it.name } // örn: ["Subbed", "Dubbed"]
-
+     
 
 
         return newAnimeLoadResponse(
@@ -302,11 +298,10 @@ addDubStatus(if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed)
             this.posterUrl = finalPosterUrl
             this.plot = plot
   //          this.tags = listOf(loadData.group, loadData.nation)
-          this.tags = listOf(loadData.group, loadData.nation) + dubTags
-            this.episodes = mutableMapOf(
-    DubStatus.Subbed to processedEpisodes,
-    DubStatus.Dubbed to processedEpisodes // veya ayrı bir filtreleme ile sadece dublajlılar
-)
+     this.tags = listOf(loadData.group, loadData.nation, dubStatus.name) // örn: "Dubbed"
+    this.episodes = mutableMapOf(
+        dubStatus to processedEpisodes
+    )
         }
     }
 
