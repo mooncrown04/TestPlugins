@@ -280,7 +280,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 val (itemCleanTitle, season, episode) = parseEpisodeInfo(item.title.toString())
                 ParsedEpisode(item, itemCleanTitle, season, episode)
             }.sortedWith(
-                compareBy<ParsedEpisode>(nullsLast()) { it.season }.thenBy(nullsLast()) { it.episode }
+                compareBy<ParsedEpisode> { it.season }.thenBy { it.episode }
             )
             
             parsedItems.mapIndexed { index, parsedItem ->
