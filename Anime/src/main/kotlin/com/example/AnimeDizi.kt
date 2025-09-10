@@ -125,7 +125,7 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     //override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 anime Dizi 🎬"
+    override var name = "35 animemm Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -135,7 +135,6 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     private val DEFAULT_POSTER_URL =
         "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
 
-    // Yeni eklenen önbellek değişkeni
     private var cachedPlaylist: Playlist? = null
     private val CACHE_KEY = "iptv_playlist_cache"
 
@@ -149,27 +148,19 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val episode: Int = 0
     )
 
-    // Yeni eklenen yardımcı fonksiyon: Önbelleğe alma ve yükleme
     private suspend fun getOrFetchPlaylist(): Playlist {
-        // Önce belleği kontrol et
         if (cachedPlaylist != null) {
             return cachedPlaylist!!
         }
-
-        // Bellekte yoksa SharedPreferences'ı kontrol et
         val cachedJson = sharedPref?.getString(CACHE_KEY, null)
         if (cachedJson != null) {
             Log.d(name, "Playlist verisi önbellekten yükleniyor.")
             cachedPlaylist = parseJson<Playlist>(cachedJson)
             return cachedPlaylist!!
         }
-
-        // Önbellekte de yoksa, ağdan indir
         Log.d(name, "Playlist verisi ağdan indiriliyor.")
         val content = app.get(mainUrl).text
         val newPlaylist = IptvPlaylistParser().parseM3U(content)
-
-        // Veriyi belleğe ve SharedPreferences'a kaydet
         cachedPlaylist = newPlaylist
         sharedPref?.edit()?.putString(CACHE_KEY, newPlaylist.toJson())?.apply()
         
