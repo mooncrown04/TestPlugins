@@ -125,7 +125,7 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     //override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 animemmm Dizi 🎬"
+    override var name = "35 anime Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -259,13 +259,13 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
         val isDubbed = dubbedKeywords.any { keyword -> loadData.title.lowercase().contains(keyword) }
         
-        // Bölümleri önce bölüm numarasına, sonra sezona göre sıralıyoruz
+        // Bölümleri önce bölüm numarasına, sonra sezona göre sıralıyoruz ve sayısal karşılaştırma yapıyoruz
         val sortedItems = loadData.items.sortedWith(compareBy<PlaylistItem> { item ->
             val (_, _, episode) = parseEpisodeInfo(item.title.toString())
-            episode
+            episode ?: -1 // Bölüm numarası bulunamazsa en başa koy
         }.thenBy { item ->
             val (_, season, _) = parseEpisodeInfo(item.title.toString())
-            season
+            season ?: -1 // Sezon numarası bulunamazsa en başa koy
         })
 
         val processedEpisodes = sortedItems.mapIndexed { index, item ->
