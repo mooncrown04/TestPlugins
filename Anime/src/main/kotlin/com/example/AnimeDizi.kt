@@ -125,7 +125,7 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     //override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 anime Dizi 🎬"
+    override var name = "35 animemmm Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -259,10 +259,13 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
         val isDubbed = dubbedKeywords.any { keyword -> loadData.title.lowercase().contains(keyword) }
         
-        // Önce bölümleri bölüm numaralarına göre sıralıyoruz
-        val sortedItems = loadData.items.sortedWith(compareBy { item ->
+        // Bölümleri önce bölüm numarasına, sonra sezona göre sıralıyoruz
+        val sortedItems = loadData.items.sortedWith(compareBy<PlaylistItem> { item ->
             val (_, _, episode) = parseEpisodeInfo(item.title.toString())
             episode
+        }.thenBy { item ->
+            val (_, season, _) = parseEpisodeInfo(item.title.toString())
+            season
         })
 
         val processedEpisodes = sortedItems.mapIndexed { index, item ->
@@ -271,7 +274,6 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val finalEpisode = episode ?: (index + 1)
             
             newEpisode(
-                // loadLinks'e sadece o bölüme ait veriyi gönderiyoruz
                 LoadData(
                     items = listOf(item),
                     title = itemCleanTitle,
@@ -291,7 +293,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 this.episode = finalEpisode
                 this.posterUrl = loadData.poster
             }
-        }.sortedWith(compareBy({ it.season }, { it.episode }))
+        }
 
         val episodesMap = mutableMapOf<DubStatus, List<Episode>>()
 
