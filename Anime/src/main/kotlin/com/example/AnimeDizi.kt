@@ -340,8 +340,9 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             episodesMap.keys.map {
                 if (it == DubStatus.Dubbed) "Türkçe Dublaj" else "Türkçe Altyazılı"
             }
-        this.episodes = episodesMap.mapValues { it.value.toList() }
-        episodesMap.keys.forEach { addDubStatus(it) }
+       this.episodes = episodesMap.mapValues { it.value.toList() }.toMutableMap()
+       addDubStatus(parsed.dubStatus)
+
         this.recommendations = recommendedList.shuffled().take(10)
     }
 
