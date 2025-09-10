@@ -165,10 +165,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             )
 
              val language = firstShow.attributes["tvg-language"]?.lowercase()
-
-val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
-
-val isDubbed = dubbedKeywords.any { keyword -> language?.contains(keyword) == true }
+             val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
+             val isDubbed = dubbedKeywords.any { keyword -> language?.contains(keyword) == true }
             val searchResponse = newAnimeSearchResponse(cleanTitle, loadData.toJson())
             searchResponse.apply {
                 posterUrl = loadData.poster
@@ -217,7 +215,8 @@ addDubStatus(if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed)
                 title = cleanTitle,
                 poster = firstShow.attributes["tvg-logo"] ?: DEFAULT_POSTER_URL,
                 group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
-                nation = firstShow.attributes["tvg-country"] ?: "TR"
+                nation = firstShow.attributes["tvg-country"] ?: "TR",
+                dublaj = firstShow.attributes["tvg-language"] ?: "TURKCE"
             )
                val language = firstShow.attributes["tvg-language"]?.lowercase()
 
@@ -241,7 +240,6 @@ val isDubbed = dubbedKeywords.any { keyword -> language?.contains(keyword) == tr
         val loadData = parseJson<LoadData>(url)
         val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
         val cleanTitle = loadData.title
-
         val allShows = kanallar.items.filter {
             val (itemCleanTitle, _, _) = parseEpisodeInfo(it.title.toString())
             itemCleanTitle == cleanTitle
@@ -283,7 +281,6 @@ val isDubbed = dubbedKeywords.any { keyword -> language?.contains(keyword) == tr
                 }
             } else null
         }.sortedWith(compareBy({ it.season }, { it.episode }))
-
         val processedEpisodes = currentShowEpisodes.map { episode ->
             episode.apply {
                 val episodeLoadData = parseJson<LoadData>(this.data)
