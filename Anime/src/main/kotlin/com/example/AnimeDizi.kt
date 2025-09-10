@@ -259,7 +259,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
 
-    override suspend fun load(url: String): LoadResponse {
+override suspend fun load(url: String): LoadResponse {
     val loadData = parseJson<LoadData>(url)
 
     val finalPosterUrl = loadData.poster
@@ -341,7 +341,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         this.episodes = episodesMap
     }
     
-    response.addRecommended(recommendedList)
+    response.recommendations = recommendedList
     return response
 }
     override suspend fun loadLinks(
