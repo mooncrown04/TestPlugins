@@ -259,91 +259,63 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
 
-override suspend fun load(url: String): LoadResponse {
-    val loadData = parseJson<LoadData>(url)
+    override suspend fun load(url: String): LoadResponse {
+        val loadData = parseJson<LoadData>(url)
 
-    val finalPosterUrl = loadData.poster
-    val plot = "TMDB'den özet alınamadı."
+        val finalPosterUrl = loadData.poster
+        val plot = "TMDB'den özet alınamadı."
 
-    val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
-    val isDubbed = dubbedKeywords.any { keyword -> loadData.title.lowercase().contains(keyword) }
-    
-    val processedEpisodes = loadData.urls.mapIndexed { index, videoUrl ->
-        val (itemCleanTitle, season, episode) = parseEpisodeInfo(loadData.title)
-        val finalSeason = season ?: 1
-        val finalEpisode = episode ?: (index + 1)
+        val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
+        val isDubbed = dubbedKeywords.any { keyword -> loadData.title.lowercase().contains(keyword) }
         
-        newEpisode(
-            LoadData(
-                listOf(videoUrl),
-                loadData.title,
-                loadData.poster,
-                loadData.group,
-                loadData.nation,
-                finalSeason,
-                finalEpisode
-            ).toJson()
-        ) {
-            this.name = if (season != null && episode != null) {
-                "$itemCleanTitle S$finalSeason E$finalEpisode"
-            } else {
-                itemCleanTitle
+        val processedEpisodes = loadData.urls.mapIndexed { index, videoUrl ->
+            val (itemCleanTitle, season, episode) = parseEpisodeInfo(loadData.title)
+            val finalSeason = season ?: 1
+            val finalEpisode = episode ?: (index + 1)
+            
+            newEpisode(
+                LoadData(
+                    listOf(videoUrl),
+                    loadData.title,
+                    loadData.poster,
+                    loadData.group,
+                    loadData.nation,
+                    finalSeason,
+                    finalEpisode
+                ).toJson()
+            ) {
+                this.name = if (season != null && episode != null) {
+                    "$itemCleanTitle S$finalSeason E$finalEpisode"
+                } else {
+                    itemCleanTitle
+                }
+                this.season = finalSeason
+                this.episode = finalEpisode
+                this.posterUrl = loadData.poster
             }
-            this.season = finalSeason
-            this.episode = finalEpisode
-            this.posterUrl = loadData.poster
+        }.sortedWith(compareBy({ it.season }, { it.episode }))
+
+        val episodesMap = mutableMapOf<DubStatus, List<Episode>>()
+
+        if (processedEpisodes.isNotEmpty()) {
+            val languageStatus = if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed
+            episodesMap[languageStatus] = processedEpisodes
         }
-    }.sortedWith(compareBy({ it.season }, { it.episode }))
-
-    val episodesMap = mutableMapOf<DubStatus, List<Episode>>()
-
-    if (processedEpisodes.isNotEmpty()) {
-        val languageStatus = if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed
-        episodesMap[languageStatus] = processedEpisodes
-    }
-
-    val allShows = getOrFetchPlaylist().items
-    val currentTitleClean = parseEpisodeInfo(loadData.title).first
-
-    val recommendedList = allShows.filter {
-        val (itemCleanTitle, _, _) = parseEpisodeInfo(it.title.toString())
-        itemCleanTitle != currentTitleClean && 
-        (it.attributes["group-title"] == loadData.group || it.attributes["tvg-country"] == loadData.nation)
-    }.groupBy {
-        parseEpisodeInfo(it.title.toString()).first
-    }.values.shuffled().take(10).mapNotNull { shows ->
-        val firstShow = shows.firstOrNull() ?: return@mapNotNull null
-        val cleanTitle = parseEpisodeInfo(firstShow.title.toString()).first
-        val recomendedData = LoadData(
-            urls = shows.mapNotNull { it.url },
-            title = cleanTitle,
-            poster = firstShow.attributes["tvg-logo"] ?: DEFAULT_POSTER_URL,
-            group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
-            nation = firstShow.attributes["tvg-country"] ?: "TR"
-        )
-        val language = firstShow.attributes["tvg-language"]?.lowercase()
-        val isDubbedRec = dubbedKeywords.any { keyword -> language?.contains(keyword) == true }
-        newAnimeSearchResponse(cleanTitle, recomendedData.toJson()).apply {
-            posterUrl = recomendedData.poster
-            type = TvType.Anime
-            addDubStatus(if (isDubbedRec) DubStatus.Dubbed else DubStatus.Subbed)
+        
+        val response = newAnimeLoadResponse(
+            loadData.title,
+            url,
+            TvType.Anime
+        ) {
+            this.posterUrl = finalPosterUrl
+            this.plot = plot
+            this.tags = listOf(loadData.group, loadData.nation) + (if (isDubbed) "Türkçe Dublaj" else "Türkçe Altyazılı")
+            this.episodes = episodesMap
         }
+        
+        return response
     }
 
-    val response = newAnimeLoadResponse(
-        loadData.title,
-        url,
-        TvType.Anime
-    ) {
-        this.posterUrl = finalPosterUrl
-        this.plot = plot
-        this.tags = listOf(loadData.group, loadData.nation) + (if (isDubbed) "Türkçe Dublaj" else "Türkçe Altyazılı")
-        this.episodes = episodesMap
-    }
-    
-    response.recommendations = recommendedList
-    return response
-}
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
