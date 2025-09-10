@@ -161,15 +161,19 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
                 nation = firstShow.attributes["tvg-country"] ?: "TR"
             )
+
+             val language = firstShow.attributes["tvg-language"]?.lowercase()
+
+val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
+
+val isDubbed = dubbedKeywords.any { keyword -> language?.contains(keyword) == true }
             val searchResponse = newAnimeSearchResponse(cleanTitle, loadData.toJson())
             searchResponse.apply {
                 posterUrl = loadData.poster
                 type = TvType.Anime
-                if (firstShow.attributes["tvg-language"]?.contains("Dublaj", true) == true) {
-                    addDubStatus(DubStatus.Dubbed)
-                } else {
-                    addDubStatus(DubStatus.Subbed)
-                }
+
+addDubStatus(if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed)
+
             }
 
             val firstChar = cleanTitle.firstOrNull()?.uppercaseChar() ?: '#'
@@ -213,15 +217,19 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
                 nation = firstShow.attributes["tvg-country"] ?: "TR"
             )
+               val language = firstShow.attributes["tvg-language"]?.lowercase()
+
+val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
+
+val isDubbed = dubbedKeywords.any { keyword -> language?.contains(keyword) == true }
+
             val searchResponse = newAnimeSearchResponse(cleanTitle, loadData.toJson())
             searchResponse.apply {
                 posterUrl = loadData.poster
                 type = TvType.Anime
-                if (firstShow.attributes["tvg-language"]?.contains("Dublaj", true) == true) {
-                    addDubStatus(DubStatus.Dubbed)
-                } else {
-                    addDubStatus(DubStatus.Subbed)
-                }
+       
+addDubStatus(if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed)
+
             }
         }
     }
