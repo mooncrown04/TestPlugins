@@ -125,7 +125,7 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     //override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 animeler Dizi 🎬"
+    override var name = "35 anime Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -293,14 +293,22 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             episodesMap[languageStatus] = processedEpisodes
         }
         
-        // ÖNERİLENLER KISMI BAŞLANGIÇ: DİĞER BÖLÜMLERİ GÖSTERİYOR
-        val recommendedList = processedEpisodes.map { episode ->
-             newAnimeSearchResponse(episode.name ?: "", episode.data).apply {
-                posterUrl = episode.posterUrl
-                type = TvType.Anime
-                addDubStatus(if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed)
-             }
-        }
+        // ÖNERİLENLER KISMI BAŞLANGIÇ: "Bölüm No. Dizi Adı" formatı
+        val recommendedList = processedEpisodes
+             .filter { it.season != loadData.season || it.episode != loadData.episode }
+             .mapNotNull { episode ->
+                 val recommendedTitle = if (episode.episode != null) {
+                    "${episode.episode}. ${loadData.title}"
+                 } else {
+                    "Bilinmeyen Bölüm"
+                 }
+
+                 newAnimeSearchResponse(recommendedTitle, episode.data).apply {
+                    posterUrl = episode.posterUrl
+                    type = TvType.Anime
+                    addDubStatus(if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed)
+                 }
+            }
         // ÖNERİLENLER KISMI BİTİŞ
 
         val response = newAnimeLoadResponse(
@@ -327,10 +335,13 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val loadData = parseJson<LoadData>(data)
         loadData.urls.forEachIndexed { index, videoUrl ->
             val linkQuality = Qualities.Unknown.value
+            
+            val titleText = loadData.title
+            
             callback.invoke(
                 newExtractorLink(
                     source = this.name,
-                    name = "${loadData.title} Kaynak ${index + 1}",
+                    name = titleText,
                     url = videoUrl,
                     type = ExtractorLinkType.M3U8
                 ) {
