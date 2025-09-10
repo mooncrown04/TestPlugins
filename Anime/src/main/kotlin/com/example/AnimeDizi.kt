@@ -302,6 +302,36 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             episodesMap[languageStatus] = processedEpisodes
         }
         
+        // ÖNERİLENLER KISMI İÇİN BAŞLANGIÇ - DİKKAT: PERFORMANSI ETKİLER
+        val allShows = getOrFetchPlaylist().items
+        val currentTitleClean = parseEpisodeInfo(loadData.title).first
+
+        val recommendedList = allShows.filter {
+            val (itemCleanTitle, _, _) = parseEpisodeInfo(it.title.toString())
+            itemCleanTitle != currentTitleClean && 
+            (it.attributes["group-title"] == loadData.group || it.attributes["tvg-country"] == loadData.nation)
+        }.groupBy {
+            parseEpisodeInfo(it.title.toString()).first
+        }.values.shuffled().take(10).mapNotNull { shows ->
+            val firstShow = shows.firstOrNull() ?: return@mapNotNull null
+            val cleanTitle = parseEpisodeInfo(firstShow.title.toString()).first
+            val recomendedData = LoadData(
+                urls = shows.mapNotNull { it.url },
+                title = cleanTitle,
+                poster = firstShow.attributes["tvg-logo"] ?: DEFAULT_POSTER_URL,
+                group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
+                nation = firstShow.attributes["tvg-country"] ?: "TR"
+            )
+            val language = firstShow.attributes["tvg-language"]?.lowercase()
+            val isDubbedRec = dubbedKeywords.any { keyword -> language?.contains(keyword) == true }
+            newAnimeSearchResponse(cleanTitle, recomendedData.toJson()).apply {
+                posterUrl = recomendedData.poster
+                type = TvType.Anime
+                addDubStatus(if (isDubbedRec) DubStatus.Dubbed else DubStatus.Subbed)
+            }
+        }
+        // ÖNERİLENLER KISMI İÇİN BİTİŞ
+
         val response = newAnimeLoadResponse(
             loadData.title,
             url,
@@ -311,6 +341,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             this.plot = plot
             this.tags = listOf(loadData.group, loadData.nation) + (if (isDubbed) "Türkçe Dublaj" else "Türkçe Altyazılı")
             this.episodes = episodesMap
+            this.recommendations = recommendedList
         }
         
         return response
