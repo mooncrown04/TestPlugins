@@ -343,7 +343,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         this.plot = plot
         this.tags = listOf(loadData.group, loadData.nation) + (if (isDubbed) "Türkçe Dublaj" else "Türkçe Altyazılı")
         this.episodes = episodesMap
-        this.recomended = recommendedList // Önerilenler listesini ekliyoruz
+        this.recommended = recommendedList // Önerilenler listesini ekliyoruz
+
     }
 }
     override suspend fun loadLinks(
