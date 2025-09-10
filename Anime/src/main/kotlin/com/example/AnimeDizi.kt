@@ -125,7 +125,7 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     //override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 anime Dizi 🎬"
+    override var name = "35 animel Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -259,24 +259,23 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
         val isDubbed = dubbedKeywords.any { keyword -> loadData.title.lowercase().contains(keyword) }
         
-        // Bölümleri önce bölüm numarasına, sonra sezona göre sıralıyoruz ve sayısal karşılaştırma yapıyoruz
-        val sortedItems = loadData.items.sortedWith(compareBy<PlaylistItem> { item ->
-            val (_, _, episode) = parseEpisodeInfo(item.title.toString())
-            episode ?: -1 // Bölüm numarası bulunamazsa en başa koy
-        }.thenBy { item ->
-            val (_, season, _) = parseEpisodeInfo(item.title.toString())
-            season ?: -1 // Sezon numarası bulunamazsa en başa koy
-        })
-
-        val processedEpisodes = sortedItems.mapIndexed { index, item ->
+        // Önce bölümleri parse edip, güvenli bir şekilde sıralıyoruz
+        val parsedItems = loadData.items.map { item ->
             val (itemCleanTitle, season, episode) = parseEpisodeInfo(item.title.toString())
-            val finalSeason = season ?: 1
-            val finalEpisode = episode ?: (index + 1)
+            ParsedEpisode(item, itemCleanTitle, season, episode)
+        }
+        
+        val sortedEpisodes = parsedItems.sortedWith(compareBy<ParsedEpisode> { it.season ?: 0 }
+            .thenBy { it.episode ?: 0 })
+
+        val processedEpisodes = sortedEpisodes.mapIndexed { index, parsedItem ->
+            val finalSeason = parsedItem.season ?: 1
+            val finalEpisode = parsedItem.episode ?: (index + 1)
             
             newEpisode(
                 LoadData(
-                    items = listOf(item),
-                    title = itemCleanTitle,
+                    items = listOf(parsedItem.item),
+                    title = parsedItem.itemCleanTitle,
                     poster = loadData.poster,
                     group = loadData.group,
                     nation = loadData.nation,
@@ -284,10 +283,10 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                     episode = finalEpisode
                 ).toJson()
             ) {
-                this.name = if (season != null && episode != null) {
-                    "$itemCleanTitle S$finalSeason E$finalEpisode"
+                this.name = if (parsedItem.season != null && parsedItem.episode != null) {
+                    "${parsedItem.itemCleanTitle} S$finalSeason E$finalEpisode"
                 } else {
-                    itemCleanTitle
+                    parsedItem.itemCleanTitle
                 }
                 this.season = finalSeason
                 this.episode = finalEpisode
@@ -358,4 +357,11 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         }
         return true
     }
+    
+    private data class ParsedEpisode(
+        val item: PlaylistItem,
+        val itemCleanTitle: String,
+        val season: Int?,
+        val episode: Int?
+    )
 }
