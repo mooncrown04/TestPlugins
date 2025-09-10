@@ -248,7 +248,9 @@ val isDubbed = dubbedKeywords.any { keyword -> language?.contains(keyword) == tr
             ?: DEFAULT_POSTER_URL
         val plot = "TMDB'den özet alınamadı."
         
-        val dublaj = firstShow.attributes["tvg-language"] ?: "TURKCE"
+        val dublaj =  allShows.firstOrNull()?.attributes?.get("tvg-language")?.takeIf { it.isNotBlank() }
+            ?:"TURKCE"
+       
         
         val groupedEpisodes = allShows.groupBy {
             val (_, season, episode) = parseEpisodeInfo(it.title.toString())
