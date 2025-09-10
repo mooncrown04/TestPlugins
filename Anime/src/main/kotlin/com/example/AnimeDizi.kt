@@ -125,7 +125,7 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     //override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 anime Dizi 🎬"
+    override var name = "35 animem Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -146,7 +146,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val group: String,
         val nation: String,
         val season: Int = 1,
-        val episode: Int = 0
+        val episode: Int = 0,
+        val allPlaylistItems: List<PlaylistItem>? = null // Yeni eklenen özellik
     )
 
     // Yeni eklenen yardımcı fonksiyon: Önbelleğe alma ve yükleme
@@ -185,12 +186,14 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
         val alphabeticGroups = groupedByCleanTitle.toSortedMap().mapNotNull { (cleanTitle, shows) ->
             val firstShow = shows.firstOrNull() ?: return@mapNotNull null
+            // LoadData nesnesine tüm playlist öğelerini ekliyoruz
             val loadData = LoadData(
                 urls = shows.mapNotNull { it.url },
                 title = cleanTitle,
                 poster = firstShow.attributes["tvg-logo"] ?: DEFAULT_POSTER_URL,
                 group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
-                nation = firstShow.attributes["tvg-country"] ?: "TR"
+                nation = firstShow.attributes["tvg-country"] ?: "TR",
+                allPlaylistItems = kanallar.items
             )
 
             val language = firstShow.attributes["tvg-language"]?.lowercase()
@@ -242,7 +245,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 title = cleanTitle,
                 poster = firstShow.attributes["tvg-logo"] ?: DEFAULT_POSTER_URL,
                 group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
-                nation = firstShow.attributes["tvg-country"] ?: "TR"
+                nation = firstShow.attributes["tvg-country"] ?: "TR",
+                allPlaylistItems = kanallar.items // Buraya da ekliyoruz
             )
             val language = firstShow.attributes["tvg-language"]?.lowercase()
             val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
@@ -302,8 +306,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             episodesMap[languageStatus] = processedEpisodes
         }
         
-        // ÖNERİLENLER KISMI İÇİN BAŞLANGIÇ - DİKKAT: PERFORMANSI ETKİLER
-        val allShows = getOrFetchPlaylist().items
+        // ÖNERİLENLER KISMI İÇİN BAŞLANGIÇ - Veri doğrudan LoadData'dan alınıyor
+        val allShows = loadData.allPlaylistItems ?: getOrFetchPlaylist().items
         val currentTitleClean = parseEpisodeInfo(loadData.title).first
 
         val recommendedList = allShows.filter {
