@@ -223,19 +223,47 @@ val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowerc
             Pair(groupKey, searchResponse)
         }.groupBy { it.first }.mapValues { it.value.map { it.second } }.toSortedMap()
 
+    
         val finalHomePageLists = mutableListOf<HomePageList>()
         val turkishAlphabet = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUVYZ".split("").filter { it.isNotBlank() }
-        val fullAlphabet = mutableListOf<String>().apply { addAll(turkishAlphabet) }
+          // Alfabedeki Q, W, X gibi Türkçe'de olmayan ama listede olabilecek harfleri de ekler
+    val fullAlphabet = turkishAlphabet + listOf("Q", "W", "X") 
 
-        if (alphabeticGroups.containsKey("0-9"))
-            finalHomePageLists.add(HomePageList("🔢 0-9", alphabeticGroups["0-9"] ?: emptyList(), isHorizontalImages = true))
-        fullAlphabet.forEach { char ->
-            alphabeticGroups[char]?.let { finalHomePageLists.add(HomePageList("🎬 $char", it, isHorizontalImages = true)) }
+
+	   // Grupları işleme listesine ekler.
+    val allGroupsToProcess = mutableListOf<String>()
+    if (alphabeticGroups.containsKey("0-9")) allGroupsToProcess.add("0-9")
+    fullAlphabet.forEach { char ->
+        if (alphabeticGroups.containsKey(char)) {
+            allGroupsToProcess.add(char)
         }
-        alphabeticGroups["#"]?.let { finalHomePageLists.add(HomePageList("🔣 #", it, isHorizontalImages = true)) }
-
-        return newHomePageResponse(finalHomePageLists, hasNext = false)
     }
+    if (alphabeticGroups.containsKey("#")) allGroupsToProcess.add("#")
+
+    // Her harf grubunu dolaşır ve ana sayfa listelerini oluşturur.
+    allGroupsToProcess.forEach { char ->
+        val shows = alphabeticGroups[char]
+        if (shows != null && shows.isNotEmpty()) {
+            val listTitle = when (char) {
+                "0-9" -> "🔢 0-9 ${fullAlphabet.joinToString(" ") { it.lowercase(Locale.getDefault()) }}"
+                "#" -> "🔣 # ${fullAlphabet.joinToString(" ") { it.lowercase(Locale.getDefault()) }}"
+                else -> {
+                    val startIndex = fullAlphabet.indexOf(char)
+                    if (startIndex != -1) {
+                        val remainingAlphabet = fullAlphabet.subList(startIndex, fullAlphabet.size).joinToString(" ") { it }
+                        "🎬 $char ${remainingAlphabet.substring(1).lowercase(Locale.getDefault())}"
+                    } else {
+                        // Eğer harf alfabede yoksa yedek başlık
+                        "🎬 $char"
+                    }
+                }
+            }
+            finalHomePageLists.add(HomePageList(listTitle, shows, isHorizontalImages = true))
+        }
+    }
+
+    return newHomePageResponse(finalHomePageLists, hasNext = false)
+}
 
     override suspend fun search(query: String): List<SearchResponse> {
         val kanallar = getOrFetchPlaylist()
@@ -305,32 +333,27 @@ val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowerc
 
 override suspend fun load(url: String): LoadResponse {
     val loadData = parseJson<LoadData>(url)
-
-    // Playlist verisini yeniden çekmek yerine, loadData içindeki öğeleri kullanın.
     val allShows = loadData.items
 
     val finalPosterUrl = loadData.poster
     val plot = "TMDB'den özet alınamadı."
 
-    // Bölümleri Dublajlı ve Altyazılı olarak ayırmak için iki farklı liste oluştur.
     val dubbedEpisodes = mutableListOf<Episode>()
     val subbedEpisodes = mutableListOf<Episode>()
+    val unknownEpisodes = mutableListOf<Episode>() // Yeni liste eklendi
 
-// Bu listelerin sınıfın en üstünde tanımlı olduğundan emin olun.
     val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
     val subbedKeywords = listOf("altyazılı", "altyazi")
         
-    // Her bir bölümü kontrol ederek doğru listeye ekle.
     allShows.forEach { item ->
         val (itemCleanTitle, season, episode) = parseEpisodeInfo(item.title.toString())
         val finalSeason = season ?: 1
         val finalEpisode = episode ?: 1
-  val language = item.attributes["tvg-language"]?.lowercase()
-        // BURASI DÜZELTİLDİ: Artık daha kapsamlı bir kontrol yapılıyor.
-        val isDubbed = dubbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish"|| language == "dublaj"
+        val language = item.attributes["tvg-language"]?.lowercase()
+        
+        val isDubbed = dubbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish" || language == "dublaj"
         val isSubbed = subbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
-
-
+        val isUnknown = !isDubbed && !isSubbed // Yeni durum kontrolü
 
         val episodePoster = item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: finalPosterUrl
 
@@ -357,16 +380,18 @@ override suspend fun load(url: String): LoadResponse {
             this.posterUrl = episodePoster
         }
 
-      if (isDubbed) {
-                dubbedEpisodes.add(episodeObj)
-            } else if (isSubbed) {
-                subbedEpisodes.add(episodeObj)
-            }
+        if (isDubbed) {
+            dubbedEpisodes.add(episodeObj)
+        } else if (isSubbed) {
+            subbedEpisodes.add(episodeObj)
+        } else {
+            unknownEpisodes.add(episodeObj) // Etiket yoksa buraya eklenecek
         }
+    }
     
-    // Sezon ve bölümlere göre sırala.
     dubbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
     subbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
+    unknownEpisodes.sortWith(compareBy({ it.season }, { it.episode })) // Yeni listeyi sırala
 
     val episodesMap = mutableMapOf<DubStatus, List<Episode>>()
 
@@ -375,6 +400,18 @@ override suspend fun load(url: String): LoadResponse {
     }
     if (subbedEpisodes.isNotEmpty()) {
         episodesMap[DubStatus.Subbed] = subbedEpisodes
+    }
+    if (unknownEpisodes.isNotEmpty()) {
+        // Etiketsiz bölümler için 'DubStatus.Subbed' veya 'Dubbed' kullanılabilir,
+        // ancak Cloudstream'in arayüzünde "Unknown" diye bir etiket olmadığı için 
+        // en mantıklı seçeneklerden biri 'Subbed' olarak eklemektir, 
+        // böylece 'Altyazılı' sekmesinde görünürler.
+        // Diğer bir seçenek, `episodesMap`'e hiç eklemeyip, `dubbedEpisodes` ve 
+        // `subbedEpisodes`'ı birleştirmeden önce tüm listeyi birleştirmektir.
+        
+        // Şimdilik en basit çözüm olarak tüm bölümleri tek bir listede birleştirelim.
+        val combinedEpisodes = dubbedEpisodes + subbedEpisodes + unknownEpisodes
+        episodesMap[DubStatus.Subbed] = combinedEpisodes
     }
     
     val tags = mutableListOf<String>()
@@ -387,25 +424,23 @@ override suspend fun load(url: String): LoadResponse {
         tags.add("Türkçe Altyazılı")
     }
 
-    val recommendedList = (dubbedEpisodes + subbedEpisodes)
-        .filter { it.season != loadData.season || it.episode != loadData.episode }
+    val recommendedList = (dubbedEpisodes + subbedEpisodes + unknownEpisodes) // Önerilenler listesine hepsi dahil ediliyor
         .shuffled()
         .take(10)
         .mapNotNull { episode ->
             val episodeLoadData = parseJson<LoadData>(episode.data)
-             // Önerilenler listesinin başlıklarına bölüm numarasını ekliyoruz
-        val episodeTitleWithNumber = if (episodeLoadData.episode > 0) {
-            "${episodeLoadData.title} S${episodeLoadData.season} E${episodeLoadData.episode}"
-        } else {
-            episodeLoadData.title
-        }
+            val episodeTitleWithNumber = if (episodeLoadData.episode > 0) {
+                "${episodeLoadData.title} S${episodeLoadData.season} E${episodeLoadData.episode}"
+            } else {
+                episodeLoadData.title
+            }
             
             newAnimeSearchResponse(episodeTitleWithNumber, episode.data).apply {
                 posterUrl = episodeLoadData.poster
                 type = TvType.Anime
                 if (episodeLoadData.isDubbed || episodeLoadData.isSubbed) {
-                        addDubStatus(dubExist = episodeLoadData.isDubbed, subExist = episodeLoadData.isSubbed)
-                    }
+                    addDubStatus(dubExist = episodeLoadData.isDubbed, subExist = episodeLoadData.isSubbed)
+                }
             }
         }
 
