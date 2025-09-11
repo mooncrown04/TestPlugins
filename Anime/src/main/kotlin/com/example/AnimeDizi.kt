@@ -13,7 +13,7 @@ import com.lagradost.cloudstream3.DubStatus
 import com.lagradost.cloudstream3.addDubStatus
 import java.io.InputStream
 import java.util.Locale
-import com.lagradost.cloudstream3.Actor
+import com.lagradost.cloudstream3.ActorData
 // --- Yardımcı Sınıflar ---
 data class Playlist(val items: List<PlaylistItem> = emptyList())
 
@@ -456,10 +456,10 @@ override suspend fun load(url: String): LoadResponse {
         this.recommendations = recommendedList
    // YENİ HALİ: `Actor` ismini dizinin başlığı yapma
     this.actors = listOf(
-        Actor(loadData.title, finalPosterUrl))
+       ActorData(loadData.title, finalPosterUrl))
 	  // YENİ EKLEME: `Actor` listesini buraya ekleyin
     this.actors = listOf(
-        Actor("MoOnCrOwN", "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"))
+        ActorData("MoOnCrOwN", "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"))
 	
 	
 	
