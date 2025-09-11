@@ -334,12 +334,6 @@ override suspend fun load(url: String): LoadResponse {
         val isSubbed = subbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
     
 
-      if (isDubbed) {
-            dubbedEpisodes.add(episodeObj)
-        } else { // Burası sorunlu
-            subbedEpisodes.add(episodeObj)
-        }
-    }
 
 
 
