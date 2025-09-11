@@ -190,7 +190,9 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val languageStatus = when {
                 isDubbed -> DubStatus.Dubbed
                 isSubbed -> DubStatus.Subbed
-                else -> DubStatus.Subbed
+                else -> null
+                //else -> DubStatus.Subbed
+                
             }
             val loadData = LoadData(
                 items = shows,
@@ -255,8 +257,9 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             
             val languageStatus = when {
                 isDubbed -> DubStatus.Dubbed
-                isSubbed -> DubStatus.Subbed
-                else -> DubStatus.Subbed
+                isSubbed -> DubStatus.Subbed      
+                else -> null
+             //   else -> DubStatus.Subbed
             }
             val loadData = LoadData(
                 items = shows,
@@ -310,7 +313,8 @@ override suspend fun load(url: String): LoadResponse {
             val languageStatus = when {
                 isDubbed -> DubStatus.Dubbed
                 isSubbed -> DubStatus.Subbed
-                else -> DubStatus.Subbed
+             else -> null
+             //   else -> DubStatus.Subbed
             }
 
         val episodePoster = item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: finalPosterUrl
