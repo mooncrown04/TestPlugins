@@ -340,7 +340,7 @@ override suspend fun load(url: String): LoadResponse {
 
     val dubbedEpisodes = mutableListOf<Episode>()
     val subbedEpisodes = mutableListOf<Episode>()
-    val unknownEpisodes = mutableListOf<Episode>() // Yeni liste eklendi
+    val unknownEpisodes = mutableListOf<Episode>()
 
     val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
     val subbedKeywords = listOf("altyazılı", "altyazi")
@@ -353,8 +353,7 @@ override suspend fun load(url: String): LoadResponse {
         
         val isDubbed = dubbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish" || language == "dublaj"
         val isSubbed = subbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
-        val isUnknown = !isDubbed && !isSubbed // Yeni durum kontrolü
-
+        
         val episodePoster = item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: finalPosterUrl
 
         val episodeObj = newEpisode(
@@ -385,13 +384,13 @@ override suspend fun load(url: String): LoadResponse {
         } else if (isSubbed) {
             subbedEpisodes.add(episodeObj)
         } else {
-            unknownEpisodes.add(episodeObj) // Etiket yoksa buraya eklenecek
+            unknownEpisodes.add(episodeObj)
         }
     }
     
     dubbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
     subbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
-    unknownEpisodes.sortWith(compareBy({ it.season }, { it.episode })) // Yeni listeyi sırala
+    unknownEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
 
     val episodesMap = mutableMapOf<DubStatus, List<Episode>>()
 
@@ -401,28 +400,31 @@ override suspend fun load(url: String): LoadResponse {
     if (subbedEpisodes.isNotEmpty()) {
         episodesMap[DubStatus.Subbed] = subbedEpisodes
     }
- // Etiketi olmayan bölümler için özel bir durum.
-    // Eğer sadece etiketsiz bölümler varsa, bunları da bir dublaj veya altyazı grubuna eklemek yerine
-    // en iyi yöntem, 'episodes' anahtarının direkt olarak tüm listeyi içermesini sağlamaktır.
-    // Böylece altyazı veya dublaj etiketi olmadan da bölümler oynatılabilir.
-    // Bunun için alttaki mantık daha doğru.
-    if (episodesMap.isEmpty() && unknownEpisodes.isNotEmpty()) {
-         // Eğer hiç dublajlı veya altyazılı bölüm yoksa, tüm bölümleri "Subbed" olarak gösteririz.
-         // Bu, oynatma düğmesinin görünmesi için bir geçici çözümdür.
-         episodesMap[DubStatus.Subbed] = unknownEpisodes
-    }
+
+    // Etiketsiz bölümler, eğer varlarsa ve başka etiketli bölüm yoksa, 
+    // "Dubbed" veya "Subbed" olarak gösterilmek yerine kendi başlarına listelenir.
+    // Cloudstream arayüzünde oynatma tuşu için bir kategoriye ait olmaları gerekir.
+    // Bu yüzden en iyi çözüm, tüm bölümleri tek bir liste altında birleştirmektir.
+    val combinedEpisodes = mutableListOf<Episode>()
+    combinedEpisodes.addAll(dubbedEpisodes)
+    combinedEpisodes.addAll(subbedEpisodes)
+    combinedEpisodes.addAll(unknownEpisodes)
+    combinedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
+    
+    episodesMap[DubStatus.Subbed] = combinedEpisodes
     
     val tags = mutableListOf<String>()
     tags.add(loadData.group)
     tags.add(loadData.nation)
-    if (episodesMap.containsKey(DubStatus.Dubbed)) {
+    // Sadece gerçekten dublajlı veya altyazılı bölüm varsa etiket eklenir.
+    if (dubbedEpisodes.isNotEmpty()) {
         tags.add("Türkçe Dublaj")
     }
-    if (episodesMap.containsKey(DubStatus.Subbed)) {
+    if (subbedEpisodes.isNotEmpty()) {
         tags.add("Türkçe Altyazılı")
     }
 
-    val recommendedList = (dubbedEpisodes + subbedEpisodes + unknownEpisodes) // Önerilenler listesine hepsi dahil ediliyor
+    val recommendedList = (dubbedEpisodes + subbedEpisodes + unknownEpisodes)
         .shuffled()
         .take(10)
         .mapNotNull { episode ->
