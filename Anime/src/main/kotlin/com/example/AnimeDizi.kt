@@ -454,7 +454,16 @@ override suspend fun load(url: String): LoadResponse {
         this.tags = tags
         this.episodes = episodesMap
         this.recommendations = recommendedList
-    }
+   // YENİ HALİ: `Actor` ismini dizinin başlığı yapma
+    this.actors = listOf(
+        Actor(loadData.title, finalPosterUrl))
+	  // YENİ EKLEME: `Actor` listesini buraya ekleyin
+    this.actors = listOf(
+        Actor("MoOnCrOwN", "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"))
+	
+	
+	
+	}
 }
 
     override suspend fun loadLinks(
