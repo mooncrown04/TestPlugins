@@ -321,7 +321,6 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 this.episode = finalEpisode
                 this.posterUrl = episodePoster
                 if (isDubbed || isSubbed) {
-                    // HATA DÜZELTİLDİ: addDubStatus'a doğru parametreleri veriyoruz
                     addDubStatus(dubExist = isDubbed, subExist = isSubbed)
                 }
             }
