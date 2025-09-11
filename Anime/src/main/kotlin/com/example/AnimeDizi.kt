@@ -207,7 +207,14 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             searchResponse.apply {
                 posterUrl = loadData.poster
                 type = TvType.Anime
-                addDubStatus(languageStatus)
+               // addDubStatus(languageStatus)
+              // BURASI DÜZELTİLDİ: Sadece languageStatus null değilse ekle
+                if (languageStatus != null) {
+                    addDubStatus(languageStatus)
+                }
+            
+            
+            
             }
 
             val firstChar = cleanTitle.firstOrNull()?.uppercaseChar() ?: '#'
@@ -267,14 +274,18 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 poster = firstShow.attributes["tvg-logo"] ?: DEFAULT_POSTER_URL,
                 group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
                 nation = firstShow.attributes["tvg-country"] ?: "TR",
-                dubStatus = languageStatus
+                dubStatus = languageStatus           
+            
             )
             
             val searchResponse = newAnimeSearchResponse(cleanTitle, loadData.toJson())
             searchResponse.apply {
                 posterUrl = loadData.poster
                 type = TvType.Anime
-                addDubStatus(languageStatus)
+                  // BURASI DÜZELTİLDİ: Sadece languageStatus null değilse ekle
+                if (languageStatus != null) {
+                    addDubStatus(languageStatus)
+                }
             }
         }
     }
@@ -339,27 +350,31 @@ override suspend fun load(url: String): LoadResponse {
             this.season = finalSeason
             this.episode = finalEpisode
             this.posterUrl = episodePoster
+         this.posterUrl = episodePoster
+                // BURASI DÜZELTİLDİ: Sadece languageStatus null değilse ekle
+                if (languageStatus != null) {
+                    addDubStatus(languageStatus)
+                }
+            }
+
+            if (isDubbed) {
+                dubbedEpisodes.add(episodeObj)
+            } else {
+                subbedEpisodes.add(episodeObj)
+            }
         }
 
-        if (isDubbed) {
-            dubbedEpisodes.add(episodeObj)
-        } else {
-            subbedEpisodes.add(episodeObj)
+        dubbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
+        subbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
+
+        val episodesMap = mutableMapOf<DubStatus, List<Episode>>()
+
+        if (dubbedEpisodes.isNotEmpty()) {
+            episodesMap[DubStatus.Dubbed] = dubbedEpisodes
         }
-    }
-    
-    // Sezon ve bölümlere göre sırala.
-    dubbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
-    subbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
-
-    val episodesMap = mutableMapOf<DubStatus, List<Episode>>()
-
-    if (dubbedEpisodes.isNotEmpty()) {
-        episodesMap[DubStatus.Dubbed] = dubbedEpisodes
-    }
-    if (subbedEpisodes.isNotEmpty()) {
-        episodesMap[DubStatus.Subbed] = subbedEpisodes
-    }
+        if (subbedEpisodes.isNotEmpty()) {
+            episodesMap[DubStatus.Subbed] = subbedEpisodes
+        }
     
     val tags = mutableListOf<String>()
     tags.add(loadData.group)
