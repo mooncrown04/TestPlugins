@@ -125,7 +125,7 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     //override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 anime Dizi 🎬"
+    override var name = "35 animef Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -225,44 +225,18 @@ val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowerc
 
         val finalHomePageLists = mutableListOf<HomePageList>()
         val turkishAlphabet = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUVYZ".split("").filter { it.isNotBlank() }
-          // Alfabedeki Q, W, X gibi Türkçe'de olmayan ama listede olabilecek harfleri de ekler
-    val fullAlphabet = turkishAlphabet + listOf("Q", "W", "X") 
+        val fullAlphabet = mutableListOf<String>().apply { addAll(turkishAlphabet) }
 
-
-	   // Grupları işleme listesine ekler.
-    val allGroupsToProcess = mutableListOf<String>()
-    if (alphabeticGroups.containsKey("0-9")) allGroupsToProcess.add("0-9")
-    fullAlphabet.forEach { char ->
-        if (alphabeticGroups.containsKey(char)) {
-            allGroupsToProcess.add(char)
+        if (alphabeticGroups.containsKey("0-9"))
+            finalHomePageLists.add(HomePageList("🔢 0-9", alphabeticGroups["0-9"] ?: emptyList(), isHorizontalImages = true))
+        fullAlphabet.forEach { char ->
+            alphabeticGroups[char]?.let { finalHomePageLists.add(HomePageList("🎬 $char", it, isHorizontalImages = true)) }
         }
-    }
-    if (alphabeticGroups.containsKey("#")) allGroupsToProcess.add("#")
+        alphabeticGroups["#"]?.let { finalHomePageLists.add(HomePageList("🔣 #", it, isHorizontalImages = true)) }
 
-    // Her harf grubunu dolaşır ve ana sayfa listelerini oluşturur.
-    allGroupsToProcess.forEach { char ->
-        val shows = alphabeticGroups[char]
-        if (shows != null && shows.isNotEmpty()) {
-            val listTitle = when (char) {
-                "0-9" -> "🔢 0-9 ${fullAlphabet.joinToString(" ") { it.lowercase(Locale.getDefault()) }}"
-                "#" -> "🔣 # ${fullAlphabet.joinToString(" ") { it.lowercase(Locale.getDefault()) }}"
-                else -> {
-                    val startIndex = fullAlphabet.indexOf(char)
-                    if (startIndex != -1) {
-                        val remainingAlphabet = fullAlphabet.subList(startIndex, fullAlphabet.size).joinToString(" ") { it }
-                        "🎬 $char ${remainingAlphabet.substring(1).lowercase(Locale.getDefault())}"
-                    } else {
-                        // Eğer harf alfabede yoksa yedek başlık
-                        "🎬 $char"
-                    }
-                }
-            }
-            finalHomePageLists.add(HomePageList(listTitle, shows, isHorizontalImages = true))
-        }
+        return newHomePageResponse(finalHomePageLists, hasNext = false)
     }
 
-    return newHomePageResponse(finalHomePageLists, hasNext = false)
-}
     override suspend fun search(query: String): List<SearchResponse> {
         val kanallar = getOrFetchPlaylist()
         val groupedByCleanTitle = kanallar.items.groupBy {
