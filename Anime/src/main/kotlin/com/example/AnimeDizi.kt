@@ -293,7 +293,7 @@ val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowerc
             searchResponse.apply {
                 posterUrl = loadData.poster
                 type = TvType.Anime
-                addDubStatus(languageStatus)
+              
             if (isDubbed || isSubbed) {
                     addDubStatus(dubExist = isDubbed, subExist = isSubbed)
                 }
@@ -333,6 +333,16 @@ override suspend fun load(url: String): LoadResponse {
         val isDubbed = dubbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish"|| language == "dublaj"
         val isSubbed = subbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
     
+
+      if (isDubbed) {
+            dubbedEpisodes.add(episodeObj)
+        } else { // Burası sorunlu
+            subbedEpisodes.add(episodeObj)
+        }
+    }
+
+
+
 
         val episodePoster = item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: finalPosterUrl
 
