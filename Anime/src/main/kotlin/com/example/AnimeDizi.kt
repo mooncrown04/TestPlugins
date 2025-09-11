@@ -146,8 +146,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val nation: String,
         val season: Int = 1,
         val episode: Int = 0,
-        val isDubbed: Boolean, // Artık dubStatus yerine boolean kullanıyoruz
-        val isSubbed: Boolean // Artık dubStatus yerine boolean kullanıyoruz
+        val isDubbed: Boolean,
+        val isSubbed: Boolean
     )
 
     private suspend fun getOrFetchPlaylist(): Playlist {
@@ -202,8 +202,9 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             searchResponse.apply {
                 posterUrl = loadData.poster
                 type = TvType.Anime
-                // HATA DÜZELTİLDİ: isDubbed ve isSubbed boolean'larını doğrudan kullanıyoruz.
-                addDubStatus(dubExist = isDubbed, subExist = isSubbed)
+                if (isDubbed || isSubbed) {
+                    addDubStatus(dubExist = isDubbed, subExist = isSubbed)
+                }
             }
 
             val firstChar = cleanTitle.firstOrNull()?.uppercaseChar() ?: '#'
@@ -264,8 +265,9 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             searchResponse.apply {
                 posterUrl = loadData.poster
                 type = TvType.Anime
-                // HATA DÜZELTİLDİ: isDubbed ve isSubbed boolean'larını doğrudan kullanıyoruz.
-                addDubStatus(dubExist = isDubbed, subExist = isSubbed)
+                if (isDubbed || isSubbed) {
+                    addDubStatus(dubExist = isDubbed, subExist = isSubbed)
+                }
             }
         }
     }
@@ -318,8 +320,9 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 this.season = finalSeason
                 this.episode = finalEpisode
                 this.posterUrl = episodePoster
-                // HATA DÜZELTİLDİ: isDubbed ve isSubbed boolean'larını doğrudan kullanıyoruz.
-                addDubStatus(dubExist = isDubbed, subExist = isSubbed)
+                if (isDubbed || isSubbed) {
+                    addDubStatus(isDub = isDubbed)
+                }
             }
 
             if (isDubbed) {
@@ -367,8 +370,9 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 newAnimeSearchResponse(episodeTitleWithNumber, episode.data).apply {
                     posterUrl = episodeLoadData.poster
                     type = TvType.Anime
-                    // HATA DÜZELTİLDİ: isDubbed ve isSubbed boolean'larını doğrudan kullanıyoruz.
-                    addDubStatus(dubExist = episodeLoadData.isDubbed, subExist = episodeLoadData.isSubbed)
+                    if (episodeLoadData.isDubbed || episodeLoadData.isSubbed) {
+                        addDubStatus(dubExist = episodeLoadData.isDubbed, subExist = episodeLoadData.isSubbed)
+                    }
                 }
             }
 
