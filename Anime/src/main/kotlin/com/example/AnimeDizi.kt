@@ -146,7 +146,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val nation: String,
         val season: Int = 1,
         val episode: Int = 0,
-        val dubStatus: DubStatus? = null
+        val isDubbed: Boolean, // Artık dubStatus yerine boolean kullanıyoruz
+        val isSubbed: Boolean // Artık dubStatus yerine boolean kullanıyoruz
     )
 
     private suspend fun getOrFetchPlaylist(): Playlist {
@@ -187,28 +188,22 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val isDubbed = dubbedKeywords.any { languageAndTitle.contains(it) }
             val isSubbed = subbedKeywords.any { languageAndTitle.contains(it) }
             
-            val languageStatus = when {
-                isDubbed -> DubStatus.Dubbed
-                isSubbed -> DubStatus.Subbed
-                else -> null
-            }
             val loadData = LoadData(
                 items = shows,
                 title = cleanTitle,
                 poster = firstShow.attributes["tvg-logo"] ?: DEFAULT_POSTER_URL,
                 group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
                 nation = firstShow.attributes["tvg-country"] ?: "TR",
-                dubStatus = languageStatus
+                isDubbed = isDubbed,
+                isSubbed = isSubbed
             )
 
             val searchResponse = newAnimeSearchResponse(cleanTitle, loadData.toJson())
             searchResponse.apply {
                 posterUrl = loadData.poster
                 type = TvType.Anime
-                // HATA DÜZELTİLDİ: Null değeri güvenli bir şekilde işliyoruz
-                languageStatus?.let { status ->
-                    addDubStatus(status)
-                }
+                // HATA DÜZELTİLDİ: isDubbed ve isSubbed boolean'larını doğrudan kullanıyoruz.
+                addDubStatus(dubExist = isDubbed, subExist = isSubbed)
             }
 
             val firstChar = cleanTitle.firstOrNull()?.uppercaseChar() ?: '#'
@@ -255,28 +250,22 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val isDubbed = dubbedKeywords.any { languageAndTitle.contains(it) }
             val isSubbed = subbedKeywords.any { languageAndTitle.contains(it) }
             
-            val languageStatus = when {
-                isDubbed -> DubStatus.Dubbed
-                isSubbed -> DubStatus.Subbed
-                else -> null
-            }
             val loadData = LoadData(
                 items = shows,
                 title = cleanTitle,
                 poster = firstShow.attributes["tvg-logo"] ?: DEFAULT_POSTER_URL,
                 group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
                 nation = firstShow.attributes["tvg-country"] ?: "TR",
-                dubStatus = languageStatus
+                isDubbed = isDubbed,
+                isSubbed = isSubbed
             )
 
             val searchResponse = newAnimeSearchResponse(cleanTitle, loadData.toJson())
             searchResponse.apply {
                 posterUrl = loadData.poster
                 type = TvType.Anime
-                // HATA DÜZELTİLDİ: Null değeri güvenli bir şekilde işliyoruz
-                languageStatus?.let { status ->
-                    addDubStatus(status)
-                }
+                // HATA DÜZELTİLDİ: isDubbed ve isSubbed boolean'larını doğrudan kullanıyoruz.
+                addDubStatus(dubExist = isDubbed, subExist = isSubbed)
             }
         }
     }
@@ -306,12 +295,6 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val isDubbed = dubbedKeywords.any { languageAndTitle.contains(it) }
             val isSubbed = subbedKeywords.any { languageAndTitle.contains(it) }
             
-            val languageStatus = when {
-                isDubbed -> DubStatus.Dubbed
-                isSubbed -> DubStatus.Subbed
-                else -> null
-            }
-
             val episodePoster = item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: finalPosterUrl
 
             val episodeObj = newEpisode(
@@ -323,7 +306,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                     nation = item.attributes["tvg-country"] ?: "TR",
                     season = finalSeason,
                     episode = finalEpisode,
-                    dubStatus = languageStatus
+                    isDubbed = isDubbed,
+                    isSubbed = isSubbed
                 ).toJson()
             ) {
                 this.name = if (season != null && episode != null) {
@@ -334,10 +318,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 this.season = finalSeason
                 this.episode = finalEpisode
                 this.posterUrl = episodePoster
-                // HATA DÜZELTİLDİ: Null değeri güvenli bir şekilde işliyoruz
-                languageStatus?.let { status ->
-                    addDubStatus(status)
-                }
+                // HATA DÜZELTİLDİ: isDubbed ve isSubbed boolean'larını doğrudan kullanıyoruz.
+                addDubStatus(dubExist = isDubbed, subExist = isSubbed)
             }
 
             if (isDubbed) {
@@ -385,10 +367,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 newAnimeSearchResponse(episodeTitleWithNumber, episode.data).apply {
                     posterUrl = episodeLoadData.poster
                     type = TvType.Anime
-                    // HATA DÜZELTİLDİ: Null değeri güvenli bir şekilde işliyoruz
-                    episodeLoadData.dubStatus?.let { status ->
-                        addDubStatus(status)
-                    }
+                    // HATA DÜZELTİLDİ: isDubbed ve isSubbed boolean'larını doğrudan kullanıyoruz.
+                    addDubStatus(dubExist = episodeLoadData.isDubbed, subExist = episodeLoadData.isSubbed)
                 }
             }
 
