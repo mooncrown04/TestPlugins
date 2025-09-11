@@ -125,7 +125,7 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     //override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 zanime Dizi 🎬"
+    override var name = "35 anime Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -298,19 +298,28 @@ override suspend fun load(url: String): LoadResponse {
     val dubbedEpisodes = mutableListOf<Episode>()
     val subbedEpisodes = mutableListOf<Episode>()
 
+
+// Bu listelerin sınıfın en üstünde tanımlı olduğundan emin olun.
+    val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
+    val subbedKeywords = listOf("altyazılı", "altyazi")
+    
+
+    
     // Her bir bölümü kontrol ederek doğru listeye ekle.
     allShows.forEach { item ->
         val (itemCleanTitle, season, episode) = parseEpisodeInfo(item.title.toString())
         val finalSeason = season ?: 1
         val finalEpisode = episode ?: 1
- 
-        val isDubbed = item.attributes["tvg-language"]?.lowercase() == "turkish" || item.title.toString().lowercase().contains("türkçe")       
-        val isSubbed = item.attributes["tvg-language"]?.lowercase() == "altyazılı" || item.title.toString().lowercase().contains("altyazılı")
-    val languageStatus = when {
-    isDubbed -> DubStatus.Dubbed
-    isSubbed -> DubStatus.Subbed
-    else -> DubStatus.Subbed // Eğer ne dublaj ne de altyazı etiketi bulunamazsa varsayılan olarak altyazılı sayılır.
-}
+  val language = item.attributes["tvg-language"]?.lowercase()
+        // BURASI DÜZELTİLDİ: Artık daha kapsamlı bir kontrol yapılıyor.
+        val isDubbed = dubbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish"
+        val isSubbed = subbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
+        val languageStatus = when {
+            isDubbed -> DubStatus.Dubbed
+            isSubbed -> DubStatus.Subbed
+            else -> DubStatus.Subbed // Eğer ne dublaj ne de altyazı etiketi bulunamazsa varsayılan olarak altyazılı sayılır.
+        }
+
         val episodePoster = item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: finalPosterUrl
 
         val episodeObj = newEpisode(
@@ -371,6 +380,13 @@ override suspend fun load(url: String): LoadResponse {
         .take(10)
         .mapNotNull { episode ->
             val episodeLoadData = parseJson<LoadData>(episode.data)
+             // Önerilenler listesinin başlıklarına bölüm numarasını ekliyoruz
+        val episodeTitleWithNumber = if (episodeLoadData.episode > 0) {
+            "${episodeLoadData.title} S${episodeLoadData.season} E${episodeLoadData.episode}"
+        } else {
+            episodeLoadData.title
+        }
+            
             newAnimeSearchResponse(episodeLoadData.title, episode.data).apply {
                 posterUrl = episodeLoadData.poster
                 type = TvType.Anime
