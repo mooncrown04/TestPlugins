@@ -454,12 +454,18 @@ override suspend fun load(url: String): LoadResponse {
         this.tags = tags
         this.episodes = episodesMap
         this.recommendations = recommendedList
-   // YENİ HALİ: `Actor` ismini dizinin başlığı yapma
+    // YENİ HALİ: ActorData'yı doğru bir şekilde oluşturma
+    // Önce bir Actor nesnesi oluşturun ve ismini, resim URL'sini verin.
+    val actor = Actor(loadData.title, finalPosterUrl)
+    
+    // Sonra, ActorData nesnesi oluşturup bu actor'ı ve rolünü (opsiyonel) aktarın.
+    // Şimdilik rolü null olarak bırakabiliriz.
     this.actors = listOf(
-       ActorData(loadData.title, finalPosterUrl))
-	  // YENİ EKLEME: `Actor` listesini buraya ekleyin
-    this.actors = listOf(
-        ActorData("MoOnCrOwN", "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"))
+        ActorData(actor, null)
+    )
+		
+		//this.actors = listOf(
+     //   ActorData("MoOnCrOwN", "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"))
 	
 	
 	
