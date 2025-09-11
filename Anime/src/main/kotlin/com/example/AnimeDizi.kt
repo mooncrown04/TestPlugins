@@ -316,13 +316,10 @@ override suspend fun load(url: String): LoadResponse {
     val dubbedEpisodes = mutableListOf<Episode>()
     val subbedEpisodes = mutableListOf<Episode>()
 
-
 // Bu listelerin sınıfın en üstünde tanımlı olduğundan emin olun.
     val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
     val subbedKeywords = listOf("altyazılı", "altyazi")
-    
-
-    
+        
     // Her bir bölümü kontrol ederek doğru listeye ekle.
     allShows.forEach { item ->
         val (itemCleanTitle, season, episode) = parseEpisodeInfo(item.title.toString())
@@ -332,9 +329,6 @@ override suspend fun load(url: String): LoadResponse {
         // BURASI DÜZELTİLDİ: Artık daha kapsamlı bir kontrol yapılıyor.
         val isDubbed = dubbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish"|| language == "dublaj"
         val isSubbed = subbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
-    
-
-
 
 
 
@@ -363,12 +357,12 @@ override suspend fun load(url: String): LoadResponse {
             this.posterUrl = episodePoster
         }
 
-        if (isDubbed) {
-            dubbedEpisodes.add(episodeObj)
-        } else {
-            subbedEpisodes.add(episodeObj)
+      if (isDubbed) {
+                dubbedEpisodes.add(episodeObj)
+            } else if (isSubbed) {
+                subbedEpisodes.add(episodeObj)
+            }
         }
-    }
     
     // Sezon ve bölümlere göre sırala.
     dubbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
