@@ -125,7 +125,7 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     //override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 animed Dizi 🎬"
+    override var name = "35 anime Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -177,25 +177,21 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
         val alphabeticGroups = groupedByCleanTitle.toSortedMap().mapNotNull { (cleanTitle, shows) ->
             val firstShow = shows.firstOrNull() ?: return@mapNotNull null
-            
-       
-          val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
-val subbedKeywords = listOf("altyazılı", "altyazi")
-            
-            
-            val language = firstShow.attributes["tvg-language"]?.lowercase()
+             
+     val dubbedKeywords = listOf("dublaj", "türkçe", "turkish", "tr")
+            val subbedKeywords = listOf("altyazılı", "altyazi", "en", "eng")
 
-// Dublaj kontrolü:
-val isDubbed = dubbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish"|| language == "dublaj"
 
-// Altyazı kontrolü:
-val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
-     //       val languageStatus = if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed
-val languageStatus = when {
-    isDubbed -> DubStatus.Dubbed
-    isSubbed -> DubStatus.Subbed
-    else -> DubStatus.Subbed // Eğer ne dublaj ne de altyazı etiketi bulunamazsa varsayılan olarak altyazılı sayılır.
-}
+            // BURASI DÜZELTİLDİ: Başlık ve dil etiketi tek bir kontrolde birleştirildi.
+            val languageAndTitle = (firstShow.title.toString() + " " + (firstShow.attributes["tvg-language"] ?: "")).lowercase()
+            val isDubbed = dubbedKeywords.any { languageAndTitle.contains(it) }
+            val isSubbed = subbedKeywords.any { languageAndTitle.contains(it) }
+            
+            val languageStatus = when {
+                isDubbed -> DubStatus.Dubbed
+                isSubbed -> DubStatus.Subbed
+                else -> DubStatus.Subbed
+            }
             val loadData = LoadData(
                 items = shows,
                 title = cleanTitle,
@@ -248,23 +244,20 @@ val languageStatus = when {
             val firstShow = shows.firstOrNull() ?: return@map newAnimeSearchResponse(cleanTitle, "")
             
                
-          val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
-val subbedKeywords = listOf("altyazılı", "altyazi")
-            
-            
-            val language = firstShow.attributes["tvg-language"]?.lowercase()
+     val dubbedKeywords = listOf("dublaj", "türkçe", "turkish", "tr")
+            val subbedKeywords = listOf("altyazılı", "altyazi", "en", "eng")
 
-// Dublaj kontrolü:
-val isDubbed = dubbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish"|| language == "dublaj"
 
-// Altyazı kontrolü:
-val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
-     //       val languageStatus = if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed
-val languageStatus = when {
-    isDubbed -> DubStatus.Dubbed
-    isSubbed -> DubStatus.Subbed
-    else -> DubStatus.Subbed // Eğer ne dublaj ne de altyazı etiketi bulunamazsa varsayılan olarak altyazılı sayılır.
-}
+            // BURASI DÜZELTİLDİ: Başlık ve dil etiketi tek bir kontrolde birleştirildi.
+            val languageAndTitle = (firstShow.title.toString() + " " + (firstShow.attributes["tvg-language"] ?: "")).lowercase()
+            val isDubbed = dubbedKeywords.any { languageAndTitle.contains(it) }
+            val isSubbed = subbedKeywords.any { languageAndTitle.contains(it) }
+            
+            val languageStatus = when {
+                isDubbed -> DubStatus.Dubbed
+                isSubbed -> DubStatus.Subbed
+                else -> DubStatus.Subbed
+            }
             val loadData = LoadData(
                 items = shows,
                 title = cleanTitle,
@@ -299,10 +292,9 @@ override suspend fun load(url: String): LoadResponse {
     val subbedEpisodes = mutableListOf<Episode>()
 
 
-// Bu listelerin sınıfın en üstünde tanımlı olduğundan emin olun.
-    val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
-    val subbedKeywords = listOf("altyazılı", "altyazi")
-    
+ val dubbedKeywords = listOf("dublaj", "türkçe", "turkish", "tr")
+        val subbedKeywords = listOf("altyazılı", "altyazi", "en", "eng")
+
 
     
     // Her bir bölümü kontrol ederek doğru listeye ekle.
@@ -310,15 +302,16 @@ override suspend fun load(url: String): LoadResponse {
         val (itemCleanTitle, season, episode) = parseEpisodeInfo(item.title.toString())
         val finalSeason = season ?: 1
         val finalEpisode = episode ?: 1
-  val language = item.attributes["tvg-language"]?.lowercase()
-        // BURASI DÜZELTİLDİ: Artık daha kapsamlı bir kontrol yapılıyor.
-        val isDubbed = dubbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish"|| language == "dublaj"
-        val isSubbed = subbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
-        val languageStatus = when {
-            isDubbed -> DubStatus.Dubbed
-            isSubbed -> DubStatus.Subbed
-            else -> DubStatus.Subbed // Eğer ne dublaj ne de altyazı etiketi bulunamazsa varsayılan olarak altyazılı sayılır.
-        }
+             // BURASI DÜZELTİLDİ: Başlık ve dil etiketi tek bir kontrolde birleştirildi.
+            val languageAndTitle = (item.title.toString() + " " + (item.attributes["tvg-language"] ?: "")).lowercase()
+            val isDubbed = dubbedKeywords.any { languageAndTitle.contains(it) }
+            val isSubbed = subbedKeywords.any { languageAndTitle.contains(it) }
+            
+            val languageStatus = when {
+                isDubbed -> DubStatus.Dubbed
+                isSubbed -> DubStatus.Subbed
+                else -> DubStatus.Subbed
+            }
 
         val episodePoster = item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: finalPosterUrl
 
