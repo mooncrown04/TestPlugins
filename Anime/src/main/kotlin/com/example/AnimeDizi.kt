@@ -183,7 +183,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
             
       // isDubbed kontrolü artık hem başlığı hem de tvg-language değerini kontrol ediyor.
-            val isDubbed = dubbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "tr"
+            val isDubbed = dubbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } 
 
             val languageStatus = if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed
 
@@ -243,7 +243,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
         //    val isDubbed = dubbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) }
             // isDubbed kontrolü artık hem başlığı hem de tvg-language değerini kontrol ediyor.
-val isDubbed = dubbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "tr"
+val isDubbed = dubbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } 
 
             val languageStatus = if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed
 
