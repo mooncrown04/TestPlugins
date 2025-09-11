@@ -412,7 +412,16 @@ override suspend fun load(url: String): LoadResponse {
     combinedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
     
     episodesMap[DubStatus.Subbed] = combinedEpisodes
-    
+
+ val actorsList = mutableListOf<ActorData>()
+
+ actorsList.add(
+            ActorData(
+                actor = Actor("MoOnCrOwN","https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg")          
+            )
+        )
+
+	
     val tags = mutableListOf<String>()
     tags.add(loadData.group)
     tags.add(loadData.nation)
@@ -462,7 +471,7 @@ override suspend fun load(url: String): LoadResponse {
     // Şimdilik rolü null olarak bırakabiliriz.
     this.actors = listOf(
         ActorData(actor, null)
-    )
+   ) +actorsList
 		
 		//this.actors = listOf(
      //   ActorData("MoOnCrOwN", "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"))
