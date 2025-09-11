@@ -401,17 +401,15 @@ override suspend fun load(url: String): LoadResponse {
     if (subbedEpisodes.isNotEmpty()) {
         episodesMap[DubStatus.Subbed] = subbedEpisodes
     }
-    if (unknownEpisodes.isNotEmpty()) {
-        // Etiketsiz bölümler için 'DubStatus.Subbed' veya 'Dubbed' kullanılabilir,
-        // ancak Cloudstream'in arayüzünde "Unknown" diye bir etiket olmadığı için 
-        // en mantıklı seçeneklerden biri 'Subbed' olarak eklemektir, 
-        // böylece 'Altyazılı' sekmesinde görünürler.
-        // Diğer bir seçenek, `episodesMap`'e hiç eklemeyip, `dubbedEpisodes` ve 
-        // `subbedEpisodes`'ı birleştirmeden önce tüm listeyi birleştirmektir.
-        
-        // Şimdilik en basit çözüm olarak tüm bölümleri tek bir listede birleştirelim.
-        val combinedEpisodes = dubbedEpisodes + subbedEpisodes + unknownEpisodes
-        episodesMap[DubStatus.Subbed] = combinedEpisodes
+ // Etiketi olmayan bölümler için özel bir durum.
+    // Eğer sadece etiketsiz bölümler varsa, bunları da bir dublaj veya altyazı grubuna eklemek yerine
+    // en iyi yöntem, 'episodes' anahtarının direkt olarak tüm listeyi içermesini sağlamaktır.
+    // Böylece altyazı veya dublaj etiketi olmadan da bölümler oynatılabilir.
+    // Bunun için alttaki mantık daha doğru.
+    if (episodesMap.isEmpty() && unknownEpisodes.isNotEmpty()) {
+         // Eğer hiç dublajlı veya altyazılı bölüm yoksa, tüm bölümleri "Subbed" olarak gösteririz.
+         // Bu, oynatma düğmesinin görünmesi için bir geçici çözümdür.
+         episodesMap[DubStatus.Subbed] = unknownEpisodes
     }
     
     val tags = mutableListOf<String>()
