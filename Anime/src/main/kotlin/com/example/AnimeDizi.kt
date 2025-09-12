@@ -146,7 +146,6 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val nation: String,
         val season: Int = 1,
         val episode: Int = 0,
-       // val dubStatus: DubStatus? = null
       val isDubbed: Boolean,
         val isSubbed: Boolean
 
