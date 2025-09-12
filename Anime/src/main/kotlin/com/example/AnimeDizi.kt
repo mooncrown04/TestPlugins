@@ -209,9 +209,12 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             searchResponse.apply {
                 posterUrl = loadData.poster
                 type = TvType.Anime
-                // Bu çağrı doğru, çünkü AnimeSearchResponse'a özel bir imza kullanıyor
-                 if (isDubbed || isSubbed) {
-                     addDubStatus(dubExist = isDubbed, subExist = isSubbed)
+                // DÜZELTME: Doğru parametrelerle çağırın
+                 if (isDubbed) {
+                     addDubStatus(DubStatus.Dubbed, episodes = shows.size)
+                 }
+                 if (isSubbed) {
+                     addDubStatus(DubStatus.Subbed, episodes = shows.size)
                  }
             }
 
@@ -296,9 +299,12 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 posterUrl = loadData.poster
                 type = TvType.Anime
             
-            // Bu çağrı doğru, çünkü AnimeSearchResponse'a özel bir imza kullanıyor
-            if (isDubbed || isSubbed) {
-                 addDubStatus(dubExist = isDubbed, subExist = isSubbed)
+            // DÜZELTME: Doğru parametrelerle çağırın
+            if (isDubbed) {
+                 addDubStatus(DubStatus.Dubbed, episodes = shows.size)
+            }
+            if (isSubbed) {
+                 addDubStatus(DubStatus.Subbed, episodes = shows.size)
             }
             }
         }
@@ -352,8 +358,7 @@ override suspend fun load(url: String): LoadResponse {
             this.season = finalSeason
             this.episode = finalEpisode
             this.posterUrl = episodePoster
-            // Düzeltme burada! Artık `Episode`'a özel addDubStatus çağrısını kullanıyoruz.
-            // Bu çağrı, `AnimeSearchResponse`'daki `dubExist` ve `subExist` parametrelerini kabul etmez.
+            // DÜZELTME: Burada da doğru parametrelerle çağırmalısınız.
             if (isDubbed) {
                 addDubStatus(DubStatus.Dubbed, episodes = 1)
             }
@@ -429,7 +434,7 @@ override suspend fun load(url: String): LoadResponse {
         newAnimeSearchResponse(episodeTitleWithNumber, episode.data).apply {
             posterUrl = episodeLoadData.poster
             type = TvType.Anime
-            // Bu çağrı doğru
+            // DÜZELTME: Doğru parametrelerle çağırın
             if (episodeLoadData.isDubbed) {
                 addDubStatus(DubStatus.Dubbed, episodes = 1)
             }
