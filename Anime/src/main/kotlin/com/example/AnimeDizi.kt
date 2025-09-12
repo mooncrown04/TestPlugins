@@ -185,7 +185,9 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
           val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
           val subbedKeywords = listOf("altyazılı", "altyazi")
             
-          val language = item.attributes["tvg-language"]?.lowercase(Locale.getDefault())
+            
+            val language = firstShow.attributes["tvg-language"]?.lowercase()
+
 // Dublaj kontrolü:
 val isDubbed = dubbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish"|| language == "dublaj"|| language == "TÜRKÇE"
 
@@ -296,7 +298,8 @@ val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowerc
 val subbedKeywords = listOf("altyazılı", "altyazi")
             
             
-           val language = item.attributes["tvg-language"]?.lowercase(Locale.getDefault())
+            val language = firstShow.attributes["tvg-language"]?.lowercase()
+
 // Dublaj kontrolü:
 val isDubbed = dubbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish"|| language == "dublaj"|| language == "TÜRKÇE"
 // Altyazı kontrolü:
@@ -346,8 +349,8 @@ override suspend fun load(url: String): LoadResponse {
         val (itemCleanTitle, season, episode) = parseEpisodeInfo(item.title.toString())
         val finalSeason = season ?: 1
         val finalEpisode = episode ?: 1
-       // val language = item.attributes["tvg-language"]?.lowercase()
-         val language = item.attributes["tvg-language"]?.lowercase(Locale.getDefault())
+        val language = item.attributes["tvg-language"]?.lowercase()
+        
         val isDubbed = dubbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish" || language == "dublaj"|| language == "TÜRKÇE"
         val isSubbed = subbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
         
