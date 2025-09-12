@@ -189,7 +189,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val language = firstShow.attributes["tvg-language"]?.lowercase()
 
 // Dublaj kontrolü:
-val isDubbed = dubbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish"|| language == "dublaj"
+val isDubbed = dubbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish"|| language == "dublaj"|| language == "TÜRKÇE"
 
 // Altyazı kontrolü:
 val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
@@ -301,7 +301,7 @@ val subbedKeywords = listOf("altyazılı", "altyazi")
             val language = firstShow.attributes["tvg-language"]?.lowercase()
 
 // Dublaj kontrolü:
-val isDubbed = dubbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish"|| language == "dublaj"
+val isDubbed = dubbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish"|| language == "dublaj"|| language == "TÜRKÇE"
 // Altyazı kontrolü:
 val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
      //       val languageStatus = if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed
@@ -351,7 +351,7 @@ override suspend fun load(url: String): LoadResponse {
         val finalEpisode = episode ?: 1
         val language = item.attributes["tvg-language"]?.lowercase()
         
-        val isDubbed = dubbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish" || language == "dublaj"
+        val isDubbed = dubbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish" || language == "dublaj"|| language == "TÜRKÇE"
         val isSubbed = subbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
         
         val episodePoster = item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: finalPosterUrl
