@@ -153,15 +153,16 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
    )
 
     private suspend fun getOrFetchPlaylist(): Playlist {
-        if (cachedPlaylist != null) {
-            return cachedPlaylist!!
-        }
-        val cachedJson = sharedPref?.getString(CACHE_KEY, null)
-        if (cachedJson != null) {
-            Log.d(name, "Playlist verisi önbellekten yükleniyor.")
-            cachedPlaylist = parseJson<Playlist>(cachedJson)
-            return cachedPlaylist!!
-        }
+      // Önbellek kontrolünü geçici olarak devre dışı bırak
+    // if (cachedPlaylist != null) {
+    //     return cachedPlaylist!!
+    // }
+    // val cachedJson = sharedPref?.getString(CACHE_KEY, null)
+    // if (cachedJson != null) {
+    //     Log.d(name, "Playlist verisi önbellekten yükleniyor.")
+    //     cachedPlaylist = parseJson<Playlist>(cachedJson)
+    //     return cachedPlaylist!!
+    // }
         Log.d(name, "Playlist verisi ağdan indiriliyor.")
         val content = app.get(mainUrl).text
         val newPlaylist = IptvPlaylistParser().parseM3U(content)
