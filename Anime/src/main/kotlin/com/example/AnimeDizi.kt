@@ -164,16 +164,6 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     )
 
     private suspend fun getOrFetchPlaylist(): Playlist {
-        // Önbellek kontrolünü geçici olarak devre dışı bırak
-     // if (cachedPlaylist != null) {
-     //     return cachedPlaylist!!
-     // }
-     // val cachedJson = sharedPref?.getString(CACHE_KEY, null)
-     // if (cachedJson != null) {
-     //     Log.d(name, "Playlist verisi önbellekten yükleniyor.")
-     //     cachedPlaylist = parseJson<Playlist>(cachedJson)
-     //     return cachedPlaylist!!
-     // }
         Log.d(name, "Playlist verisi ağdan indiriliyor.")
         val content = app.get(mainUrl).text
         val newPlaylist = IptvPlaylistParser().parseM3U(content)
@@ -209,13 +199,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             searchResponse.apply {
                 posterUrl = loadData.poster
                 type = TvType.Anime
-                // DÜZELTME: Doğru parametrelerle çağırın
-                 if (isDubbed) {
-                     addDubStatus(DubStatus.Dubbed, episodes = shows.size)
-                 }
-                 if (isSubbed) {
-                     addDubStatus(DubStatus.Subbed, episodes = shows.size)
-                 }
+                // DÜZELTME: Artık bu şekilde çağırıyoruz. dub ve sub için ayrı ayrı bölüm sayısı veriyoruz.
+                 addDubStatus(dubExist = isDubbed, subExist = isSubbed, dubEpisodes = shows.size, subEpisodes = shows.size)
             }
 
             val firstChar = cleanTitle.firstOrNull()?.uppercaseChar() ?: '#'
@@ -299,13 +284,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 posterUrl = loadData.poster
                 type = TvType.Anime
             
-            // DÜZELTME: Doğru parametrelerle çağırın
-            if (isDubbed) {
-                 addDubStatus(DubStatus.Dubbed, episodes = shows.size)
-            }
-            if (isSubbed) {
-                 addDubStatus(DubStatus.Subbed, episodes = shows.size)
-            }
+            // DÜZELTME: Burada da aynı şekilde. Tek çağrı ve her iki dil için de bölüm sayısı
+            addDubStatus(dubExist = isDubbed, subExist = isSubbed, dubEpisodes = shows.size, subEpisodes = shows.size)
             }
         }
     }
@@ -358,7 +338,7 @@ override suspend fun load(url: String): LoadResponse {
             this.season = finalSeason
             this.episode = finalEpisode
             this.posterUrl = episodePoster
-            // DÜZELTME: Burada da doğru parametrelerle çağırmalısınız.
+            // DÜZELTME: Burada da doğru parametrelerle çağırın. Episode için `episodes` parametresi yeterlidir.
             if (isDubbed) {
                 addDubStatus(DubStatus.Dubbed, episodes = 1)
             }
@@ -435,12 +415,7 @@ override suspend fun load(url: String): LoadResponse {
             posterUrl = episodeLoadData.poster
             type = TvType.Anime
             // DÜZELTME: Doğru parametrelerle çağırın
-            if (episodeLoadData.isDubbed) {
-                addDubStatus(DubStatus.Dubbed, episodes = 1)
-            }
-            if (episodeLoadData.isSubbed) {
-                addDubStatus(DubStatus.Subbed, episodes = 1)
-            }
+            addDubStatus(dubExist = episodeLoadData.isDubbed, subExist = episodeLoadData.isSubbed, dubEpisodes = 1, subEpisodes = 1)
         }
     }
 
