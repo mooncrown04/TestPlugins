@@ -211,10 +211,10 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 type = TvType.Anime
                 // DÜZELTME: addDubStatus fonksiyonunu yeni API'ye göre çağır
                  if (isDubbed) {
-                     addDubStatus(status = DubStatus.Dubbed)
+                     addDubStatus(DubStatus.Dubbed)
                  }
                  if (isSubbed) {
-                     addDubStatus(status = DubStatus.Subbed)
+                     addDubStatus(DubStatus.Subbed)
                  }
             }
 
@@ -301,10 +301,10 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             
             // DÜZELTME: addDubStatus fonksiyonunu yeni API'ye göre çağır
             if (isDubbed) {
-                 addDubStatus(status = DubStatus.Dubbed)
+                 addDubStatus(DubStatus.Dubbed)
             }
             if (isSubbed) {
-                 addDubStatus(status = DubStatus.Subbed)
+                 addDubStatus(DubStatus.Subbed)
             }
             }
         }
@@ -360,10 +360,10 @@ override suspend fun load(url: String): LoadResponse {
             this.posterUrl = episodePoster
             // DÜZELTME: addDubStatus fonksiyonunu yeni API'ye göre çağır
             if (isDubbed) {
-                addDubStatus(status = DubStatus.Dubbed)
+                addDubStatus(DubStatus.Dubbed)
             }
             if (isSubbed) {
-                addDubStatus(status = DubStatus.Subbed)
+                addDubStatus(DubStatus.Subbed)
             }
         }
         episodeObj
@@ -377,126 +377,4 @@ override suspend fun load(url: String): LoadResponse {
         } else if (loadDataInEpisode.isSubbed) {
             subbedEpisodes.add(episode)
         } else {
-            unknownEpisodes.add(episode)
-        }
-    }
-    
-    dubbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
-    subbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
-    unknownEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
-
-    val episodesMap = mutableMapOf<DubStatus, List<Episode>>()
-
-    if (dubbedEpisodes.isNotEmpty()) {
-        episodesMap[DubStatus.Dubbed] = dubbedEpisodes
-    }
-    if (subbedEpisodes.isNotEmpty()) {
-        episodesMap[DubStatus.Subbed] = subbedEpisodes
-    }
-    // Etiketsiz bölümleri bir gruba ekle. Çoğu zaman bunlar altyazılıdır.
-    if (unknownEpisodes.isNotEmpty()) {
-        // Zaten altyazılı bölüm varsa, etiketsizleri onlara ekle.
-        episodesMap[DubStatus.Subbed] = (episodesMap[DubStatus.Subbed] ?: emptyList()) + unknownEpisodes
-    }
-    
-    // Tüm bölümleri birleştirilmiş ve sıralı bir liste oluştur
-    val allCombinedEpisodes = (dubbedEpisodes + subbedEpisodes + unknownEpisodes)
-        .sortedWith(compareBy({ it.season }, { it.episode }))
-
-    val actorsList = mutableListOf<ActorData>()
-
-    actorsList.add(
-        ActorData(
-            actor = Actor("MoOnCrOwN","https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg")          
-        )
-    )
-
-    
-    val tags = mutableListOf<String>()
-    tags.add(loadData.group)
-    tags.add(loadData.nation)
-    // Sadece gerçekten dublajlı veya altyazılı bölüm varsa etiket eklenir.
-    if (dubbedEpisodes.isNotEmpty()) {
-        tags.add("Türkçe Dublaj")
-    }
-    if (subbedEpisodes.isNotEmpty()) {
-        tags.add("Türkçe Altyazılı")
-    }
-
-    val recommendedList = allCombinedEpisodes.shuffled().take(10).mapNotNull { episode ->
-        val episodeLoadData = parseJson<LoadData>(episode.data)
-        val episodeTitleWithNumber = if (episodeLoadData.episode > 0) {
-            "${episodeLoadData.title} S${episodeLoadData.season} E${episodeLoadData.episode}"
-        } else {
-            episodeLoadData.title
-        }
-        
-        newAnimeSearchResponse(episodeTitleWithNumber, episode.data).apply {
-            posterUrl = episodeLoadData.poster
-            type = TvType.Anime
-            // DÜZELTME: addDubStatus fonksiyonunu yeni API'ye göre çağır
-            if (episodeLoadData.isDubbed) {
-                addDubStatus(status = DubStatus.Dubbed)
-            }
-            if (episodeLoadData.isSubbed) {
-                addDubStatus(status = DubStatus.Subbed)
-            }
-        }
-    }
-
-    return newAnimeLoadResponse(
-        loadData.title,
-        url,
-        TvType.TvSeries
-    ) {
-        this.posterUrl = finalPosterUrl
-        this.plot = plot
-        this.tags = tags
-        this.episodes = episodesMap
-        this.recommendations = recommendedList
-    // YENİ HALİ: ActorData'yı doğru bir şekilde oluşturma
-    // Önce bir Actor nesnesi oluşturun ve ismini, resim URL'sini verin.
-    val actor = Actor(loadData.title, finalPosterUrl)
-    
-    // Sonra, ActorData nesnesi oluşturup bu actor'ı ve rolünü (opsiyonel) aktarın.
-    // Şimdilik rolü null olarak bırakabiliriz.
-    this.actors = listOf(
-        ActorData(actor, null)
-    ) +actorsList
-    
-    }
-}
-
-    override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        val loadData = parseJson<LoadData>(data)
-        loadData.items.forEach { item ->
-            val linkQuality = Qualities.Unknown.value
-            
-            val titleText = loadData.title
-            
-            callback.invoke(
-                newExtractorLink(
-                    source = this.name,
-                    name = titleText,
-                    url = item.url.toString(),
-                    type = ExtractorLinkType.M3U8
-                ) {
-                    quality = linkQuality
-                }
-            )
-        }
-        return true
-    }
-    
-    private data class ParsedEpisode(
-        val item: PlaylistItem,
-        val itemCleanTitle: String,
-        val season: Int?,
-        val episode: Int?
-    )
-}
+            unknownEpisodes.add(episode
