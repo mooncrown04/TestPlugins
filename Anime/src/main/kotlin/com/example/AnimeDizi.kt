@@ -366,7 +366,7 @@ override suspend fun load(url: String): LoadResponse {
                 addDubStatus(DubStatus.Subbed)
             }
         }
-        episodeObj
+        return@mapNotNull episodeObj
     }
     
     // YENİ: Bölümleri dil durumlarına göre ayır
@@ -377,4 +377,20 @@ override suspend fun load(url: String): LoadResponse {
         } else if (loadDataInEpisode.isSubbed) {
             subbedEpisodes.add(episode)
         } else {
-            unknownEpisodes.add(episode
+            unknownEpisodes.add(episode)
+        }
+    }
+    
+    dubbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
+    subbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
+    unknownEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
+
+    val episodesMap = mutableMapOf<DubStatus, List<Episode>>()
+
+    if (dubbedEpisodes.isNotEmpty()) {
+        episodesMap[DubStatus.Dubbed] = dubbedEpisodes
+    }
+    if (subbedEpisodes.isNotEmpty()) {
+        episodesMap[DubStatus.Subbed] = subbedEpisodes
+    }
+    // Etiketsiz bölümleri bir gruba ekle.
