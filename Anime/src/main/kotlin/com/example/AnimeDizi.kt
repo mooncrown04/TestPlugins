@@ -475,7 +475,7 @@ override suspend fun load(url: String): LoadResponse {
     ) {
         this.posterUrl = finalPosterUrl
         this.plot = plot
-       this.score = Acclaimed.Score.from10(loadData.score) Puanı rating'e atıyoruz
+        this.score = Acclaimed.Score.from10(loadData.score) //Puanı rating'e atıyoruz
         this.tags = tags      
 	    this.episodes = episodesMap
         this.recommendations = recommendedList
