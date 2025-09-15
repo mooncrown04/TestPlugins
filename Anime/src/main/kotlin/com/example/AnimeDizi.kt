@@ -220,7 +220,6 @@ val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowerc
             searchResponse.apply {
                 posterUrl = loadData.poster
                 type = TvType.Anime
-                 rating = score?.div(10.0) 
 				 if (isDubbed || isSubbed) {
                     addDubStatus(dubExist = isDubbed, subExist = isSubbed)
                 }
