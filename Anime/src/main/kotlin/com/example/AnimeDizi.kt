@@ -353,7 +353,8 @@ override suspend fun load(url: String): LoadResponse {
     val finalPosterUrl = loadData.poster
     val plot = "TMDB'den özet alınamadı."
 
-
+// Puanın null olup olmadığını kontrol et
+    val scoreToUse = loadData.score
 
     val dubbedEpisodes = mutableListOf<Episode>()
     val subbedEpisodes = mutableListOf<Episode>()
@@ -477,8 +478,12 @@ override suspend fun load(url: String): LoadResponse {
     ) {
         this.posterUrl = finalPosterUrl
         this.plot = plot
-        this.score = Score.from10(loadData.score) //Puanı rating'e atıyoruz
-        this.tags = tags      
+      //  this.score = Score.from10(loadData.score) //Puanı rating'e atıyoruz
+         // Puanı atarken güvenli çağrı operatörü (?.let) kullanın
+        this.score = scoreToUse?.let { Score.from10(it) }
+
+		
+		this.tags = tags      
 	    this.episodes = episodesMap
         this.recommendations = recommendedList
     // YENİ HALİ: ActorData'yı doğru bir şekilde oluşturma
