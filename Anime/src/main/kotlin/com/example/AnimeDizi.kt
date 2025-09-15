@@ -384,8 +384,9 @@ override suspend fun load(url: String): LoadResponse {
                 season = finalSeason,
                 episode = finalEpisode,
                 isDubbed = isDubbed,
-                isSubbed = isSubbed
-            ).toJson()
+                isSubbed = isSubbed,
+             score = item.score // <-- BURADAKİ DÜZELTME
+			).toJson()
         ) {
             this.name = if (season != null && episode != null) {
                 "${itemCleanTitle} S$finalSeason E$finalEpisode"
