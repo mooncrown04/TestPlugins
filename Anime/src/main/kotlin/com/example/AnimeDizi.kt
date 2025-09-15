@@ -15,7 +15,6 @@ import java.io.InputStream
 import java.util.Locale
 import com.lagradost.cloudstream3.ActorData
 import com.lagradost.cloudstream3.Score
-import com.lagradost.cloudstream3.Acclaimed
 // --- Yardımcı Sınıflar ---
 data class Playlist(val items: List<PlaylistItem> = emptyList())
 
@@ -476,7 +475,7 @@ override suspend fun load(url: String): LoadResponse {
     ) {
         this.posterUrl = finalPosterUrl
         this.plot = plot
-        this.score = Acclaimed.Score.from10(loadData.score) //Puanı rating'e atıyoruz
+        this.score = Score.from10(loadData.score) //Puanı rating'e atıyoruz
         this.tags = tags      
 	    this.episodes = episodesMap
         this.recommendations = recommendedList
