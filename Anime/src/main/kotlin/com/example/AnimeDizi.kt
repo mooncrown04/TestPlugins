@@ -220,7 +220,7 @@ val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowerc
             searchResponse.apply {
                 posterUrl = loadData.poster
                 type = TvType.Anime
-                 rating = score?.div(100.0) 
+                 rating = score?.div(10.0) 
 				 if (isDubbed || isSubbed) {
                     addDubStatus(dubExist = isDubbed, subExist = isSubbed)
                 }
@@ -477,7 +477,7 @@ val finalPlot = "$scoreText$plot"
     ) {
         this.posterUrl = finalPosterUrl
         this.plot = plot
-        this.rating = loadData.score?.div(100.0) // Puanı rating'e atıyoruz
+        this.Score = Score.from10(loadData.score) // Puanı rating'e atıyoruz
         this.tags = tags      
 	    this.episodes = episodesMap
         this.recommendations = recommendedList
