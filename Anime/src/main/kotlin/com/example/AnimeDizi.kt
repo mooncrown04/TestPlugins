@@ -351,9 +351,6 @@ override suspend fun load(url: String): LoadResponse {
     val finalPosterUrl = loadData.poster
     val plot = "TMDB'den özet alınamadı."
 
-// Puanı özet metnine ekleyelim
-val scoreText = if (loadData.score != null) "Puan: ${loadData.score}\n" else ""
-val finalPlot = "$scoreText$plot"
 
 
     val dubbedEpisodes = mutableListOf<Episode>()
@@ -478,7 +475,7 @@ val finalPlot = "$scoreText$plot"
     ) {
         this.posterUrl = finalPosterUrl
         this.plot = plot
-       this.score = Score.from10(score)// Puanı rating'e atıyoruz
+       this.score = Acclaimed.Score.from10(loadData.score) Puanı rating'e atıyoruz
         this.tags = tags      
 	    this.episodes = episodesMap
         this.recommendations = recommendedList
