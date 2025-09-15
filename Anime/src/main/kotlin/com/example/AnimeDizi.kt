@@ -24,7 +24,8 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val url: String? = null,
     val userAgent: String? = null,
-	val score: Int? = null
+	//val score: Int? = null
+	val score: Double? = null
 ) {
     companion object {
         const val EXT_M3U = "#EXTM3U"
@@ -52,8 +53,8 @@ class IptvPlaylistParser {
                    
    // `tvg-score` etiketini alıp Int'e dönüştürüyoruz.
             // Yoksa veya sayı değilse null döner.
-            val score = attributes["tvg-score"]?.toIntOrNull() 
-
+        //    val score = attributes["tvg-score"]?.toIntOrNull() 
+val score = attributes["tvg-score"]?.toDoubleOrNull()
             // `PlaylistItem` oluştururken `score` değerini ekliyoruz.
             playlistItems.add(PlaylistItem(title, attributes, score = score)) 
 
@@ -159,7 +160,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val episode: Int = 0,
         val isDubbed: Boolean,
         val isSubbed: Boolean,
-        val score: Int? = null 
+      val score: Double? = null
+		//val score: Int? = null 
    )
 
     private suspend fun getOrFetchPlaylist(): Playlist {
@@ -191,8 +193,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
         val alphabeticGroups = groupedByCleanTitle.toSortedMap().mapNotNull { (cleanTitle, shows) ->
             val firstShow = shows.firstOrNull() ?: return@mapNotNull null
-           val score = firstShow.attributes["tvg-score"]?.toIntOrNull() // Puanı alıyoruz. 
-       
+          // val score = firstShow.attributes["tvg-score"]?.toIntOrNull() // Puanı alıyoruz. 
+             val score = firstShow.attributes["tvg-score"]?.toDoubleOrNull()
           val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
           val subbedKeywords = listOf("altyazılı", "altyazi")
             
