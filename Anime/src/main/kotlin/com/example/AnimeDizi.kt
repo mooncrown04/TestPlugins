@@ -14,6 +14,7 @@ import com.lagradost.cloudstream3.addDubStatus
 import java.io.InputStream
 import java.util.Locale
 import com.lagradost.cloudstream3.ActorData
+import com.lagradost.cloudstream3.Acclaimed.Score
 // --- Yardımcı Sınıflar ---
 data class Playlist(val items: List<PlaylistItem> = emptyList())
 
