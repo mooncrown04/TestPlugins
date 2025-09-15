@@ -22,7 +22,8 @@ data class PlaylistItem(
     val attributes: Map<String, String> = emptyMap(),
     val headers: Map<String, String> = emptyMap(),
     val url: String? = null,
-    val userAgent: String? = null
+    val userAgent: String? = null,
+	val score: Int? = null
 ) {
     companion object {
         const val EXT_M3U = "#EXTM3U"
@@ -47,7 +48,16 @@ class IptvPlaylistParser {
                 if (line.startsWith(PlaylistItem.EXT_INF)) {
                     val title = line.getTitle()
                     val attributes = line.getAttributes()
-                    playlistItems.add(PlaylistItem(title, attributes))
+                   
+   // `tvg-score` etiketini alıp Int'e dönüştürüyoruz.
+            // Yoksa veya sayı değilse null döner.
+            val score = attributes["tvg-score"]?.toIntOrNull() 
+
+            // `PlaylistItem` oluştururken `score` değerini ekliyoruz.
+            playlistItems.add(PlaylistItem(title, attributes, score = score)) 
+
+
+				 //  playlistItems.add(PlaylistItem(title, attributes))
                 } else if (!line.startsWith("#")) {
                     val item = playlistItems.getOrNull(currentIndex)
                     if (item != null) {
@@ -146,9 +156,9 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val nation: String,
         val season: Int = 1,
         val episode: Int = 0,
-      val isDubbed: Boolean,
-        val isSubbed: Boolean
-
+        val isDubbed: Boolean,
+        val isSubbed: Boolean,
+        val score: Int? = null 
    )
 
     private suspend fun getOrFetchPlaylist(): Playlist {
@@ -180,7 +190,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
         val alphabeticGroups = groupedByCleanTitle.toSortedMap().mapNotNull { (cleanTitle, shows) ->
             val firstShow = shows.firstOrNull() ?: return@mapNotNull null
-            
+           val score = firstShow.attributes["tvg-score"]?.toIntOrNull() // Puanı alıyoruz. 
        
           val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
           val subbedKeywords = listOf("altyazılı", "altyazi")
@@ -202,14 +212,16 @@ val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowerc
                 group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
                 nation = firstShow.attributes["tvg-country"] ?: "TR",
                 isDubbed = isDubbed,
-                isSubbed = isSubbed
-            )
+                isSubbed = isSubbed,
+                score = score
+			)
 
             val searchResponse = newAnimeSearchResponse(cleanTitle, loadData.toJson())
             searchResponse.apply {
                 posterUrl = loadData.poster
                 type = TvType.Anime
-                 if (isDubbed || isSubbed) {
+                 rating = score?.div(100.0) 
+				 if (isDubbed || isSubbed) {
                     addDubStatus(dubExist = isDubbed, subExist = isSubbed)
                 }
             }
@@ -338,6 +350,11 @@ override suspend fun load(url: String): LoadResponse {
     val finalPosterUrl = loadData.poster
     val plot = "TMDB'den özet alınamadı."
 
+// Puanı özet metnine ekleyelim
+val scoreText = if (loadData.score != null) "Puan: ${loadData.score}\n" else ""
+val finalPlot = "$scoreText$plot"
+
+
     val dubbedEpisodes = mutableListOf<Episode>()
     val subbedEpisodes = mutableListOf<Episode>()
     val unknownEpisodes = mutableListOf<Episode>()
@@ -460,8 +477,9 @@ override suspend fun load(url: String): LoadResponse {
     ) {
         this.posterUrl = finalPosterUrl
         this.plot = plot
-        this.tags = tags
-        this.episodes = episodesMap
+        this.rating = loadData.score?.div(100.0) // Puanı rating'e atıyoruz
+        this.tags = tags      
+	    this.episodes = episodesMap
         this.recommendations = recommendedList
     // YENİ HALİ: ActorData'yı doğru bir şekilde oluşturma
     // Önce bir Actor nesnesi oluşturun ve ismini, resim URL'sini verin.
