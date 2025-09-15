@@ -383,8 +383,9 @@ val finalPlot = "$scoreText$plot"
                 season = finalSeason,
                 episode = finalEpisode,
                 isDubbed = isDubbed,
-                isSubbed = isSubbed
-            ).toJson()
+                isSubbed = isSubbed,
+         score = score
+			).toJson()
         ) {
             this.name = if (season != null && episode != null) {
                 "${itemCleanTitle} S$finalSeason E$finalEpisode"
