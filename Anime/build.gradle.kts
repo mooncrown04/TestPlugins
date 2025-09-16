@@ -33,3 +33,6 @@ cloudstream {
     tvTypes = listOf("TvSeries")
     iconUrl = "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powerdizi/powerdizi.png"
 }
+dependencies {
+    implementation("com.lagradost.cloudstream3:cloudstream-tmdb:1.1.0")
+}
