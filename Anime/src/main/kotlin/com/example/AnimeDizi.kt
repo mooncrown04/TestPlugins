@@ -26,7 +26,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var lang = "tr"
     override val hasQuickSearch = true
     override val hasDownloadSupport = true
-    override val supportedTypes = setOf(TvType.TvSeries) // Not: Anime için TvType.Anime olmalı
+    override val supportedTypes = setOf(TvType.TvSeries)
 
     private val DEFAULT_POSTER_URL =
         "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
@@ -54,7 +54,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     }
 
 
-// --- Yardımcı Sınıflar ---
+    // --- Yardımcı Sınıflar ---
     data class Playlist(val items: List<PlaylistItem> = emptyList())
     data class PlaylistItem(
         val title: String? = null,
@@ -87,9 +87,9 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                     if (line.startsWith(PlaylistItem.EXT_INF)) {
                         val title = line.getTitle()
                         val attributes = line.getAttributes()
-                        
+
                         val score = attributes["tvg-score"]?.toDoubleOrNull()
-                        playlistItems.add(PlaylistItem(title, attributes, score = score)) 
+                        playlistItems.add(PlaylistItem(title, attributes, score = score))
                     } else if (!line.startsWith("#")) {
                         val item = playlistItems.getOrNull(currentIndex)
                         if (item != null) {
@@ -201,7 +201,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
 
             val score = shows.mapNotNull { it.score }.maxOrNull()
-            
+
             val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
             val subbedKeywords = listOf("altyazılı", "altyazi")
             val language = firstShow.attributes["tvg-language"]?.lowercase()
@@ -242,7 +242,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val finalHomePageLists = mutableListOf<HomePageList>()
         val turkishAlphabet = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUVYZ".split("").filter { it.isNotBlank() }
         val fullAlphabet = turkishAlphabet + listOf("Q", "W", "X")
-        
+
         val allGroupsToProcess = mutableListOf<String>()
         if (alphabeticGroups.containsKey("0-9")) allGroupsToProcess.add("0-9")
         fullAlphabet.forEach { char ->
@@ -290,13 +290,13 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val rawPosterUrl = firstShow.attributes["tvg-logo"]
             val verifiedPosterUrl = checkPosterUrl(rawPosterUrl)
             val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
-            
+
             val score = shows.mapNotNull { it.score }.maxOrNull()
 
             val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
             val subbedKeywords = listOf("altyazılı", "altyazi")
             val language = firstShow.attributes["tvg-language"]?.lowercase()
-            
+
             val isDubbed = dubbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish"|| language == "dublaj"|| language == "TÜRKÇE"
             val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
 
@@ -310,7 +310,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                 isSubbed = isSubbed,
                 score = score
             )
-            
+
             val searchResponse = newAnimeSearchResponse(cleanTitle, loadData.toJson())
             searchResponse.apply {
                 posterUrl = loadData.poster
@@ -325,11 +325,6 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
 
----
-
-### Güncellenen `load` ve `loadLinks` Fonksiyonları
-
-```kotlin
     override suspend fun load(url: String): LoadResponse {
         val loadData = parseJson<LoadData>(url)
         val allItems = loadData.items
@@ -347,21 +342,21 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
         val dubbedEpisodes = mutableListOf<Episode>()
         val subbedEpisodes = mutableListOf<Episode>()
-        
+
         episodesByLang.forEach { (key, items) ->
             val (season, episode) = key
             val firstItem = items.first()
             val cleanTitle = parseEpisodeInfo(firstItem.title.toString()).first
-            
+
             val episodePoster = firstItem.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: finalPosterUrl
-            
+
             // Aynı bölümün farklı dillerdeki tüm kaynaklarını bul
             val dubbedItems = items.filter { item ->
                 val titleLower = item.title.toString().lowercase()
                 val language = item.attributes["tvg-language"]?.lowercase()
                 listOf("dublaj", "türkçe", "turkish").any { titleLower.contains(it) } || language == "tr" || language == "turkish" || language == "dublaj" || language == "türkçe"
             }
-            
+
             val subbedItems = items.filter { item ->
                 val titleLower = item.title.toString().lowercase()
                 val language = item.attributes["tvg-language"]?.lowercase()
@@ -424,7 +419,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         if (dubbedEpisodes.isNotEmpty()) episodesMap[DubStatus.Dubbed] = dubbedEpisodes
         if (subbedEpisodes.isNotEmpty()) episodesMap[DubStatus.Subbed] = subbedEpisodes
 
-        val actorsList = listOf(ActorData(Actor("MoOnCrOwN","[https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg](https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg)")))
+        val actorsList = listOf(ActorData(Actor("MoOnCrOwN","https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg")))
         val tags = mutableListOf<String>()
         tags.add(loadData.group)
         tags.add(loadData.nation)
@@ -464,29 +459,4 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        // Her bir kaynaktan gelen URL için ayrı bir link oluşturulur.
-        val loadData = parseJson<LoadData>(data)
-        loadData.items.forEachIndexed { index, item ->
-            val linkQuality = Qualities.Unknown.value
-            
-            // Dil bilgisini kaynaktan alarak isim oluşturulur.
-            val sourceName = when {
-                loadData.isDubbed -> "Türkçe Dublaj Kaynak ${index + 1}"
-                loadData.isSubbed -> "Türkçe Altyazılı Kaynak ${index + 1}"
-                else -> "Kaynak ${index + 1}"
-            }
-
-            callback.invoke(
-                newExtractorLink(
-                    source = this.name,
-                    name = sourceName,
-                    url = item.url.toString(),
-                    type = ExtractorLinkType.M3U8
-                ) {
-                    quality = linkQuality
-                }
-            )
-        }
-        return true
-    }
-}
+        // Her bir
