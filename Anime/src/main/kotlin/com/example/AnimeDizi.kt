@@ -34,6 +34,32 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     private var cachedPlaylist: Playlist? = null
     private val CACHE_KEY = "iptv_playlist_cache"
 
+
+   private suspend fun checkPosterUrl(url: String?): String? {
+        if (url.isNullOrBlank()) {
+            return null
+        }
+        return try {
+            val response = app.head(url)
+            if (response.isSuccessful) {
+                url
+            } else {
+                Log.e(name, "Resim URL'si geçersiz: $url, Hata Kodu: ${response.code}")
+                null
+            }
+        } catch (e: Exception) {
+            Log.e(name, "Resim URL'si kontrol edilirken hata: $url", e)
+            null
+        }
+    }
+
+
+
+
+
+
+
+	
 // --- Yardımcı Sınıflar ---
 data class Playlist(val items: List<PlaylistItem> = emptyList())
 data class PlaylistItem(
@@ -175,7 +201,16 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 
         val alphabeticGroups = groupedByCleanTitle.toSortedMap().mapNotNull { (cleanTitle, shows) ->
             val firstShow = shows.firstOrNull() ?: return@mapNotNull null
-            
+
+// POSTER ATAMASI:
+val rawPosterUrl = firstShow.attributes["tvg-logo"]
+val verifiedPosterUrl = checkPosterUrl(rawPosterUrl)
+val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
+
+
+
+
+			
             // Düzeltme: Tüm bölümlerin puanlarından en yükseğini al.
             val score = shows.mapNotNull { it.score }.maxOrNull()
             
@@ -190,7 +225,7 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
             val loadData = LoadData(
                 items = shows,
                 title = cleanTitle,
-                poster = firstShow.attributes["tvg-logo"] ?: DEFAULT_POSTER_URL,
+                poster = finalPosterUrl,
                 group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
                 nation = firstShow.attributes["tvg-country"] ?: "TR",
                 isDubbed = isDubbed,
@@ -269,7 +304,15 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
             cleanTitle.lowercase(Locale.getDefault()).contains(query.lowercase(Locale.getDefault()))
         }.map { (cleanTitle, shows) ->
             val firstShow = shows.firstOrNull() ?: return@map newAnimeSearchResponse(cleanTitle, "")
-            
+
+
+// POSTER ATAMASI:
+val rawPosterUrl = firstShow.attributes["tvg-logo"]
+val verifiedPosterUrl = checkPosterUrl(rawPosterUrl)
+val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
+
+
+			
             // Düzeltme: Tüm bölümlerin puanlarından en yükseğini al.
             val score = shows.mapNotNull { it.score }.maxOrNull()
 
@@ -285,7 +328,7 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
             val loadData = LoadData(
                 items = shows,
                 title = cleanTitle,
-                poster = firstShow.attributes["tvg-logo"] ?: DEFAULT_POSTER_URL,
+                poster = finalPosterUrl,
                 group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
                 nation = firstShow.attributes["tvg-country"] ?: "TR",
                 isDubbed = isDubbed,
