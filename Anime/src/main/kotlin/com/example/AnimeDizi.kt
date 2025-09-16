@@ -21,7 +21,7 @@ import com.lagradost.cloudstream3.Score
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 Animem Dizi 🎬"
+    override var name = "35 Anime Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -35,7 +35,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     private val CACHE_KEY = "iptv_playlist_cache"
 
 
-   private suspend fun checkPosterUrl(url: String?): String? {
+    private suspend fun checkPosterUrl(url: String?): String? {
         if (url.isNullOrBlank()) {
             return null
         }
@@ -210,7 +210,7 @@ val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
 
 
 
-			
+            
             // Düzeltme: Tüm bölümlerin puanlarından en yükseğini al.
             val score = shows.mapNotNull { it.score }.maxOrNull()
             
@@ -220,7 +220,7 @@ val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
             // Dublaj kontrolü:
             val isDubbed = dubbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish"|| language == "dublaj"|| language == "TÜRKÇE"
             // Altyazı kontrolü:
-			val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
+            val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
 
             val loadData = LoadData(
                 items = shows,
@@ -252,13 +252,13 @@ val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
             Pair(groupKey, searchResponse)
         }.groupBy { it.first }.mapValues { it.value.map { it.second } }.toSortedMap()
 
-    
-        val finalHomePageLists = mutableListOf<HomePageList>()        
-		val turkishAlphabet = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUVYZ".split("").filter { it.isNotBlank() }
-         // Alfabedeki Q, W, X gibi Türkçe'de olmayan ama listede olabilecek harfleri de ekler
-		val fullAlphabet = turkishAlphabet + listOf("Q", "W", "X") 
         
-		// Grupları işleme listesine ekler.
+        val finalHomePageLists = mutableListOf<HomePageList>()        
+        val turkishAlphabet = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUVYZ".split("").filter { it.isNotBlank() }
+         // Alfabedeki Q, W, X gibi Türkçe'de olmayan ama listede olabilecek harfleri de ekler
+        val fullAlphabet = turkishAlphabet + listOf("Q", "W", "X") 
+        
+        // Grupları işleme listesine ekler.
         val allGroupsToProcess = mutableListOf<String>()
         if (alphabeticGroups.containsKey("0-9")) allGroupsToProcess.add("0-9")
         fullAlphabet.forEach { char ->
@@ -281,7 +281,7 @@ val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
                             val remainingAlphabet = fullAlphabet.subList(startIndex, fullAlphabet.size).joinToString(" ") { it }
                             "🎬 $char ${remainingAlphabet.substring(1).lowercase(Locale.getDefault())}"
                         } else {
-						 // Eğer harf alfabede yoksa yedek başlık
+                         // Eğer harf alfabede yoksa yedek başlık
                             "🎬 $char"
                         }
                     }
@@ -312,18 +312,18 @@ val verifiedPosterUrl = checkPosterUrl(rawPosterUrl)
 val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
 
 
-			
+            
             // Düzeltme: Tüm bölümlerin puanlarından en yükseğini al.
             val score = shows.mapNotNull { it.score }.maxOrNull()
 
             val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
             val subbedKeywords = listOf("altyazılı", "altyazi")
             val language = firstShow.attributes["tvg-language"]?.lowercase()
-             
-			 // Dublaj kontrolü:
+              
+             // Dublaj kontrolü:
             val isDubbed = dubbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish"|| language == "dublaj"|| language == "TÜRKÇE"
             // Altyazı kontrolü:
-			val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
+            val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
 
             val loadData = LoadData(
                 items = shows,
@@ -450,8 +450,8 @@ val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
         val tags = mutableListOf<String>()
         tags.add(loadData.group)
         tags.add(loadData.nation)
-         // Sadece gerçekten dublajlı veya altyazılı bölüm varsa etiket eklenir.
-		if (dubbedEpisodes.isNotEmpty()) {
+           // Sadece gerçekten dublajlı veya altyazılı bölüm varsa etiket eklenir.
+        if (dubbedEpisodes.isNotEmpty()) {
             tags.add("Türkçe Dublaj")
         }
         if (subbedEpisodes.isNotEmpty()) {
@@ -459,9 +459,9 @@ val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
         }
 
         val recommendedList = (dubbedEpisodes + subbedEpisodes + unknownEpisodes)
-            //.shuffled()    burası karık olması sağlanıyor
-            .take(24)
-            .mapNotNull { episode ->
+             //.shuffled()
+             .take(24)
+             .mapNotNull { episode ->
                 val episodeLoadData = parseJson<LoadData>(episode.data)
                 val episodeTitleWithNumber = if (episodeLoadData.episode > 0) {
                     "${episodeLoadData.title} S${episodeLoadData.season} E${episodeLoadData.episode}"
@@ -486,7 +486,7 @@ val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
             this.posterUrl = finalPosterUrl
             this.plot = plot
             this.score = scoreToUse?.let { Score.from10(it) }
-            this.tags = tags       
+            this.tags = tags        
             this.episodes = episodesMap
             this.recommendations = recommendedList
             val actor = Actor(loadData.title, finalPosterUrl)
@@ -503,17 +503,16 @@ val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val loadData = parseJson<LoadData>(data)
-        loadData.items.forEach { item ->
-			
-			val linkQuality = Qualities.Unknown.value
+        loadData.items.forEachIndexed { index, item ->
+            val linkQuality = Qualities.Unknown.value
             
-            val titleText = loadData.title
+            val sourceName = "${loadData.title} Kaynak ${index + 1}"
             
             callback.invoke(
                 newExtractorLink(
                     source = this.name,
-                    name = titleText,             
-					url = item.url.toString(),
+                    name = sourceName,
+                    url = item.url.toString(),
                     type = ExtractorLinkType.M3U8
                 ) {
                     quality = linkQuality
