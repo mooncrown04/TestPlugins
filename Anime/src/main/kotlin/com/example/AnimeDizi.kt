@@ -21,7 +21,7 @@ import com.lagradost.cloudstream3.Score
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 Anime Dizi 🎬"
+    override var name = "35 Animem Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -503,16 +503,19 @@ val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val loadData = parseJson<LoadData>(data)
-        loadData.items.forEach { item ->
-            val linkQuality = Qualities.Unknown.value
+       // loadData.items.forEach { item ->
+            loadData.urls.forEachIndexed { index, videoUrl ->
+			
+			val linkQuality = Qualities.Unknown.value
             
-            val titleText = loadData.title
+          //  val titleText = loadData.title
             
             callback.invoke(
                 newExtractorLink(
                     source = this.name,
-                    name = titleText,
-                    url = item.url.toString(),
+                 //   name = titleText,
+                    name = "${loadData.title} Kaynak ${index + 1}",
+					url = item.url.toString(),
                     type = ExtractorLinkType.M3U8
                 ) {
                     quality = linkQuality
