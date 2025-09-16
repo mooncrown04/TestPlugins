@@ -515,7 +515,8 @@ val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
                     source = this.name,
                  //   name = titleText,
                     name = "${loadData.title} Kaynak ${index + 1}",
-					url = item.url.toString(),
+					url = videoUrl,
+					//url = item.url.toString(),
                     type = ExtractorLinkType.M3U8
                 ) {
                     quality = linkQuality
