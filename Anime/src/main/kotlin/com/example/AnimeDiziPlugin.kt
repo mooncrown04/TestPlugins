@@ -7,7 +7,7 @@ import android.content.Context
 @CloudstreamPlugin
 class AnimeDiziPlugin: Plugin() {
     override fun load(context: Context) {
-    //    registerMainAPI(AnimeDizi(context.getSharedPreferences("AnimeDizi", 0)))
- registerMainAPI(AnimeDizi(context, null))
+    registerMainAPI(AnimeDizi(context.getSharedPreferences("AnimeDizi", 0)))
+ 
     }
 }
