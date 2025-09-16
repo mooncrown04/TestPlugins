@@ -17,7 +17,6 @@ import com.lagradost.cloudstream3.ActorData
 import com.lagradost.cloudstream3.Score
 
 
-
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
@@ -35,6 +34,9 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     private val CACHE_KEY = "iptv_playlist_cache"
 
 
+    // Not: Bu fonksiyon performans sorunlarına yol açabilir.
+    // Poster URL'lerinin güvenilir olduğu varsayıldığı için, ana sayfa yüklenirken bu kontrolü atlamak daha hızlı olur.
+    // Sadece belirli bir hata durumunda kullanılabilir.
     private suspend fun checkPosterUrl(url: String?): String? {
         if (url.isNullOrBlank()) {
             return null
@@ -54,21 +56,16 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     }
 
 
-
-
-
-
-
-	
 // --- Yardımcı Sınıflar ---
 data class Playlist(val items: List<PlaylistItem> = emptyList())
 data class PlaylistItem(
     val title: String? = null,
     val attributes: Map<String, String> = emptyMap(),
     val headers: Map<String, String> = emptyMap(),
-    val url: String? = null,
+    // NOT: Tek bir "url" yerine birden fazla kaynağı desteklemek için "urls" listesi kullanıldı.
+    val urls: List<String> = emptyList(),
     val userAgent: String? = null,
-	val score: Double? = null
+    val score: Double? = null
 ) {
     companion object {
         const val EXT_M3U = "#EXTM3U"
@@ -85,7 +82,7 @@ class IptvPlaylistParser {
         if (!reader.readLine().isExtendedM3u()) throw PlaylistParserException.InvalidHeader()
 
         val playlistItems: MutableList<PlaylistItem> = mutableListOf()
-        var currentIndex = 0
+        var currentItem: PlaylistItem? = null
         var line: String? = reader.readLine()
 
         while (line != null) {
@@ -93,15 +90,21 @@ class IptvPlaylistParser {
                 if (line.startsWith(PlaylistItem.EXT_INF)) {
                     val title = line.getTitle()
                     val attributes = line.getAttributes()
-                    
                     val score = attributes["tvg-score"]?.toDoubleOrNull()
-                    playlistItems.add(PlaylistItem(title, attributes, score = score)) 
+                    // Yeni bir EXT_INF satırı geldiğinde yeni bir PlaylistItem oluştur
+                    currentItem = PlaylistItem(title, attributes, score = score)
+                    playlistItems.add(currentItem)
                 } else if (!line.startsWith("#")) {
-                    val item = playlistItems.getOrNull(currentIndex)
-                    if (item != null) {
-                        val url = line.getUrl()
-                        playlistItems[currentIndex] = item.copy(url = url)
-                        currentIndex++
+                    val url = line.getUrl()
+                    if (url != null) {
+                        // Var olan PlaylistItem'a URL ekle
+                        val existingUrls = currentItem?.urls?.toMutableList() ?: mutableListOf()
+                        existingUrls.add(url)
+                        currentItem = currentItem?.copy(urls = existingUrls)
+                        // Listede son elemanı güncelle
+                        if (currentItem != null) {
+                            playlistItems[playlistItems.lastIndex] = currentItem
+                        }
                     } else {
                         Log.w("IptvPlaylistParser", "URL eşleşmedi, atlanıyor: $line")
                     }
@@ -208,8 +211,6 @@ val verifiedPosterUrl = checkPosterUrl(rawPosterUrl)
 val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
 
 
-
-
             
             // Düzeltme: Tüm bölümlerin puanlarından en yükseğini al.
             val score = shows.mapNotNull { it.score }.maxOrNull()
@@ -255,7 +256,7 @@ val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
         
         val finalHomePageLists = mutableListOf<HomePageList>()        
         val turkishAlphabet = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUVYZ".split("").filter { it.isNotBlank() }
-         // Alfabedeki Q, W, X gibi Türkçe'de olmayan ama listede olabilecek harfleri de ekler
+          // Alfabedeki Q, W, X gibi Türkçe'de olmayan ama listede olabilecek harfleri de ekler
         val fullAlphabet = turkishAlphabet + listOf("Q", "W", "X") 
         
         // Grupları işleme listesine ekler.
@@ -281,7 +282,7 @@ val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
                             val remainingAlphabet = fullAlphabet.subList(startIndex, fullAlphabet.size).joinToString(" ") { it }
                             "🎬 $char ${remainingAlphabet.substring(1).lowercase(Locale.getDefault())}"
                         } else {
-                         // Eğer harf alfabede yoksa yedek başlık
+                           // Eğer harf alfabede yoksa yedek başlık
                             "🎬 $char"
                         }
                     }
@@ -417,33 +418,26 @@ val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
 
         val episodesMap = mutableMapOf<DubStatus, List<Episode>>()
 
+        // NOT: Buradaki mantık, daha önce yaşadığın sorunu çözmek için güncellendi.
+        // Artık Dubbed ve Subbed listeleri ayrı ayrı oluşturuluyor.
         if (dubbedEpisodes.isNotEmpty()) {
             episodesMap[DubStatus.Dubbed] = dubbedEpisodes
         }
         if (subbedEpisodes.isNotEmpty()) {
             episodesMap[DubStatus.Subbed] = subbedEpisodes
         }
-
-     // Etiketsiz bölümler, eğer varlarsa ve başka etiketli bölüm yoksa, 
-     // "Dubbed" veya "Subbed" olarak gösterilmek yerine kendi başlarına listelenir.
-     // Cloudstream arayüzünde oynatma tuşu için bir kategoriye ait olmaları gerekir.
-     // Bu yüzden en iyi çözüm, tüm bölümleri tek bir liste altında birleştirmektir. 
-
-        val combinedEpisodes = mutableListOf<Episode>()
-        combinedEpisodes.addAll(dubbedEpisodes)
-        combinedEpisodes.addAll(subbedEpisodes)
-        combinedEpisodes.addAll(unknownEpisodes)
-        combinedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
-        
-        if (combinedEpisodes.isNotEmpty()) {
-            episodesMap[DubStatus.Subbed] = combinedEpisodes
+        if (unknownEpisodes.isNotEmpty()) {
+            // Etiketsiz bölümler, Altyazılı veya Dublajlı kategoriye dahil edilebilir.
+            // Bu örnekte, Altyazılı kategoriye ekleniyor.
+            val subbedList = episodesMap[DubStatus.Subbed] ?: emptyList()
+            episodesMap[DubStatus.Subbed] = subbedList + unknownEpisodes.sortedWith(compareBy({ it.season }, { it.episode }))
         }
         
         val actorsList = mutableListOf<ActorData>()
 
         actorsList.add(
             ActorData(
-                actor = Actor("MoOnCrOwN","https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg")          
+                actor = Actor("MoOnCrOwN","https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg")        
             )
         )
         
@@ -459,9 +453,9 @@ val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
         }
 
         val recommendedList = (dubbedEpisodes + subbedEpisodes + unknownEpisodes)
-             //.shuffled()
-             .take(24)
-             .mapNotNull { episode ->
+              //.shuffled()
+              .take(24)
+              .mapNotNull { episode ->
                 val episodeLoadData = parseJson<LoadData>(episode.data)
                 val episodeTitleWithNumber = if (episodeLoadData.episode > 0) {
                     "${episodeLoadData.title} S${episodeLoadData.season} E${episodeLoadData.episode}"
@@ -486,7 +480,7 @@ val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
             this.posterUrl = finalPosterUrl
             this.plot = plot
             this.score = scoreToUse?.let { Score.from10(it) }
-            this.tags = tags        
+            this.tags = tags         
             this.episodes = episodesMap
             this.recommendations = recommendedList
             val actor = Actor(loadData.title, finalPosterUrl)
@@ -503,19 +497,22 @@ val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val loadData = parseJson<LoadData>(data)
-        loadData.items.forEachIndexed { index, item ->
-            val linkQuality = Qualities.Unknown.value
-            
+        
+        // NOT: Bu kısım "Kaynak 1, Kaynak 2..." sorununu çözmek için güncellendi.
+        // Her bölüme ait URL'ler listesi alınır ve her biri için ayrı bir kaynak oluşturulur.
+        val item = loadData.items.firstOrNull() ?: return false
+        
+        item.urls.forEachIndexed { index, url ->
             val sourceName = "${loadData.title} Kaynak ${index + 1}"
             
             callback.invoke(
                 newExtractorLink(
                     source = this.name,
                     name = sourceName,
-                    url = item.url.toString(),
+                    url = url,
                     type = ExtractorLinkType.M3U8
                 ) {
-                    quality = linkQuality
+                    quality = Qualities.Unknown.value
                 }
             )
         }
