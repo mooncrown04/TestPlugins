@@ -178,7 +178,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
 
     private suspend fun getOrFetchPlaylist(): Playlist {
         Log.d(name, "Playlist verisi ağdan indiriliyor.")
-        val content = app.get(mainUrl).text
+        val content = get(mainUrl).text
         val newPlaylist = IptvPlaylistParser().parseM3U(content)
         cachedPlaylist = newPlaylist
         sharedPref?.edit()?.putString(CACHE_KEY, newPlaylist.toJson())?.apply()
