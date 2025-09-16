@@ -36,3 +36,7 @@ cloudstream {
 dependencies {
     implementation("com.lagradost.cloudstream3:cloudstream-tmdb:1.0.0")
 }
+repositories {
+    mavenCentral()
+    maven { url = uri("https://jitpack.io") }
+}
