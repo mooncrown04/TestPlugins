@@ -91,8 +91,7 @@ class AnimeDizi(private val context: android.content.Context, private val shared
     private suspend fun fetchTMDBData(title: String): JSONObject? {
         return withContext(Dispatchers.IO) {
             try {
-                val apiKey = "4032c1fd53e1b6fef5af1b406fccaa72"
-                //BuildConfig.TMDB_SECRET_API.trim('"')
+                val apiKey = BuildConfig.TMDB_SECRET_API.trim('"')
                 if (apiKey.isEmpty()) {
                     Log.e("TMDB", "API key is empty")
                     return@withContext null
