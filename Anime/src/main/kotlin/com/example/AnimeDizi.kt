@@ -17,17 +17,42 @@ import com.lagradost.cloudstream3.ActorData
 import com.lagradost.cloudstream3.Score
 
 
+import com.lagradost.cloudstream3.metaproviders.TmdbApi
+import com.lagradost.cloudstream3.mvvm.Resource
+import com.lagradost.cloudstream3.movie.TMDB
+import com.lagradost.cloudstream3.metaproviders.TmdbApi.getTmdbId
+import com.lagradost.cloudstream3.metaproviders.TmdbApi.getTvDetails
+import com.example.R // Bu, projenizin paket adını belirtir. Sizin projenize göre değişebilir.
+// BuildConfig sınıfına erişim için bir import satırı genellikle gerekli değildir,
+// ancak IDE'de hata alırsanız manuel olarak ekleyebilirsiniz.
+import com.example.BuildConfig
+
+
+
+
+
 
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 Anime Dizi 🎬"
+    override var name = "35 Anime TMDB Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(TvType.TvSeries)
 
+
+
+  // TMDB API anahtarını build.gradle'den alınan BuildConfig alanından çeker.
+    private val tmdbApiKey = BuildConfig.TMDB_SECRET_API
+    private val tmdbApi = TmdbApi(tmdbApiKey)
+
+
+
+
+
+	
     private val DEFAULT_POSTER_URL =
         "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
 
