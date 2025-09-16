@@ -5,8 +5,9 @@ import com.lagradost.cloudstream3.plugins.Plugin
 import android.content.Context
 
 @CloudstreamPlugin
-class powerDiziPlugin: Plugin() {
+class AnimeDizi: Plugin() {
     override fun load(context: Context) {
-        registerMainAPI(AnimeDizi(context.getSharedPreferences("AnimeDizi", 0)))
+    //    registerMainAPI(AnimeDizi(context.getSharedPreferences("AnimeDizi", 0)))
+ registerMainAPI(AnimeDizi(context, null))
     }
 }
