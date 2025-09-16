@@ -15,7 +15,7 @@ import java.io.InputStream
 import java.util.Locale
 import com.lagradost.cloudstream3.ActorData
 import com.lagradost.cloudstream3.Score
-import com.lagradost.cloudstream3.APIHolder.get
+import com.lagradost.cloudstream3.APIHolder.get // Bu import satırı eklendi
 import java.util.regex.Pattern
 
 // --- Ana Eklenti Sınıfı ---
@@ -52,7 +52,6 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             null
         }
     }
-
 
     // --- Yardımcı Sınıflar ---
     data class Playlist(val items: List<PlaylistItem> = emptyList())
@@ -459,4 +458,29 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        // Her bir
+        // Her bir kaynaktan gelen URL için ayrı bir link oluşturulur.
+        val loadData = parseJson<LoadData>(data)
+        loadData.items.forEachIndexed { index, item ->
+            val linkQuality = Qualities.Unknown.value
+
+            val sourceName = when {
+                loadData.isDubbed -> "Türkçe Dublaj Kaynak ${index + 1}"
+                loadData.isSubbed -> "Türkçe Altyazılı Kaynak ${index + 1}"
+                else -> "Kaynak ${index + 1}"
+            }
+
+            callback.invoke(
+                newExtractorLink(
+                    source = this.name,
+                    name = sourceName,
+                    url = item.url.toString(),
+                    type = ExtractorLinkType.M3U8
+                ) {
+                    quality = linkQuality
+                }
+            )
+        }
+        // Bu satır, Missing return statement hatasını çözüyor.
+        return true
+    }
+}
