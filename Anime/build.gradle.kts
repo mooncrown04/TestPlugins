@@ -1,9 +1,7 @@
 version = 3
 
-
 dependencies {
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-    implementation("com.lagradost.cloudstream3:cloudstream-tmdb:1.0.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 }
 
 android {
@@ -18,9 +16,9 @@ android {
 }
 
 cloudstream {
-    authors     = listOf("GitLatte", "patr0nq", "keyiflerolsun")
+    authors     = listOf("MoOnCrOwN","GitLatte", "patr0nq", "keyiflerolsun")
     language    = "tr"
-    description = "yabancı anime arşivi"
+    description = "powerboard`un sinema arşivi"
 
     /**
      * Status int as the following:
@@ -30,6 +28,6 @@ cloudstream {
      * 3: Beta only
     **/
     status  = 1 // will be 3 if unspecified
-    tvTypes = listOf("TvSeries")
-    iconUrl = "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powerdizi/powerdizi.png"
+    tvTypes = listOf("Movie")
+    iconUrl = "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png"
 }
