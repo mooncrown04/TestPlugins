@@ -17,6 +17,15 @@ import com.lagradost.cloudstream3.ActorData
 import com.lagradost.cloudstream3.Score
 
 
+import com.lagradost.cloudstream3.utils.*
+import com.sinetech.latte.BuildConfig
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.URL
+import java.net.URLEncoder
+
+
 import com.lagradost.cloudstream3.metaproviders.TmdbApi
 import com.lagradost.cloudstream3.mvvm.Resource
 import com.lagradost.cloudstream3.movie.TMDB
