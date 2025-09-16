@@ -18,7 +18,7 @@ import com.lagradost.cloudstream3.Score
 
 
 import com.lagradost.cloudstream3.utils.*
-import com.sinetech.latte.BuildConfig
+import com.example.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -26,42 +26,18 @@ import java.net.URL
 import java.net.URLEncoder
 
 
-import com.lagradost.cloudstream3.metaproviders.TmdbApi
-import com.lagradost.cloudstream3.mvvm.Resource
-import com.lagradost.cloudstream3.movie.TMDB
-import com.lagradost.cloudstream3.metaproviders.TmdbApi.getTmdbId
-import com.lagradost.cloudstream3.metaproviders.TmdbApi.getTvDetails
-import com.example.R // Bu, projenizin paket adını belirtir. Sizin projenize göre değişebilir.
-// BuildConfig sınıfına erişim için bir import satırı genellikle gerekli değildir,
-// ancak IDE'de hata alırsanız manuel olarak ekleyebilirsiniz.
-import com.example.BuildConfig
-
-
-
-
 
 
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 Anime TMDB Dizi 🎬"
+    override var name = "35 Anime Dizi 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(TvType.TvSeries)
 
-
-
-  // TMDB API anahtarını build.gradle'den alınan BuildConfig alanından çeker.
-    private val tmdbApiKey = BuildConfig.TMDB_SECRET_API
-    private val tmdbApi = TmdbApi(tmdbApiKey)
-
-
-
-
-
-	
     private val DEFAULT_POSTER_URL =
         "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
 
@@ -384,6 +360,39 @@ val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
 
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
 
+    private suspend fun fetchTMDBData(title: String): JSONObject? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val apiKey = BuildConfig.TMDB_SECRET_API.trim('"')
+                if (apiKey.isEmpty()) {
+                    Log.e("TMDB", "API key is empty")
+                    return@withContext null
+                }
+
+                val encodedTitle = URLEncoder.encode(title.replace(Regex("\\([^)]*\\)"), "").trim(), "UTF-8")
+                val searchUrl = "https://api.themoviedb.org/3/search/movie?api_key=$apiKey&query=$encodedTitle&language=tr-TR"
+                
+                val response = withContext(Dispatchers.IO) {
+                    URL(searchUrl).readText()
+                }
+                val jsonResponse = JSONObject(response)
+                val results = jsonResponse.getJSONArray("results")
+                
+                if (results.length() > 0) {
+                    val movieId = results.getJSONObject(0).getInt("id")
+                    val detailsUrl = "https://api.themoviedb.org/3/movie/$movieId?api_key=$apiKey&append_to_response=credits&language=tr-TR"
+                    val detailsResponse = withContext(Dispatchers.IO) {
+                        URL(detailsUrl).readText()
+                    }
+                    return@withContext JSONObject(detailsResponse)
+                }
+                null
+            } catch (e: Exception) {
+                Log.e("TMDB", "Error fetching TMDB data: ${e.message}")
+                null
+            }
+        }
+    }
     override suspend fun load(url: String): LoadResponse {
         val loadData = parseJson<LoadData>(url)
         val allShows = loadData.items
