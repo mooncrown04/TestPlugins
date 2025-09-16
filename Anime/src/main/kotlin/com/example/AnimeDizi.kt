@@ -15,9 +15,27 @@ import java.io.InputStream
 import java.util.Locale
 import com.lagradost.cloudstream3.ActorData
 import com.lagradost.cloudstream3.Score
+
+
+
+// --- Ana Eklenti Sınıfı ---
+class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
+    override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
+    override var name = "35 anime Dizi4 🎬"
+    override val hasMainPage = true
+    override var lang = "tr"
+    override val hasQuickSearch = true
+    override val hasDownloadSupport = true
+    override val supportedTypes = setOf(TvType.TvSeries)
+
+    private val DEFAULT_POSTER_URL =
+        "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
+
+    private var cachedPlaylist: Playlist? = null
+    private val CACHE_KEY = "iptv_playlist_cache"
+
 // --- Yardımcı Sınıflar ---
 data class Playlist(val items: List<PlaylistItem> = emptyList())
-
 data class PlaylistItem(
     val title: String? = null,
     val attributes: Map<String, String> = emptyMap(),
@@ -125,21 +143,6 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
     return Triple(textWithCleanedChars.trim(), null, null)
 }
 
-// --- Ana Eklenti Sınıfı ---
-class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
-    override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 anime Dizi4 🎬"
-    override val hasMainPage = true
-    override var lang = "tr"
-    override val hasQuickSearch = true
-    override val hasDownloadSupport = true
-    override val supportedTypes = setOf(TvType.TvSeries)
-
-    private val DEFAULT_POSTER_URL =
-        "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
-
-    private var cachedPlaylist: Playlist? = null
-    private val CACHE_KEY = "iptv_playlist_cache"
 
     data class LoadData(
         val items: List<PlaylistItem>,
@@ -179,9 +182,10 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
             val subbedKeywords = listOf("altyazılı", "altyazi")
             val language = firstShow.attributes["tvg-language"]?.lowercase()
-
+            // Dublaj kontrolü:
             val isDubbed = dubbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish"|| language == "dublaj"|| language == "TÜRKÇE"
-            val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
+            // Altyazı kontrolü:
+			val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
 
             val loadData = LoadData(
                 items = shows,
@@ -214,10 +218,12 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         }.groupBy { it.first }.mapValues { it.value.map { it.second } }.toSortedMap()
 
     
-        val finalHomePageLists = mutableListOf<HomePageList>()
-        val turkishAlphabet = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUVYZ".split("").filter { it.isNotBlank() }
-        val fullAlphabet = turkishAlphabet + listOf("Q", "W", "X") 
-
+        val finalHomePageLists = mutableListOf<HomePageList>()        
+		val turkishAlphabet = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUVYZ".split("").filter { it.isNotBlank() }
+         // Alfabedeki Q, W, X gibi Türkçe'de olmayan ama listede olabilecek harfleri de ekler
+		val fullAlphabet = turkishAlphabet + listOf("Q", "W", "X") 
+        
+		// Grupları işleme listesine ekler.
         val allGroupsToProcess = mutableListOf<String>()
         if (alphabeticGroups.containsKey("0-9")) allGroupsToProcess.add("0-9")
         fullAlphabet.forEach { char ->
@@ -227,6 +233,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         }
         if (alphabeticGroups.containsKey("#")) allGroupsToProcess.add("#")
 
+        // Her harf grubunu dolaşır ve ana sayfa listelerini oluşturur.
         allGroupsToProcess.forEach { char ->
             val shows = alphabeticGroups[char]
             if (shows != null && shows.isNotEmpty()) {
@@ -239,6 +246,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
                             val remainingAlphabet = fullAlphabet.subList(startIndex, fullAlphabet.size).joinToString(" ") { it }
                             "🎬 $char ${remainingAlphabet.substring(1).lowercase(Locale.getDefault())}"
                         } else {
+						 // Eğer harf alfabede yoksa yedek başlık
                             "🎬 $char"
                         }
                     }
@@ -268,9 +276,11 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
             val subbedKeywords = listOf("altyazılı", "altyazi")
             val language = firstShow.attributes["tvg-language"]?.lowercase()
-
+             
+			 // Dublaj kontrolü:
             val isDubbed = dubbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish"|| language == "dublaj"|| language == "TÜRKÇE"
-            val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
+            // Altyazı kontrolü:
+			val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
 
             val loadData = LoadData(
                 items = shows,
@@ -371,6 +381,11 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
             episodesMap[DubStatus.Subbed] = subbedEpisodes
         }
 
+     // Etiketsiz bölümler, eğer varlarsa ve başka etiketli bölüm yoksa, 
+     // "Dubbed" veya "Subbed" olarak gösterilmek yerine kendi başlarına listelenir.
+     // Cloudstream arayüzünde oynatma tuşu için bir kategoriye ait olmaları gerekir.
+     // Bu yüzden en iyi çözüm, tüm bölümleri tek bir liste altında birleştirmektir. 
+
         val combinedEpisodes = mutableListOf<Episode>()
         combinedEpisodes.addAll(dubbedEpisodes)
         combinedEpisodes.addAll(subbedEpisodes)
@@ -392,7 +407,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         val tags = mutableListOf<String>()
         tags.add(loadData.group)
         tags.add(loadData.nation)
-        if (dubbedEpisodes.isNotEmpty()) {
+         // Sadece gerçekten dublajlı veya altyazılı bölüm varsa etiket eklenir.
+		if (dubbedEpisodes.isNotEmpty()) {
             tags.add("Türkçe Dublaj")
         }
         if (subbedEpisodes.isNotEmpty()) {
@@ -400,8 +416,8 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         }
 
         val recommendedList = (dubbedEpisodes + subbedEpisodes + unknownEpisodes)
-            .shuffled()
-            .take(10)
+            //.shuffled()
+            .take(24)
             .mapNotNull { episode ->
                 val episodeLoadData = parseJson<LoadData>(episode.data)
                 val episodeTitleWithNumber = if (episodeLoadData.episode > 0) {
