@@ -17,7 +17,7 @@ import java.net.URLEncoder
 class AnimeDizi(private val context: android.content.Context, private val sharedPref: SharedPreferences?) : MainAPI() {
 
     override var mainUrl              = "https://raw.githubusercontent.com/GitLatte/patr0n/site/lists/power-sinema.m3u"
-    override var name                 = "3504powerboard Sinema 🎥"
+    override var name                 = "350004powerboard Sinema 🎥"
     override val hasMainPage          = true
     override var lang                 = "tr"
     override val hasQuickSearch       = true
@@ -91,7 +91,7 @@ class AnimeDizi(private val context: android.content.Context, private val shared
     private suspend fun fetchTMDBData(title: String): JSONObject? {
         return withContext(Dispatchers.IO) {
             try {
-                val apiKey = BuildConfig.TMDB_SECRET_API.trim('"')
+                val apiKey = BuildConfig.TMDB_SECRET_API   //.trim('"')
                 if (apiKey.isEmpty()) {
                     Log.e("TMDB", "API key is empty")
                     return@withContext null
