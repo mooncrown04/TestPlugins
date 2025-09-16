@@ -2,6 +2,9 @@ import java.util.Properties
 import java.io.FileInputStream
 
 android {
+    buildFeatures {
+        buildConfig = true
+    }
     defaultConfig {
         val localProps = Properties()
         val localFile = rootProject.file("local.properties")
