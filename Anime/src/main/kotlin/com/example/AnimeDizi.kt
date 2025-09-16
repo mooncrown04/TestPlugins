@@ -15,7 +15,6 @@ import java.io.InputStream
 import java.util.Locale
 import com.lagradost.cloudstream3.ActorData
 import com.lagradost.cloudstream3.Score
-import com.lagradost.cloudstream3.APIHolder.get // Bu import satırı eklendi
 import java.util.regex.Pattern
 
 // --- Ana Eklenti Sınıfı ---
