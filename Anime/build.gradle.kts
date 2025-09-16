@@ -1,9 +1,8 @@
 version = 3
 
-dependencies {
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
-    // Cloudstream'in TMDB kütüphanesi
+dependencies {
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("com.lagradost.cloudstream3:cloudstream-tmdb:1.0.0")
 }
 
