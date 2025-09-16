@@ -459,7 +459,7 @@ val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
         }
 
         val recommendedList = (dubbedEpisodes + subbedEpisodes + unknownEpisodes)
-            //.shuffled()
+            //.shuffled()    burası karık olması sağlanıyor
             .take(24)
             .mapNotNull { episode ->
                 val episodeLoadData = parseJson<LoadData>(episode.data)
@@ -503,20 +503,17 @@ val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val loadData = parseJson<LoadData>(data)
-       // loadData.items.forEach { item ->
-            loadData.urls.forEachIndexed { index, videoUrl ->
+        loadData.items.forEach { item ->
 			
 			val linkQuality = Qualities.Unknown.value
             
-          //  val titleText = loadData.title
+            val titleText = loadData.title
             
             callback.invoke(
                 newExtractorLink(
                     source = this.name,
-                 //   name = titleText,
-                    name = "${loadData.title} Kaynak ${index + 1}",
-					url = videoUrl,
-					//url = item.url.toString(),
+                    name = titleText,             
+					url = item.url.toString(),
                     type = ExtractorLinkType.M3U8
                 ) {
                     quality = linkQuality
