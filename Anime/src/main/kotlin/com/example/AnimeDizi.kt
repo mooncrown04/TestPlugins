@@ -20,7 +20,7 @@ import com.lagradost.cloudstream3.Score
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 Anime Dizi son007 🎬"
+    override var name = "35 Anime Dizi son 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -346,15 +346,12 @@ override suspend fun load(url: String): LoadResponse {
     val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
     val subbedKeywords = listOf("altyazılı", "altyazi", "sub")
 
-    val episodesByDubStatus = mutableMapOf<DubStatus, MutableList<Episode>>()
-    
     // Bölümleri dublaj/altyazı durumuna ve ardından sezona göre grupla
     val seasonsByDubStatus = mutableMapOf<DubStatus, MutableMap<Int, MutableList<PlaylistItem>>>()
     
     allShows.forEach { item ->
         val (itemCleanTitle, season, episode) = parseEpisodeInfo(item.title.toString())
         val finalSeason = season ?: 1
-        val finalEpisode = episode ?: 1
         val language = item.attributes["tvg-language"]?.lowercase()
 
         val isDubbed = dubbedKeywords.any { keyword -> item.title.toString().lowercase(Locale.getDefault()).contains(keyword) } || language == "tr" || language == "turkish" || language == "dublaj"
@@ -366,6 +363,8 @@ override suspend fun load(url: String): LoadResponse {
                           .getOrPut(finalSeason) { mutableListOf() }
                           .add(item)
     }
+
+    val episodesByDubStatus = mutableMapOf<DubStatus, MutableList<Episode>>()
 
     // Gruplama ve liste oluşturma
     seasonsByDubStatus.forEach { (status, seasons) ->
@@ -470,7 +469,8 @@ override suspend fun load(url: String): LoadResponse {
         this.plot = plot
         this.score = scoreToUse?.let { Score.from10(it) }
         this.tags = tags
-        this.episodes = episodesByDubStatus
+        // Düzeltme: MutableList'i List'e dönüştür
+        this.episodes = episodesByDubStatus.mapValues { it.value.toList() }
         this.recommendations = allEpisodes
         val actor = Actor(loadData.title, finalPosterUrl)
         this.actors = listOf(
