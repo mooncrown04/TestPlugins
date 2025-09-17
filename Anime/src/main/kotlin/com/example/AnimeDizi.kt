@@ -131,6 +131,10 @@ class IptvPlaylistParser {
     private fun String.getUrl(): String? = split("|").firstOrNull()?.trim()
 }
 
+sealed class PlaylistParserException(message: String) : Exception(message) {
+    class InvalidHeader : PlaylistParserException("Invalid file header.")
+}
+
 fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
     val textWithCleanedChars = text.replace(Regex("[\\u200E\\u200F]"), "")
     val format1Regex = Regex("""(.*?)[^\w\d]+(\d+)\.\s*Sezon\s*(\d+)\.\s*Bölüm.*""", RegexOption.IGNORE_CASE)
@@ -341,6 +345,12 @@ override suspend fun load(url: String): LoadResponse {
 
     val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
     val subbedKeywords = listOf("altyazılı", "altyazi", "sub")
+    
+    // Enum'a yeni değerleri ekleyin
+    enum class DubStatus {
+        Dubbed, Subbed, Both, Other
+    }
+
 
     val seasonsByDubStatus = mutableMapOf<DubStatus, MutableMap<Int, MutableList<PlaylistItem>>>()
     
@@ -459,8 +469,14 @@ override suspend fun load(url: String): LoadResponse {
     if (episodesByDubStatus.containsKey(DubStatus.Subbed)) {
         tags.add("Türkçe Altyazılı")
     }
+    if (episodesByDubStatus.containsKey(DubStatus.Both)) {
+        tags.add("Hem Dublaj Hem Altyazı")
+    }
+    if (episodesByDubStatus.containsKey(DubStatus.Other)) {
+        tags.add("Diğer")
+    }
 
-    val allEpisodes = (episodesByDubStatus[DubStatus.Dubbed].orEmpty() + episodesByDubStatus[DubStatus.Subbed].orEmpty() + episodesByDubStatus[DubStatus.Both].orEmpty())
+    val allEpisodes = (episodesByDubStatus[DubStatus.Dubbed].orEmpty() + episodesByDubStatus[DubStatus.Subbed].orEmpty() + episodesByDubStatus[DubStatus.Both].orEmpty() + episodesByDubStatus[DubStatus.Other].orEmpty())
         .filter { it.data.isNotBlank() }
         .distinctBy { it.data }
         .shuffled()
