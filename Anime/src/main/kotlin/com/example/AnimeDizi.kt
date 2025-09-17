@@ -20,7 +20,7 @@ import com.lagradost.cloudstream3.Score
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 Anime Dizi sonson 🎬"
+    override var name = "35 Anime Dizi son 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -349,8 +349,7 @@ override suspend fun load(url: String): LoadResponse {
 
     val dubbedEpisodes = mutableListOf<Episode>()
     val subbedEpisodes = mutableListOf<Episode>()
-    val unknownEpisodes = mutableListOf<Episode>()
-
+    
     val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
     val subbedKeywords = listOf("altyazılı", "altyazi")
 
@@ -397,16 +396,14 @@ override suspend fun load(url: String): LoadResponse {
 
         if (isDubbed) {
             dubbedEpisodes.add(episodeObj)
-        } else if (isSubbed) {
-            subbedEpisodes.add(episodeObj)
         } else {
-            unknownEpisodes.add(episodeObj) // Etiketsiz bölümleri de ekler
+            // Eğer Dublajlı değilse ve Altyazı veya Etiketsiz ise buraya ekle
+            subbedEpisodes.add(episodeObj)
         }
     }
     
     dubbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
     subbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
-    unknownEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
 
     val episodesMap = mutableMapOf<DubStatus, List<Episode>>()
 
@@ -416,11 +413,7 @@ override suspend fun load(url: String): LoadResponse {
     if (subbedEpisodes.isNotEmpty()) {
         episodesMap[DubStatus.Subbed] = subbedEpisodes
     }
-    if (unknownEpisodes.isNotEmpty()) {
-        // Etiketsiz bölümleri ayrı bir başlık altında topla
-        episodesMap[DubStatus.Unknown] = unknownEpisodes
-    }
-
+   
 
     val actorsList = mutableListOf<ActorData>()
 
@@ -441,7 +434,7 @@ override suspend fun load(url: String): LoadResponse {
         tags.add("Türkçe Altyazılı")
     }
 
-    val recommendedList = (dubbedEpisodes + subbedEpisodes + unknownEpisodes)
+    val recommendedList = (dubbedEpisodes + subbedEpisodes)
         .shuffled()
         .take(24)
         .mapNotNull { episode ->
