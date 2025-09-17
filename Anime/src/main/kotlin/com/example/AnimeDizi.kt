@@ -1,12 +1,11 @@
 package com.example
 
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.utils.ExtractorLinkType
+import com.lagradost.cloudstream3.utils.AppUtils.toJson
+import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.SubtitleFile
 import com.lagradost.cloudstream3.utils.Qualities
-import com.lagradost.cloudstream3.utils.parseJson
-import com.lagradost.cloudstream3.utils.toJson
+import com.lagradost.cloudstream3.utils.SubtitleFile
 
 data class PlaylistItem(
     val title: String?,
@@ -38,7 +37,6 @@ class AnimeDizi : MainAPI() {
     private val dubbedKeywords = listOf("tr dublaj", "dublaj", "dub")
     private val subbedKeywords = listOf("altyazı", "sub")
 
-    // Episode bilgisini temizle
     private fun parseEpisodeInfo(title: String): Triple<String, Int?, Int?> {
         val cleanTitle = title.replace(Regex("S\\d+E\\d+", RegexOption.IGNORE_CASE), "").trim()
         val season = Regex("S(\\d+)E\\d+", RegexOption.IGNORE_CASE).find(title)?.groupValues?.get(1)?.toIntOrNull()
@@ -47,8 +45,7 @@ class AnimeDizi : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        // Burada normalde M3U veya JSON kaynağını çekeceksin.
-        // Ben sana test için örnek dummy liste ekliyorum:
+        // Örnek dummy liste
         val allShows = listOf(
             PlaylistItem("Naruto S01E01 TR Dublaj", "https://cdn1/naruto1dub.m3u8", mapOf("tvg-logo" to "poster1.jpg"), score = 80),
             PlaylistItem("Naruto S01E01 TR Altyazılı", "https://cdn2/naruto1sub.m3u8", mapOf("tvg-logo" to "poster1.jpg"), score = 75),
@@ -59,7 +56,7 @@ class AnimeDizi : MainAPI() {
         val subbedEpisodes = mutableListOf<Episode>()
         val unknownEpisodes = mutableListOf<Episode>()
 
-        // --- GRUPLAMA BAŞLANGICI ---
+        // --- Bölüm bazlı grupla
         val groupedByEpisode = allShows.groupBy { item ->
             val (cleanTitle, season, episode) = parseEpisodeInfo(item.title ?: "")
             Triple(cleanTitle, season ?: 1, episode ?: 1)
@@ -92,25 +89,21 @@ class AnimeDizi : MainAPI() {
             ).toJson()
 
             val episodeObj = newEpisode(episodeLoadDataJson) {
-                this.name = if (episode > 0) "$itemCleanTitle S$season E$episode" else itemCleanTitle
+                name = if (episode > 0) "$itemCleanTitle S$season E$episode" else itemCleanTitle
                 this.season = season
                 this.episode = episode
-                this.posterUrl = posterFromItem
+                posterUrl = posterFromItem
             }
 
-            if (isDubbedGroup) {
-                dubbedEpisodes.add(episodeObj)
-            } else if (isSubbedGroup) {
-                subbedEpisodes.add(episodeObj)
-            } else {
-                unknownEpisodes.add(episodeObj)
+            when {
+                isDubbedGroup -> dubbedEpisodes.add(episodeObj)
+                isSubbedGroup -> subbedEpisodes.add(episodeObj)
+                else -> unknownEpisodes.add(episodeObj)
             }
         }
-        // --- GRUPLAMA BİTİŞİ ---
 
         val posterUrl = allShows.firstOrNull()?.attributes?.get("tvg-logo")
         val description = "Anime/Dizi içerikleri"
-        val recommendations = listOf("Öneri1", "Öneri2")
 
         return newAnimeLoadResponse("AnimeDizi İçerikleri", url, TvType.Anime) {
             posterUrl?.let { poster = it }
@@ -119,11 +112,6 @@ class AnimeDizi : MainAPI() {
             addEpisodes(DubStatus.Subbed, subbedEpisodes)
             addEpisodes(DubStatus.Unknown, unknownEpisodes)
             tags = listOf("Anime", "Dizi")
-            this.recommendations = recommendations.map { rec ->
-                newAnimeSearchResponse(rec, "$mainUrl/$rec", TvType.Anime) {
-                    posterUrl?.let { this.posterUrl = it }
-                }
-            }
         }
     }
 
@@ -136,19 +124,16 @@ class AnimeDizi : MainAPI() {
         val loadData = parseJson<LoadData>(data)
 
         loadData.items.forEachIndexed { index, item ->
-            val linkQuality = Qualities.Unknown.value
             val sourceName = "${loadData.title} Kaynak ${index + 1}"
-
-            callback.invoke(
-                newExtractorLink(
-                    source = this.name,
-                    name = sourceName,
-                    url = item.url ?: return@forEachIndexed,
-                    type = ExtractorLinkType.M3U8
-                ) {
-                    quality = linkQuality
-                }
+            val link = ExtractorLink(
+                source = name,
+                name = sourceName,
+                url = item.url ?: return@forEachIndexed,
+                referer = "",
+                quality = Qualities.Unknown.value,
+                isM3u8 = true
             )
+            callback(link)
         }
         return true
     }
