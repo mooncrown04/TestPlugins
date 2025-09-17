@@ -496,7 +496,7 @@ val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
         }
     }
 
-   override suspend fun loadLinks(
+  override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
     subtitleCallback: (SubtitleFile) -> Unit,
@@ -505,19 +505,19 @@ val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
     val loadData = parseJson<LoadData>(data)
     loadData.items.forEachIndexed { index, item ->
         val linkQuality = Qualities.Unknown.value
-        
+
         val linkName = if (loadData.items.size > 1) {
-            "${this.name} - Kaynak ${index + 1}"
+            "Kaynak ${index + 1}"
         } else {
-            this.name
+            "Oynat" // Tek kaynak için "Oynat" gibi bir isim daha uygun olabilir
         }
-        
+
         val titleText = loadData.title
-        
+
         callback.invoke(
             newExtractorLink(
-                source = linkName, // Use the new numbered name
-                name = titleText,
+                source = this.name, // Burası eklenti adını gösterir.
+                name = linkName, // Burası "Kaynak 1", "Kaynak 2" gibi ismi gösterir.
                 url = item.url.toString(),
                 type = ExtractorLinkType.M3U8
             ) {
