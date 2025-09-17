@@ -362,7 +362,7 @@ override suspend fun load(url: String): LoadResponse {
                           .add(item)
     }
 
-    val episodesByDubStatus = mutableMapOf<DubStatus, MutableList<Episode>>()
+    val episodesByDubStatus = mutableMapOf<DubStatus, List<Episode>>()
 
     seasonsByDubStatus.forEach { (status, seasons) ->
         val allSeasonEpisodes = mutableListOf<Episode>()
@@ -433,7 +433,7 @@ override suspend fun load(url: String): LoadResponse {
         }
         
         if (allSeasonEpisodes.isNotEmpty()) {
-            episodesByDubStatus.getOrPut(status) { mutableListOf() }.addAll(allSeasonEpisodes)
+            episodesByDubStatus[status] = allSeasonEpisodes
         }
     }
 
@@ -486,7 +486,7 @@ override suspend fun load(url: String): LoadResponse {
         this.plot = plot
         this.score = scoreToUse?.let { Score.from10(it) }
         this.tags = tags
-        this.episodes = episodesByDubStatus.mapValues { it.value.toList() } as MutableMap<DubStatus, List<Episode>>
+        this.episodes = episodesByDubStatus
         this.recommendations = allEpisodes
         val actor = Actor(loadData.title, finalPosterUrl)
         this.actors = listOf(
