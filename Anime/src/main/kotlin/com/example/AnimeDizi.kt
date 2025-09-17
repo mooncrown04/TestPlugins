@@ -346,12 +346,6 @@ override suspend fun load(url: String): LoadResponse {
     val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
     val subbedKeywords = listOf("altyazılı", "altyazi", "sub")
     
-    // Enum'a yeni değerleri ekleyin
-    enum class DubStatus {
-        Dubbed, Subbed, Both, Other
-    }
-
-
     val seasonsByDubStatus = mutableMapOf<DubStatus, MutableMap<Int, MutableList<PlaylistItem>>>()
     
     allShows.forEach { item ->
@@ -361,12 +355,8 @@ override suspend fun load(url: String): LoadResponse {
         val isDubbed = dubbedKeywords.any { item.title.toString().lowercase(Locale.getDefault()).contains(it) } || item.attributes["tvg-language"]?.lowercase() == "tr"
         val isSubbed = subbedKeywords.any { item.title.toString().lowercase(Locale.getDefault()).contains(it) } || item.attributes["tvg-language"]?.lowercase() == "en"
 
-        val dubStatus = when {
-            isDubbed && isSubbed -> DubStatus.Both
-            isDubbed -> DubStatus.Dubbed
-            isSubbed -> DubStatus.Subbed
-            else -> DubStatus.Other
-        }
+        // DubStatus'u doğru bir şekilde belirle
+        val dubStatus = if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed
         
         seasonsByDubStatus.getOrPut(dubStatus) { mutableMapOf() }
                           .getOrPut(finalSeason) { mutableListOf() }
@@ -380,10 +370,8 @@ override suspend fun load(url: String): LoadResponse {
         seasons.keys.sorted().forEach { season ->
             val itemsForSeason = seasons[season]
             
-            // Eğer sezonda gerçek bölümler varsa
             val validEpisodes = itemsForSeason?.filter { parseEpisodeInfo(it.title.toString()).third != null }
             if (!validEpisodes.isNullOrEmpty()) {
-                // Sadece birden fazla bölümü olan sezonlar için başlık ekle
                 if (seasons.size > 1 || season > 1) {
                     allSeasonEpisodes.add(newEpisode("") {
                         name = "Sezon $season"
@@ -392,7 +380,6 @@ override suspend fun load(url: String): LoadResponse {
                     })
                 }
                 
-                // Bölümleri oluştur ve listeye ekle
                 val sortedItems = validEpisodes.distinctBy { it.url }.sortedBy {
                     parseEpisodeInfo(it.title.toString()).third ?: 0
                 }
@@ -408,8 +395,8 @@ override suspend fun load(url: String): LoadResponse {
                         nation = item.attributes["tvg-country"] ?: "TR",
                         season = season,
                         episode = episode ?: 0,
-                        isDubbed = status == DubStatus.Dubbed || status == DubStatus.Both,
-                        isSubbed = status == DubStatus.Subbed || status == DubStatus.Both,
+                        isDubbed = status == DubStatus.Dubbed,
+                        isSubbed = status == DubStatus.Subbed,
                         score = item.score
                     )
                     
@@ -422,7 +409,6 @@ override suspend fun load(url: String): LoadResponse {
                     allSeasonEpisodes.add(episodeObj)
                 }
             } else if (itemsForSeason != null && itemsForSeason.size == 1) {
-                 // Sadece bir bölüm varsa ve numarası yoksa, direkt ekle
                 val singleItem = itemsForSeason.first()
                 val (itemCleanTitle, _, _) = parseEpisodeInfo(singleItem.title.toString())
                 val episodeLoadData = LoadData(
@@ -433,8 +419,8 @@ override suspend fun load(url: String): LoadResponse {
                     nation = singleItem.attributes["tvg-country"] ?: "TR",
                     season = 1,
                     episode = 0,
-                    isDubbed = status == DubStatus.Dubbed || status == DubStatus.Both,
-                    isSubbed = status == DubStatus.Subbed || status == DubStatus.Both,
+                    isDubbed = status == DubStatus.Dubbed,
+                    isSubbed = status == DubStatus.Subbed,
                     score = singleItem.score
                 )
                 
@@ -469,14 +455,8 @@ override suspend fun load(url: String): LoadResponse {
     if (episodesByDubStatus.containsKey(DubStatus.Subbed)) {
         tags.add("Türkçe Altyazılı")
     }
-    if (episodesByDubStatus.containsKey(DubStatus.Both)) {
-        tags.add("Hem Dublaj Hem Altyazı")
-    }
-    if (episodesByDubStatus.containsKey(DubStatus.Other)) {
-        tags.add("Diğer")
-    }
 
-    val allEpisodes = (episodesByDubStatus[DubStatus.Dubbed].orEmpty() + episodesByDubStatus[DubStatus.Subbed].orEmpty() + episodesByDubStatus[DubStatus.Both].orEmpty() + episodesByDubStatus[DubStatus.Other].orEmpty())
+    val allEpisodes = (episodesByDubStatus[DubStatus.Dubbed].orEmpty() + episodesByDubStatus[DubStatus.Subbed].orEmpty())
         .filter { it.data.isNotBlank() }
         .distinctBy { it.data }
         .shuffled()
