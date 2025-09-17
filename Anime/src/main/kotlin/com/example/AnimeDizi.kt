@@ -469,7 +469,7 @@ override suspend fun load(url: String): LoadResponse {
         this.plot = plot
         this.score = scoreToUse?.let { Score.from10(it) }
         this.tags = tags
-        this.episodes = episodesByDubStatus
+        this.episodes = episodesByDubStatus.mapValues { it.value.toList() } // Düzeltme
         this.recommendations = allEpisodes
         val actor = Actor(loadData.title, finalPosterUrl)
         this.actors = listOf(
