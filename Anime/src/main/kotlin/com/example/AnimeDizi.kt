@@ -469,8 +469,7 @@ override suspend fun load(url: String): LoadResponse {
         this.plot = plot
         this.score = scoreToUse?.let { Score.from10(it) }
         this.tags = tags
-        // Düzeltme: MutableList'i List'e dönüştür
-        this.episodes = episodesByDubStatus.mapValues { it.value.toList() }
+        this.episodes = episodesByDubStatus
         this.recommendations = allEpisodes
         val actor = Actor(loadData.title, finalPosterUrl)
         this.actors = listOf(
