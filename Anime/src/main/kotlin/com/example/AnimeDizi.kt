@@ -339,7 +339,7 @@ override suspend fun load(url: String): LoadResponse {
     val plot = "TMDB'den özet alınamadı."
     val scoreToUse = loadData.score
 
-    val episodesMap = mutableMapOf<DubStatus, MutableList<Episode>>()
+    val episodesMap = mutableMapOf<DubStatus, List<Episode>>()
 
     val dubbedSeasonMap = mutableMapOf<Int, MutableList<Episode>>()
     val subbedSeasonMap = mutableMapOf<Int, MutableList<Episode>>()
@@ -397,30 +397,42 @@ override suspend fun load(url: String): LoadResponse {
     dubbedSeasonMap.values.forEach { it.sortWith(compareBy({ it.season }, { it.episode })) }
     subbedSeasonMap.values.forEach { it.sortWith(compareBy({ it.season }, { it.episode })) }
 
-    // Dublajlı sezonları episodesMap'e ekle
-    dubbedSeasonMap.keys.sorted().forEach { season ->
-        val episodes = dubbedSeasonMap[season]?.distinctBy { it.episode }
-        if (!episodes.isNullOrEmpty()) {
-            val seasonName = if (season > 0) "Sezon $season" else "Bölümler"
-            val newEpisodes = episodes.map { it.copy(name = it.name?.replace("S$season", seasonName)) }
-            episodesMap[DubStatus.Dubbed] = episodesMap.getOrPut(DubStatus.Dubbed) { mutableListOf() }.apply { addAll(newEpisodes) }
+    // Dublajlı sezonları episodesMap'e ekle ve List'e dönüştür
+    if (dubbedSeasonMap.isNotEmpty()) {
+        val allDubbedEpisodes = mutableListOf<Episode>()
+        dubbedSeasonMap.keys.sorted().forEach { season ->
+            val episodes = dubbedSeasonMap[season]?.distinctBy { it.episode }
+            if (!episodes.isNullOrEmpty()) {
+                val seasonName = if (season > 0) "Sezon $season" else "Bölümler"
+                val newEpisodes = episodes.map {
+                    it.copy(name = it.name?.replace("S$season", seasonName))
+                }
+                allDubbedEpisodes.addAll(newEpisodes)
+            }
         }
+        episodesMap[DubStatus.Dubbed] = allDubbedEpisodes.toList()
     }
 
-    // Altyazılı sezonları episodesMap'e ekle
-    subbedSeasonMap.keys.sorted().forEach { season ->
-        val episodes = subbedSeasonMap[season]?.distinctBy { it.episode }
-        if (!episodes.isNullOrEmpty()) {
-            val seasonName = if (season > 0) "Sezon $season" else "Bölümler"
-            val newEpisodes = episodes.map { it.copy(name = it.name?.replace("S$season", seasonName)) }
-            episodesMap[DubStatus.Subbed] = episodesMap.getOrPut(DubStatus.Subbed) { mutableListOf() }.apply { addAll(newEpisodes) }
+    // Altyazılı sezonları episodesMap'e ekle ve List'e dönüştür
+    if (subbedSeasonMap.isNotEmpty()) {
+        val allSubbedEpisodes = mutableListOf<Episode>()
+        subbedSeasonMap.keys.sorted().forEach { season ->
+            val episodes = subbedSeasonMap[season]?.distinctBy { it.episode }
+            if (!episodes.isNullOrEmpty()) {
+                val seasonName = if (season > 0) "Sezon $season" else "Bölümler"
+                val newEpisodes = episodes.map {
+                    it.copy(name = it.name?.replace("S$season", seasonName))
+                }
+                allSubbedEpisodes.addAll(newEpisodes)
+            }
         }
+        episodesMap[DubStatus.Subbed] = allSubbedEpisodes.toList()
     }
     
     // Öneriler listesini oluştur
-    val recommendedList = (dubbedSeasonMap.values.flatten() + subbedSeasonMap.values.flatten())
-        .distinctBy { it.data }
-     //   .shuffled()
+    val allEpisodes = (dubbedSeasonMap.values.flatten() + subbedSeasonMap.values.flatten()).distinctBy { it.data }
+    val recommendedList = allEpisodes
+        .shuffled()
         .take(24)
         .mapNotNull { episode ->
             val episodeLoadData = parseJson<LoadData>(episode.data)
@@ -429,7 +441,6 @@ override suspend fun load(url: String): LoadResponse {
             } else {
                 episodeLoadData.title
             }
-            
             newAnimeSearchResponse(episodeTitleWithNumber, episode.data).apply {
                 posterUrl = episodeLoadData.poster
                 type = TvType.Anime
