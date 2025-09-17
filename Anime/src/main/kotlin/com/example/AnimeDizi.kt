@@ -355,7 +355,6 @@ override suspend fun load(url: String): LoadResponse {
         val isDubbed = dubbedKeywords.any { item.title.toString().lowercase(Locale.getDefault()).contains(it) } || item.attributes["tvg-language"]?.lowercase() == "tr"
         val isSubbed = subbedKeywords.any { item.title.toString().lowercase(Locale.getDefault()).contains(it) } || item.attributes["tvg-language"]?.lowercase() == "en"
 
-        // DubStatus'u doğru bir şekilde belirle
         val dubStatus = if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed
         
         seasonsByDubStatus.getOrPut(dubStatus) { mutableMapOf() }
