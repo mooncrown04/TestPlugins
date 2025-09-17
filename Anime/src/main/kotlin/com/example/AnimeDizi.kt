@@ -227,7 +227,8 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
             posterUrl = loadData.poster
             type = TvType.Anime
             this.score = score?.let { Score.from10(it) }
-            if (isDubbed || isSubbed) {
+            this.quality = SearchQuality.HD
+			if (isDubbed || isSubbed) {
                 addDubStatus(dubExist = isDubbed, subExist = isSubbed)
             }
         }
@@ -326,9 +327,10 @@ override suspend fun search(query: String): List<SearchResponse> {
         val searchResponse = newAnimeSearchResponse(cleanTitle, loadData.toJson())
         searchResponse.apply {
             posterUrl = loadData.poster
-            type = TvType.Anime
-            this.score = score?.let { Score.from10(it) }
-            if (isDubbed || isSubbed) {
+            type = TvType.Anime           
+			this.score = score?.let { Score.from10(it) }
+            this.quality = SearchQuality.HD
+		   if (isDubbed || isSubbed) {
                 addDubStatus(dubExist = isDubbed, subExist = isSubbed)
             }
         }
@@ -485,9 +487,12 @@ override suspend fun loadLinks(
     loadData.items.forEachIndexed { index, item ->
         val linkQuality = Qualities.Unknown.value
         
-        // Kaynak adı
-        val linkName =loadData.title+ "Kaynak ${index + 1}"
+        // isim ve Kaynak +no
+         val linkName =loadData.title+ "Kaynak ${index + 1}"
         
+		 val linkQuality = Qualities.P1080.value 
+		
+		
         // ExtractorLink'i oluştur ve callback'e gönder
         callback.invoke(
             newExtractorLink(
