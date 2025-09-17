@@ -20,7 +20,7 @@ import com.lagradost.cloudstream3.Score
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 Anime Dizi son4444444 🎬"
+    override var name = "35 Anime Dizi son 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -360,6 +360,9 @@ override suspend fun load(url: String): LoadResponse {
         val isDubbed = dubbedKeywords.any { keyword -> item.title.toString().lowercase(Locale.getDefault()).contains(keyword) } || language == "tr" || language == "turkish" || language == "dublaj"
         val isSubbed = subbedKeywords.any { keyword -> item.title.toString().lowercase(Locale.getDefault()).contains(keyword) } || language == "en" || language == "eng" || language == "altyazılı"
 
+        // Bölüm posteri
+        val episodePoster = item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: finalPosterUrl
+
         // Bölüm verilerini tek bir LoadData nesnesine paketle
         val episodeLoadData = LoadData(
             items = allShows.filter {
@@ -367,7 +370,7 @@ override suspend fun load(url: String): LoadResponse {
                 s == finalSeason && e == finalEpisode
             },
             title = itemCleanTitle,
-            poster = finalPosterUrl,
+            poster = finalPosterUrl, // Use the final poster for consistency
             group = item.attributes["group-title"] ?: "Bilinmeyen Grup",
             nation = item.attributes["tvg-country"] ?: "TR",
             season = finalSeason,
