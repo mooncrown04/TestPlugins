@@ -202,14 +202,14 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
 
         // Düzeltme: Tüm bölümlerin puanlarından en yükseğini al.
         val score = shows.mapNotNull { it.score }.maxOrNull()
-        
-        // Dublaj ve Altyazı kontrolü
-        val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
-        val subbedKeywords = listOf("altyazılı", "altyazi", "sub")
-        val language = firstShow.attributes["tvg-language"]?.lowercase()
 
-        val isDubbed = dubbedKeywords.any { keyword -> firstShow.title.toString().lowercase(Locale.getDefault()).contains(keyword) } || language == "tr" || language == "turkish" || language == "dublaj"
-        val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowercase(Locale.getDefault()).contains(keyword) } || language == "en" || language == "eng" || language == "altyazılı"
+        val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
+        val subbedKeywords = listOf("altyazılı", "altyazi")
+        val language = firstShow.attributes["tvg-language"]?.lowercase()
+        // Dublaj kontrolü:
+        val isDubbed = dubbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish"|| language == "dublaj"|| language == "TÜRKÇE"
+        // Altyazı kontrolü:
+        val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
 
         val loadData = LoadData(
             items = shows,
@@ -304,11 +304,13 @@ override suspend fun search(query: String): List<SearchResponse> {
         val score = shows.mapNotNull { it.score }.maxOrNull()
 
         val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
-        val subbedKeywords = listOf("altyazılı", "altyazi", "sub")
+        val subbedKeywords = listOf("altyazılı", "altyazi")
         val language = firstShow.attributes["tvg-language"]?.lowercase()
 
-        val isDubbed = dubbedKeywords.any { keyword -> firstShow.title.toString().lowercase(Locale.getDefault()).contains(keyword) } || language == "tr" || language == "turkish" || language == "dublaj"
-        val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowercase(Locale.getDefault()).contains(keyword) } || language == "en" || language == "eng" || language == "altyazılı"
+        // Dublaj kontrolü:
+        val isDubbed = dubbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish"|| language == "dublaj"|| language == "TÜRKÇE"
+        // Altyazı kontrolü:
+        val isSubbed = subbedKeywords.any { keyword -> firstShow.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
 
         val loadData = LoadData(
             items = shows,
@@ -341,104 +343,80 @@ override suspend fun load(url: String): LoadResponse {
 
     val finalPosterUrl = loadData.poster
     val plot = "TMDB'den özet alınamadı."
+
+    // loadData'dan gelen puanı kullan
     val scoreToUse = loadData.score
 
+    val dubbedEpisodes = mutableListOf<Episode>()
+    val subbedEpisodes = mutableListOf<Episode>()
+    
     val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
-    val subbedKeywords = listOf("altyazılı", "altyazi", "sub")
-    
-    val seasonsByDubStatus = mutableMapOf<DubStatus, MutableMap<Int, MutableList<PlaylistItem>>>()
-    
-    allShows.forEach { item ->
-        val (itemCleanTitle, season, episode) = parseEpisodeInfo(item.title.toString())
+    val subbedKeywords = listOf("altyazılı", "altyazi")
+
+    // Bölümleri sezon ve bölüme göre gruplandırıp, aynı bölümün tüm kaynaklarını bir arada tutar.
+    val groupedEpisodes = allShows.groupBy {
+        val (_, season, episode) = parseEpisodeInfo(it.title.toString())
+        Pair(season, episode)
+    }
+
+    groupedEpisodes.forEach { (key, episodeItems) ->
+        val (season, episode) = key
+        val item = episodeItems.first()
+        val (itemCleanTitle, _, _) = parseEpisodeInfo(item.title.toString())
         val finalSeason = season ?: 1
-        
-        val isDubbed = dubbedKeywords.any { item.title.toString().lowercase(Locale.getDefault()).contains(it) } || item.attributes["tvg-language"]?.lowercase() == "tr"
-        val isSubbed = subbedKeywords.any { item.title.toString().lowercase(Locale.getDefault()).contains(it) } || item.attributes["tvg-language"]?.lowercase() == "en"
+        val finalEpisode = episode ?: 1
+        val language = item.attributes["tvg-language"]?.lowercase()
+        val isDubbed = dubbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish" || language == "dublaj"|| language == "TÜRKÇE"
+        val isSubbed = subbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
+        val episodePoster = item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: finalPosterUrl
 
-        val dubStatus = if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed
-        
-        seasonsByDubStatus.getOrPut(dubStatus) { mutableMapOf() }
-                          .getOrPut(finalSeason) { mutableListOf() }
-                          .add(item)
-    }
+        val episodeLoadData = LoadData(
+            items = episodeItems, // Tüm kaynakları bu listeye ekle
+            title = itemCleanTitle,
+            poster = finalPosterUrl,
+            group = item.attributes["group-title"] ?: "Bilinmeyen Grup",
+            nation = item.attributes["tvg-country"] ?: "TR",
+            season = finalSeason,
+            episode = finalEpisode,
+            isDubbed = isDubbed,
+            isSubbed = isSubbed,
+            score = item.score
+        )
 
-    val episodesByDubStatus = mutableMapOf<DubStatus, List<Episode>>()
-
-    seasonsByDubStatus.forEach { (status, seasons) ->
-        val allSeasonEpisodes = mutableListOf<Episode>()
-        seasons.keys.sorted().forEach { season ->
-            val itemsForSeason = seasons[season]
-            
-            val validEpisodes = itemsForSeason?.filter { parseEpisodeInfo(it.title.toString()).third != null }
-            if (!validEpisodes.isNullOrEmpty()) {
-                if (seasons.size > 1 || season > 1) {
-                    allSeasonEpisodes.add(newEpisode("") {
-                        name = "Sezon $season"
-                        this.season = season
-                        this.episode = 0
-                    })
-                }
-                
-                val sortedItems = validEpisodes.distinctBy { it.url }.sortedBy {
-                    parseEpisodeInfo(it.title.toString()).third ?: 0
-                }
-                
-                sortedItems.forEach { item ->
-                    val (itemCleanTitle, _, episode) = parseEpisodeInfo(item.title.toString())
-                    
-                    val episodeLoadData = LoadData(
-                        items = listOf(item),
-                        title = itemCleanTitle,
-                        poster = item.attributes["tvg-logo"] ?: finalPosterUrl,
-                        group = item.attributes["group-title"] ?: "Bilinmeyen Grup",
-                        nation = item.attributes["tvg-country"] ?: "TR",
-                        season = season,
-                        episode = episode ?: 0,
-                        isDubbed = status == DubStatus.Dubbed,
-                        isSubbed = status == DubStatus.Subbed,
-                        score = item.score
-                    )
-                    
-                    val episodeObj = newEpisode(episodeLoadData.toJson()) {
-                        name = "S${season} E${episode}"
-                        this.season = season
-                        this.episode = episode ?: 0
-                        this.posterUrl = item.attributes["tvg-logo"] ?: finalPosterUrl
-                    }
-                    allSeasonEpisodes.add(episodeObj)
-                }
-            } else if (itemsForSeason != null && itemsForSeason.size == 1) {
-                val singleItem = itemsForSeason.first()
-                val (itemCleanTitle, _, _) = parseEpisodeInfo(singleItem.title.toString())
-                val episodeLoadData = LoadData(
-                    items = listOf(singleItem),
-                    title = itemCleanTitle,
-                    poster = singleItem.attributes["tvg-logo"] ?: finalPosterUrl,
-                    group = singleItem.attributes["group-title"] ?: "Bilinmeyen Grup",
-                    nation = singleItem.attributes["tvg-country"] ?: "TR",
-                    season = 1,
-                    episode = 0,
-                    isDubbed = status == DubStatus.Dubbed,
-                    isSubbed = status == DubStatus.Subbed,
-                    score = singleItem.score
-                )
-                
-                allSeasonEpisodes.add(newEpisode(episodeLoadData.toJson()) {
-                    name = itemCleanTitle
-                    this.season = 1
-                    this.episode = 0
-                    this.posterUrl = singleItem.attributes["tvg-logo"] ?: finalPosterUrl
-                })
+        val episodeObj = newEpisode(episodeLoadData.toJson()) {
+            this.name = if (season != null && episode != null) {
+                "${itemCleanTitle} S$finalSeason E$finalEpisode"
+            } else {
+                itemCleanTitle
             }
+            this.season = finalSeason
+            this.episode = finalEpisode
+            this.posterUrl = episodePoster
         }
-        
-        if (allSeasonEpisodes.isNotEmpty()) {
-            episodesByDubStatus[status] = allSeasonEpisodes
+
+        if (isDubbed) {
+            dubbedEpisodes.add(episodeObj)
+        } else {
+            // Eğer Dublajlı değilse ve Altyazı veya Etiketsiz ise buraya ekle
+            subbedEpisodes.add(episodeObj)
         }
     }
+    
+    dubbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
+    subbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
 
+    val episodesMap = mutableMapOf<DubStatus, List<Episode>>()
+
+    if (dubbedEpisodes.isNotEmpty()) {
+        episodesMap[DubStatus.Dubbed] = dubbedEpisodes
+    }
+    if (subbedEpisodes.isNotEmpty()) {
+        episodesMap[DubStatus.Subbed] = subbedEpisodes
+    }
+   
 
     val actorsList = mutableListOf<ActorData>()
+
     actorsList.add(
         ActorData(
             actor = Actor("MoOnCrOwN","https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg")
@@ -448,16 +426,15 @@ override suspend fun load(url: String): LoadResponse {
     val tags = mutableListOf<String>()
     tags.add(loadData.group)
     tags.add(loadData.nation)
-    if (episodesByDubStatus.containsKey(DubStatus.Dubbed)) {
+    // Sadece gerçekten dublajlı veya altyazılı bölüm varsa etiket eklenir.
+    if (dubbedEpisodes.isNotEmpty()) {
         tags.add("Türkçe Dublaj")
     }
-    if (episodesByDubStatus.containsKey(DubStatus.Subbed)) {
+    if (subbedEpisodes.isNotEmpty()) {
         tags.add("Türkçe Altyazılı")
     }
 
-    val allEpisodes = (episodesByDubStatus[DubStatus.Dubbed].orEmpty() + episodesByDubStatus[DubStatus.Subbed].orEmpty())
-        .filter { it.data.isNotBlank() }
-        .distinctBy { it.data }
+    val recommendedList = (dubbedEpisodes + subbedEpisodes)
         .shuffled()
         .take(24)
         .mapNotNull { episode ->
@@ -486,13 +463,50 @@ override suspend fun load(url: String): LoadResponse {
         this.plot = plot
         this.score = scoreToUse?.let { Score.from10(it) }
         this.tags = tags
-        this.episodes = episodesByDubStatus
-        this.recommendations = allEpisodes
+        this.episodes = episodesMap
+        this.recommendations = recommendedList
         val actor = Actor(loadData.title, finalPosterUrl)
         this.actors = listOf(
             ActorData(actor, null)
         ) + actorsList
     }
- }
+}
+
+
+override suspend fun loadLinks(
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    val loadData = parseJson<LoadData>(data)
     
+    // loadData'nın içindeki tüm kaynakları döngüye al
+    loadData.items.forEachIndexed { index, item ->
+        val linkQuality = Qualities.Unknown.value
+        
+        // Kaynak adı
+        val linkName =loadData.title+ "Kaynak ${index + 1}"
+        
+        // ExtractorLink'i oluştur ve callback'e gönder
+        callback.invoke(
+            newExtractorLink(
+                source = this.name,
+                name = linkName,
+                url = item.url.toString(),
+                type = ExtractorLinkType.M3U8
+            ) {
+                quality = linkQuality
+            }
+        )
+    }
+    return true
+}
+
+private data class ParsedEpisode(
+    val item: PlaylistItem,
+    val itemCleanTitle: String,
+    val season: Int?,
+    val episode: Int?
+)
 }
