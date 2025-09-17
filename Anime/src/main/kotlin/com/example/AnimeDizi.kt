@@ -349,6 +349,7 @@ override suspend fun load(url: String): LoadResponse {
 
     val dubbedEpisodes = mutableListOf<Episode>()
     val subbedEpisodes = mutableListOf<Episode>()
+    val unknownEpisodes = mutableListOf<Episode>()
 
     val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
     val subbedKeywords = listOf("altyazılı", "altyazi")
@@ -398,11 +399,14 @@ override suspend fun load(url: String): LoadResponse {
             dubbedEpisodes.add(episodeObj)
         } else if (isSubbed) {
             subbedEpisodes.add(episodeObj)
+        } else {
+            unknownEpisodes.add(episodeObj) // Etiketsiz bölümleri de ekler
         }
     }
     
     dubbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
     subbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
+    unknownEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
 
     val episodesMap = mutableMapOf<DubStatus, List<Episode>>()
 
@@ -411,6 +415,20 @@ override suspend fun load(url: String): LoadResponse {
     }
     if (subbedEpisodes.isNotEmpty()) {
         episodesMap[DubStatus.Subbed] = subbedEpisodes
+    }
+    
+    // Etiketsiz bölümler, eğer varsa ve başka etiketli bölüm yoksa, Dubbed olarak gösterilir.
+    // Bu, arayüzde bir oynatma tuşunun görünmesini sağlar.
+    // En doğru yaklaşım, tüm bölümleri tek bir ana listede birleştirmektir.
+    val combinedEpisodes = mutableListOf<Episode>()
+    combinedEpisodes.addAll(dubbedEpisodes)
+    combinedEpisodes.addAll(subbedEpisodes)
+    combinedEpisodes.addAll(unknownEpisodes)
+    combinedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
+    
+    // Cloudstream'in arayüzünde tek bir liste halinde görünmesi için Dubbed olarak işaretle.
+    if (combinedEpisodes.isNotEmpty()) {
+        episodesMap[DubStatus.Subbed] = combinedEpisodes
     }
 
     val actorsList = mutableListOf<ActorData>()
@@ -432,7 +450,7 @@ override suspend fun load(url: String): LoadResponse {
         tags.add("Türkçe Altyazılı")
     }
 
-    val recommendedList = (dubbedEpisodes + subbedEpisodes)
+    val recommendedList = (dubbedEpisodes + subbedEpisodes + unknownEpisodes)
         .shuffled()
         .take(24)
         .mapNotNull { episode ->
