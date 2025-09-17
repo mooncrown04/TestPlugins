@@ -20,7 +20,7 @@ import com.lagradost.cloudstream3.Score
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 Anime Dizi son 🎬"
+    override var name = "35 Anime Dizi sonson 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -416,20 +416,11 @@ override suspend fun load(url: String): LoadResponse {
     if (subbedEpisodes.isNotEmpty()) {
         episodesMap[DubStatus.Subbed] = subbedEpisodes
     }
-    
-    // Etiketsiz bölümler, eğer varsa ve başka etiketli bölüm yoksa, Dubbed olarak gösterilir.
-    // Bu, arayüzde bir oynatma tuşunun görünmesini sağlar.
-    // En doğru yaklaşım, tüm bölümleri tek bir ana listede birleştirmektir.
-    val combinedEpisodes = mutableListOf<Episode>()
-    combinedEpisodes.addAll(dubbedEpisodes)
-    combinedEpisodes.addAll(subbedEpisodes)
-    combinedEpisodes.addAll(unknownEpisodes)
-    combinedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
-    
-    // Cloudstream'in arayüzünde tek bir liste halinde görünmesi için Dubbed olarak işaretle.
-    if (combinedEpisodes.isNotEmpty()) {
-        episodesMap[DubStatus.Subbed] = combinedEpisodes
+    if (unknownEpisodes.isNotEmpty()) {
+        // Etiketsiz bölümleri ayrı bir başlık altında topla
+        episodesMap[DubStatus.Unknown] = unknownEpisodes
     }
+
 
     val actorsList = mutableListOf<ActorData>()
 
