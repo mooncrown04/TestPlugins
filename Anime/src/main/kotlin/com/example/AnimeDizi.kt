@@ -496,31 +496,37 @@ val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
         }
     }
 
-    override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        val loadData = parseJson<LoadData>(data)
-        loadData.items.forEach { item ->
-            val linkQuality = Qualities.Unknown.value
-            
-            val titleText = loadData.title
-            
-            callback.invoke(
-                newExtractorLink(
-                    source = this.name,
-                    name = titleText,
-                    url = item.url.toString(),
-                    type = ExtractorLinkType.M3U8
-                ) {
-                    quality = linkQuality
-                }
-            )
+   override suspend fun loadLinks(
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    val loadData = parseJson<LoadData>(data)
+    loadData.items.forEachIndexed { index, item ->
+        val linkQuality = Qualities.Unknown.value
+        
+        val linkName = if (loadData.items.size > 1) {
+            "${this.name} - Kaynak ${index + 1}"
+        } else {
+            this.name
         }
-        return true
+        
+        val titleText = loadData.title
+        
+        callback.invoke(
+            newExtractorLink(
+                source = linkName, // Use the new numbered name
+                name = titleText,
+                url = item.url.toString(),
+                type = ExtractorLinkType.M3U8
+            ) {
+                quality = linkQuality
+            }
+        )
     }
+    return true
+}
     
     private data class ParsedEpisode(
         val item: PlaylistItem,
