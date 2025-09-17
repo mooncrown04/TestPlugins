@@ -437,7 +437,7 @@ override suspend fun load(url: String): LoadResponse {
     }
 
     val recommendedList = (dubbedEpisodes + subbedEpisodes)
-        .shuffled()
+     //   .shuffled()
         .take(24)
         .mapNotNull { episode ->
             val episodeLoadData = parseJson<LoadData>(episode.data)
@@ -485,7 +485,7 @@ override suspend fun loadLinks(
     
     // loadData'nın içindeki tüm kaynakları döngüye al
     loadData.items.forEachIndexed { index, item ->
-        val linkQuality = Qualities.Unknown.value
+      //  val linkQuality = Qualities.Unknown.value
         
         // isim ve Kaynak +no
          val linkName =loadData.title+ "Kaynak ${index + 1}"
