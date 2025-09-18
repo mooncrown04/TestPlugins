@@ -374,9 +374,8 @@ override suspend fun load(url: String): LoadResponse {
         val (itemCleanTitle, _, _) = parseEpisodeInfo(item.title.toString())
         val finalSeason = season ?: 1
         val finalEpisode = episode ?: 1
-        val isDubbed = isDubbed(firstShow)
-        val isSubbed = isSubbed(firstShow)
-
+        val isDubbed = isDubbed(item)
+        val isSubbed = isSubbed(item)
 	   val episodePoster = item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: finalPosterUrl
 
         val episodeLoadData = LoadData(
