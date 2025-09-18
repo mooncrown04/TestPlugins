@@ -467,14 +467,14 @@ override suspend fun load(url: String): LoadResponse {
         this.tags = tags
         this.episodes = episodesMap
         this.recommendations = recommendedList
-        val actor = Actor(loadData.title, finalPosterUrl)
+      //  val actor = Actor(loadData.title, finalPosterUrl)
        // this.actors = listOf(
        //     ActorData(actor, null)
        // ) + actorsList
     
 	   this.actors = listOf(
                     ActorData(
-                        Actor(actor, null),
+                        Actor(loadData.title, finalPosterUrl),
                         roleString = "yazılım amalesi"
                     )
                 )
