@@ -228,7 +228,7 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
             type = TvType.Anime
             this.score = score?.let { Score.from10(it) }
             this.quality = SearchQuality.HD
-			if (isDubbed || isSubbed) {
+            if (isDubbed || isSubbed) {
                 addDubStatus(dubExist = isDubbed, subExist = isSubbed)
             }
         }
@@ -325,10 +325,10 @@ override suspend fun search(query: String): List<SearchResponse> {
         val searchResponse = newAnimeSearchResponse(cleanTitle, loadData.toJson())
         searchResponse.apply {
             posterUrl = loadData.poster
-            type = TvType.Anime           
-			this.score = score?.let { Score.from10(it) }
+            type = TvType.Anime            
+            this.score = score?.let { Score.from10(it) }
             this.quality = SearchQuality.HD
-		   if (isDubbed || isSubbed) {
+            if (isDubbed || isSubbed) {
                 addDubStatus(dubExist = isDubbed, subExist = isSubbed)
             }
         }
@@ -341,13 +341,7 @@ override suspend fun load(url: String): LoadResponse {
     val allShows = loadData.items
 
     val finalPosterUrl = loadData.poster
-  
-	  // Değişiklik burada
-
-	//val plot = "TMDB'den özet alınamadı. <br><br> Bu kanalı yapan kişiyi görmek için: <a href=\"https://dogus-live.daioncdn.net/ntv/ntv_720p.m3u8\">MoOnCrOwN'un YouTube Kanalı</a>"
-     val plot = "TMDB'den özet alınamadı. <br><br> Bu kanalı yapan kişiyi görmek için: <a href=\"https://www.youtube.com/@MoOnCrOwN\">MoOnCrOwN'un YouTube Kanalı</a>"
-    
-	//	val plot = "TMDB'den özet alınamadı."
+    val plot = "TMDB'den özet alınamadı. <br><br> Bu kanalı yapan kişiyi görmek için: <a href=\"https://www.youtube.com/@MoOnCrOwN\">MoOnCrOwN'un YouTube Kanalı</a>"
     val scoreToUse = loadData.score
     val dubbedEpisodes = mutableListOf<Episode>()
     val subbedEpisodes = mutableListOf<Episode>()
@@ -355,7 +349,6 @@ override suspend fun load(url: String): LoadResponse {
     val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
     val subbedKeywords = listOf("altyazılı", "altyazi")
 
-    // Bölümleri sezon ve bölüme göre gruplandırıp, aynı bölümün tüm kaynaklarını bir arada tutar.
     val groupedEpisodes = allShows.groupBy {
         val (_, season, episode) = parseEpisodeInfo(it.title.toString())
         Pair(season, episode)
@@ -372,7 +365,7 @@ override suspend fun load(url: String): LoadResponse {
         val episodePoster = item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: finalPosterUrl
 
         val episodeLoadData = LoadData(
-            items = episodeItems, // Tüm kaynakları bu listeye ekle
+            items = episodeItems,
             title = itemCleanTitle,
             poster = finalPosterUrl,
             group = item.attributes["group-title"] ?: "Bilinmeyen Grup",
@@ -398,7 +391,6 @@ override suspend fun load(url: String): LoadResponse {
         if (isDubbed) {
             dubbedEpisodes.add(episodeObj)
         } else {
-            // Eğer Dublajlı değilse ve Altyazı veya Etiketsiz ise buraya ekle
             subbedEpisodes.add(episodeObj)
         }
     }
@@ -419,12 +411,11 @@ override suspend fun load(url: String): LoadResponse {
         ActorData(
             actor = Actor("MoOnCrOwN","https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"),
             roleString = "yazılım amalesi"
-		)
+        )
     )
     val tags = mutableListOf<String>()
     tags.add(loadData.group)
     tags.add(loadData.nation)
-    // Sadece gerçekten dublajlı veya altyazılı bölüm varsa etiket eklenir.
     if (dubbedEpisodes.isNotEmpty()) {
         tags.add("Türkçe Dublaj")
     }
@@ -433,7 +424,6 @@ override suspend fun load(url: String): LoadResponse {
     }
 
     val recommendedList = (dubbedEpisodes + subbedEpisodes)
-     //   .shuffled()
         .take(24)
         .mapNotNull { episode ->
             val episodeLoadData = parseJson<LoadData>(episode.data)
@@ -463,19 +453,13 @@ override suspend fun load(url: String): LoadResponse {
         this.tags = tags
         this.episodes = episodesMap
         this.recommendations = recommendedList
-      //  val actor = Actor(loadData.title, finalPosterUrl)
-       // this.actors = listOf(
-       //     ActorData(actor, null)
-       // ) + actorsList
-    
-	   this.actors = listOf(
-                    ActorData(
-                        Actor(loadData.title, finalPosterUrl),
-                        roleString = "KANAL İSMİ"
-                    )
-                ) + actorsList
-		
-	}
+        this.actors = listOf(
+            ActorData(
+                Actor(loadData.title, finalPosterUrl),
+                roleString = "KANAL İSMİ"
+            )
+        ) + actorsList
+    }
 }
 
 override suspend fun loadLinks(
@@ -488,14 +472,11 @@ override suspend fun loadLinks(
     
     // loadData'nın içindeki tüm kaynakları döngüye al
     loadData.items.forEachIndexed { index, item ->
-      //  val linkQuality = Qualities.Unknown.value
-        
         // isim ve Kaynak +no
-         val linkName =loadData.title+ "Kaynak ${index + 1}"
+        val linkName = loadData.title + " Kaynak ${index + 1}"
         
-		 val linkQuality = Qualities.P1080.value 
-		
-		
+        val linkQuality = Qualities.P1080.value 
+        
         // ExtractorLink'i oluştur ve callback'e gönder
         callback.invoke(
             newExtractorLink(
