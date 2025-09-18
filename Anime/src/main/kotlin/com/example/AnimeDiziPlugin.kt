@@ -9,7 +9,7 @@ class AnimeDiziPlugin: Plugin() {
 //    override fun load(context: Context) {
  //   registerMainAPI(AnimeDizi(context.getSharedPreferences("AnimeDizi", 0)))
  override fun load(context: CloudstreamPlugin) {
-        registerMainAPI(AnimeDizi(context.getSharedPreferences("AnimeDizi", 0)))
+        registerMainAPI(AnimeDizi(context))
     }
 }
 
