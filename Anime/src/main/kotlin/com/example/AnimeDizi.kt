@@ -167,7 +167,7 @@ class IptvPlaylistParser {
         }
 
         unquotedRegex.findAll(attributesString).forEach { matchResult ->
-            val (key, value) = matchResult.destented
+            val (key, value) = matchResult.destructured
             if (!attributes.containsKey(key)) {
                 attributes[key] = value.trim()
             }
