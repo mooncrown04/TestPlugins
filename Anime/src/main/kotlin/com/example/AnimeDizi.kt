@@ -341,7 +341,11 @@ override suspend fun load(url: String): LoadResponse {
     val allShows = loadData.items
 
     val finalPosterUrl = loadData.poster
-    val plot = "TMDB'den özet alınamadı."
+  
+	  // Değişiklik burada
+    val plot = "TMDB'den özet alınamadı. <br><br> Bu kanalı yapan kişiyi görmek için: <a href=\"https://dogus-live.daioncdn.net/ntv/ntv_720p.m3u8\">MoOnCrOwN'un YouTube Kanalı</a>"
+    // loadData'dan gelen puanı kullan
+//	val plot = "TMDB'den özet alınamadı."
     // loadData'dan gelen puanı kullan
     val scoreToUse = loadData.score
     val dubbedEpisodes = mutableListOf<Episode>()
