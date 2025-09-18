@@ -17,7 +17,6 @@ import com.lagradost.cloudstream3.ActorData
 import com.lagradost.cloudstream3.Score
 import com.lagradost.cloudstream3.mvvm.suspendSafeApiCall
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
-import com.lagradost.cloudstream3.ui.settings.SettingsFragment
 import com.lagradost.cloudstream3.ui.settings.SettingsFragment.Companion.add
 import com.lagradost.cloudstream3.ui.settings.SettingsFragment.Companion.textSetting
 import com.lagradost.cloudstream3.ui.settings.SettingsFragment.Companion.singleSelectionSettings
