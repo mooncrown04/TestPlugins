@@ -300,10 +300,8 @@ override suspend fun search(query: String): List<SearchResponse> {
         val verifiedPosterUrl = checkPosterUrl(rawPosterUrl)
         val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
 
-
         // Düzeltme: Tüm bölümlerin puanlarından en yükseğini al.
         val score = shows.mapNotNull { it.score }.maxOrNull()
-
         val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
         val subbedKeywords = listOf("altyazılı", "altyazi")
         val language = firstShow.attributes["tvg-language"]?.lowercase()
@@ -338,17 +336,14 @@ override suspend fun search(query: String): List<SearchResponse> {
 }
 
 override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
-
 override suspend fun load(url: String): LoadResponse {
     val loadData = parseJson<LoadData>(url)
     val allShows = loadData.items
 
     val finalPosterUrl = loadData.poster
     val plot = "TMDB'den özet alınamadı."
-
     // loadData'dan gelen puanı kullan
     val scoreToUse = loadData.score
-
     val dubbedEpisodes = mutableListOf<Episode>()
     val subbedEpisodes = mutableListOf<Episode>()
     
@@ -360,7 +355,6 @@ override suspend fun load(url: String): LoadResponse {
         val (_, season, episode) = parseEpisodeInfo(it.title.toString())
         Pair(season, episode)
     }
-
     groupedEpisodes.forEach { (key, episodeItems) ->
         val (season, episode) = key
         val item = episodeItems.first()
@@ -415,16 +409,13 @@ override suspend fun load(url: String): LoadResponse {
     if (subbedEpisodes.isNotEmpty()) {
         episodesMap[DubStatus.Subbed] = subbedEpisodes
     }
-   
-
     val actorsList = mutableListOf<ActorData>()
-
     actorsList.add(
         ActorData(
-            actor = Actor("MoOnCrOwN","https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg")
-        )
+            actor = Actor("MoOnCrOwN","https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"),
+            roleString = "yazılım amalesi"
+		)
     )
-
     val tags = mutableListOf<String>()
     tags.add(loadData.group)
     tags.add(loadData.nation)
@@ -475,15 +466,12 @@ override suspend fun load(url: String): LoadResponse {
 	   this.actors = listOf(
                     ActorData(
                         Actor(loadData.title, finalPosterUrl),
-                        roleString = "yazılım amalesi"
+                        roleString = "KANAL İSMİ"
                     )
-                )
-	
-	
-	
+                ) + actorsList
+		
 	}
 }
-
 
 override suspend fun loadLinks(
     data: String,
