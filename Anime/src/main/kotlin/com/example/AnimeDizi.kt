@@ -1,93 +1,90 @@
-package com.mooncrown.anime
+package com.example
 
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.utils.AppUtils.parseM3u
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
-import com.lagradost.cloudstream3.ui.settings.SettingsProvider
-import com.lagradost.cloudstream3.ui.settings.PreferenceScreen
-import com.lagradost.cloudstream3.ui.settings.PreferenceCategory
-import com.lagradost.cloudstream3.ui.settings.TextPreference
-import com.lagradost.cloudstream3.ui.settings.ListPreference
 
-class AnimeDizi(val plugin: CloudstreamPlugin) : MainAPI(), SettingsProvider {
-    private val DEFAULT_M3U_URL =
-        "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    private val DEFAULT_NAME = "35 Anime Diziler 🎬"
-
-    override var mainUrl: String = DEFAULT_M3U_URL
-    override var name: String = DEFAULT_NAME
+class AnimeDizi : MainAPI() {
+    override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
+    override var name = "35 Anime Diziler 🎬"
     override val supportedTypes = setOf(TvType.TvSeries)
     override val hasMainPage = true
     override var lang = "tr"
 
-    // Kullanıcı ayarlarını tanımlıyoruz
-    override fun getPreferencesScreen(): PreferenceScreen {
-        return PreferenceScreen {
-            PreferenceCategory {
-                TextPreference(
-                    key = "plugin_name_key",
-                    title = "Eklenti Adı",
-                    summary = "Eklentinin görünen adını değiştirin.",
-                    defaultValue = DEFAULT_NAME,
-                )
+    data class M3uChannel(
+        val name: String,
+        val url: String,
+        val logo: String? = null,
+        val group: String? = null
+    )
 
-                TextPreference(
-                    key = "m3u_url_key",
-                    title = "M3U URL",
-                    summary = "Özel bir M3U listesi URL'si girin.",
-                    defaultValue = DEFAULT_M3U_URL,
-                )
+    // Basit M3U parser
+    private fun parseM3u(content: String): List<M3uChannel> {
+        val lines = content.lines()
+        val channels = mutableListOf<M3uChannel>()
 
-                ListPreference(
-                    key = "layout_preference_key",
-                    title = "Liste Düzeni",
-                    entries = listOf("Yatay", "Dikey"),
-                    defaultValue = "Yatay"
+        var currentName = ""
+        var currentLogo: String? = null
+        var currentGroup: String? = null
+
+        for (line in lines) {
+            if (line.startsWith("#EXTINF")) {
+                val namePart = line.substringAfter(",").trim()
+                currentName = namePart
+                currentLogo = Regex("tvg-logo=\"(.*?)\"").find(line)?.groupValues?.get(1)
+                currentGroup = Regex("group-title=\"(.*?)\"").find(line)?.groupValues?.get(1)
+            } else if (line.startsWith("http")) {
+                channels.add(
+                    M3uChannel(
+                        name = currentName,
+                        url = line.trim(),
+                        logo = currentLogo,
+                        group = currentGroup
+                    )
                 )
             }
         }
+        return channels
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val m3uUrl = plugin.getKey("m3u_url_key", DEFAULT_M3U_URL) ?: DEFAULT_M3U_URL
-        val pluginName = plugin.getKey("plugin_name_key", DEFAULT_NAME) ?: DEFAULT_NAME
-
-        val response = app.get(m3uUrl).text
+        val response = app.get(mainUrl).text
         val channels = parseM3u(response)
 
         val items = channels.map {
             newTvSeriesSearchResponse(
-                name = it.name,
-                url = it.url,
+                it.name,
+                it.url,
                 TvType.TvSeries
             ) {
-                this.posterUrl = it.logo
+                posterUrl = it.logo
             }
         }
 
-        return newHomePageResponse(pluginName, listOf(HomePageList(pluginName, items)))
+        return newHomePageResponse(listOf(HomePageList(name, items)))
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val m3uUrl = plugin.getKey("m3u_url_key", DEFAULT_M3U_URL) ?: DEFAULT_M3U_URL
-        val response = app.get(m3uUrl).text
+        val response = app.get(mainUrl).text
         val channels = parseM3u(response)
 
         return channels.filter { it.name.contains(query, ignoreCase = true) }.map {
             newTvSeriesSearchResponse(
-                name = it.name,
-                url = it.url,
+                it.name,
+                it.url,
                 TvType.TvSeries
             ) {
-                this.posterUrl = it.logo
+                posterUrl = it.logo
             }
         }
     }
 
     override suspend fun load(url: String): LoadResponse {
         return newTvSeriesLoadResponse(name, url, TvType.TvSeries) {
-            addEpisodes(DubStatus.Dubbed, url)
+            addEpisodes(
+                DubStatus.Dubbed,
+                listOf(Episode(url, name = name))
+            )
         }
     }
 
