@@ -11,6 +11,7 @@ import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.DubStatus
 import com.lagradost.cloudstream3.addDubStatus
+import com.lagradost.cloudstream3.AcraApplication.Companion.sharedPreferences
 import java.io.InputStream
 import java.util.Locale
 import com.lagradost.cloudstream3.ActorData
@@ -18,7 +19,8 @@ import com.lagradost.cloudstream3.Score
 import com.lagradost.cloudstream3.mvvm.suspendSafeApiCall
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.ui.settings.SettingsFragment
-import com.lagradost.cloudstream3.ui.subtitles.AbstractSubtitleEntities.sharedPref
+import com.lagradost.cloudstream3.ui.settings.SettingsFragment.Companion.textSetting
+import com.lagradost.cloudstream3.ui.settings.SettingsFragment.Companion.singleSelectionSettings
 
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(val plugin: CloudstreamPlugin) : MainAPI() {
@@ -28,16 +30,16 @@ class AnimeDizi(val plugin: CloudstreamPlugin) : MainAPI() {
     
     // Ayarları SharedPreferences'tan okur
     override var mainUrl: String
-        get() = sharedPref?.getString("m3u_url_key", DEFAULT_M3U_URL) ?: DEFAULT_M3U_URL
+        get() = sharedPreferences?.getString("m3u_url_key", DEFAULT_M3U_URL) ?: DEFAULT_M3U_URL
         set(value) {}
         
     override var name: String
-        get() = sharedPref?.getString("plugin_name_key", DEFAULT_NAME) ?: DEFAULT_NAME
+        get() = sharedPreferences?.getString("plugin_name_key", DEFAULT_NAME) ?: DEFAULT_NAME
         set(value) {}
 
     // Ayarlara göre yatay veya dikey liste gösterir
     override val hasMainPage: Boolean
-        get() = sharedPref?.getBoolean("horizontal_images_key", true) ?: true
+        get() = sharedPreferences?.getString("layout_preference_key", "Yatay") == "Yatay"
         
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -65,12 +67,10 @@ class AnimeDizi(val plugin: CloudstreamPlugin) : MainAPI() {
     }
 
 // --- Yeni Ayarlar Menüsü Sınıfı ---
-    override fun SettingsFragment.add
-Settings(pref: SharedPreferences) {
+    override fun SettingsFragment.addSettings() {
         // Eklenti adı ayarı
         textSetting(
             name = "Eklenti Adı",
-            settings = pref,
             defaultValue = DEFAULT_NAME,
             key = "plugin_name_key",
             description = "Eklentinin görünen adını değiştirin."
@@ -79,7 +79,6 @@ Settings(pref: SharedPreferences) {
         // M3U URL'si ayarı
         textSetting(
             name = "M3U URL",
-            settings = pref,
             defaultValue = DEFAULT_M3U_URL,
             key = "m3u_url_key",
             description = "Özel bir M3U listesi URL'si girin."
@@ -89,7 +88,6 @@ Settings(pref: SharedPreferences) {
         val layoutOptions = listOf("Yatay", "Dikey")
         singleSelectionSettings(
             name = "Liste Düzeni",
-            settings = pref,
             defaultValue = 0, // 0 = Yatay, 1 = Dikey
             entries = layoutOptions,
             key = "layout_preference_key"
@@ -229,14 +227,14 @@ data class LoadData(
 private suspend fun getOrFetchPlaylist(): Playlist {
     return try {
         Log.d(name, "Playlist verisi ağdan indiriliyor.")
-        val content = app.get(sharedPref?.getString("m3u_url_key", "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr") ?: "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr").text
+        val content = app.get(sharedPreferences?.getString("m3u_url_key", "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr") ?: "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr").text
         val newPlaylist = IptvPlaylistParser().parseM3U(content)
         cachedPlaylist = newPlaylist
-        sharedPref?.edit()?.putString(CACHE_KEY, newPlaylist.toJson())?.apply()
+        sharedPreferences?.edit()?.putString(CACHE_KEY, newPlaylist.toJson())?.apply()
         newPlaylist
     } catch (e: Exception) {
         Log.e("AnimeDizi", "Playlist verisi indirilirken veya işlenirken bir hata oluştu.", e)
-        cachedPlaylist ?: Playlist(emptyList()) // Hata durumunda önbelleği kullan
+        cachedPlaylist ?: Playlist(emptyList())
     }
 }
 
@@ -257,7 +255,7 @@ private fun isSubbed(item: PlaylistItem): Boolean {
 override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
     val kanallar = getOrFetchPlaylist()
     
-    val isHorizontal = sharedPref?.getString("layout_preference_key", "Yatay") == "Yatay"
+    val isHorizontal = sharedPreferences?.getString("layout_preference_key", "Yatay") == "Yatay"
 
     val groupedByCleanTitle = kanallar.items.groupBy {
         val (cleanTitle, _, _) = parseEpisodeInfo(it.title.toString())
@@ -419,8 +417,6 @@ override suspend fun load(url: String): LoadResponse {
                 poster = finalPosterUrl,
                 group = item.attributes["group-title"] ?: "Bilinmeyen Grup",
                 nation = item.attributes["tvg-country"] ?: "TR",
-                season = finalSeason,
-                episode = finalEpisode,
                 isDubbed = isDubbed,
                 isSubbed = isSubbed,
                 score = item.score
