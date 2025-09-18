@@ -68,7 +68,6 @@ class AnimeDizi(val plugin: CloudstreamPlugin) : MainAPI() {
     }
 
     override fun load(context: Context) {
-        // Ayarları burada tanımlayın, addSettings fonksiyonu artık gerekli değil
         CloudstreamPlugin.addSettings(this) {
             this.add(
                 this.textSetting(
@@ -505,7 +504,4 @@ class AnimeDizi(val plugin: CloudstreamPlugin) : MainAPI() {
     private data class ParsedEpisode(
         val item: PlaylistItem,
         val itemCleanTitle: String,
-        val season: Int?,
-        val episode: Int?
-    )
-}
+        val season:
