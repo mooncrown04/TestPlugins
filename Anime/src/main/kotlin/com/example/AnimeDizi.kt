@@ -22,22 +22,26 @@ import com.lagradost.cloudstream3.ui.settings.SettingsFragment
 import com.lagradost.cloudstream3.ui.settings.SettingsFragment.Companion.add
 import com.lagradost.cloudstream3.ui.settings.SettingsFragment.Companion.textSetting
 import com.lagradost.cloudstream3.ui.settings.SettingsFragment.Companion.singleSelectionSettings
+import com.lagradost.cloudstream3.AcraApplication.Companion.context
 
-class AnimeDizi(val sharedPreferences: SharedPreferences) : MainAPI() {
+class AnimeDizi(val plugin: CloudstreamPlugin) : MainAPI() {
     private val DEFAULT_M3U_URL = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
     private val DEFAULT_NAME = "35 Anime Diziler 🎬"
     private val CACHE_KEY = "iptv_playlist_cache"
     
+    private val sharedPreferences: SharedPreferences?
+        get() = plugin.context.getSharedPreferences("com.lagradost.cloudstream3.app_settings", 0)
+
     override var mainUrl: String
-        get() = sharedPreferences.getString("m3u_url_key", DEFAULT_M3U_URL) ?: DEFAULT_M3U_URL
+        get() = sharedPreferences?.getString("m3u_url_key", DEFAULT_M3U_URL) ?: DEFAULT_M3U_URL
         set(value) {}
         
     override var name: String
-        get() = sharedPreferences.getString("plugin_name_key", DEFAULT_NAME) ?: DEFAULT_NAME
+        get() = sharedPreferences?.getString("plugin_name_key", DEFAULT_NAME) ?: DEFAULT_NAME
         set(value) {}
 
     override val hasMainPage: Boolean
-        get() = sharedPreferences.getString("layout_preference_key", "Yatay") == "Yatay"
+        get() = sharedPreferences?.getString("layout_preference_key", "Yatay") == "Yatay"
         
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -222,7 +226,7 @@ class AnimeDizi(val sharedPreferences: SharedPreferences) : MainAPI() {
             val content = app.get(mainUrl).text
             val newPlaylist = IptvPlaylistParser().parseM3U(content)
             cachedPlaylist = newPlaylist
-            sharedPreferences.edit()?.putString(CACHE_KEY, newPlaylist.toJson())?.apply()
+            sharedPreferences?.edit()?.putString(CACHE_KEY, newPlaylist.toJson())?.apply()
             newPlaylist
         } catch (e: Exception) {
             Log.e("AnimeDizi", "Playlist verisi indirilirken veya işlenirken bir hata oluştu.", e)
@@ -244,7 +248,7 @@ class AnimeDizi(val sharedPreferences: SharedPreferences) : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val kanallar = getOrFetchPlaylist()
-        val isHorizontal = sharedPreferences.getString("layout_preference_key", "Yatay") == "Yatay"
+        val isHorizontal = sharedPreferences?.getString("layout_preference_key", "Yatay") == "Yatay"
         val groupedByCleanTitle = kanallar.items.groupBy {
             val (cleanTitle, _, _) = parseEpisodeInfo(it.title.toString())
             cleanTitle
