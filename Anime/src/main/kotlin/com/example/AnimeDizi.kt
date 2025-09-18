@@ -20,7 +20,7 @@ import com.lagradost.cloudstream3.Score
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 Anime Dizi 04 🎬"
+    override var name = "35 Anime Diziler  🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -186,6 +186,7 @@ private suspend fun getOrFetchPlaylist(): Playlist {
 }
 
 
+
 // isDubbed ve isSubbed fonksiyonları, kodun tekrarını önlemek için yardımcı fonksiyonlar olarak eklendi
 private fun isDubbed(item: PlaylistItem): Boolean {
     val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
@@ -200,96 +201,30 @@ private fun isSubbed(item: PlaylistItem): Boolean {
 }
 
 
+
 override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
     val kanallar = getOrFetchPlaylist()
-    
     val groupedByCleanTitle = kanallar.items.groupBy {
         val (cleanTitle, _, _) = parseEpisodeInfo(it.title.toString())
         cleanTitle
     }
 
-    val finalHomePageLists = mutableListOf<HomePageList>()
-    val turkishAlphabet = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUVYZ".split("").filter { it.isNotBlank() }
-    val fullAlphabet = listOf("0-9") + turkishAlphabet + listOf("Q", "W", "X", "#")
-
-    // Harf gruplarını ayır
-    val alphabeticGroups = groupedByCleanTitle.mapNotNull { (cleanTitle, shows) ->
+    val alphabeticGroups = groupedByCleanTitle.toSortedMap().mapNotNull { (cleanTitle, shows) ->
         val firstShow = shows.firstOrNull() ?: return@mapNotNull null
-        val firstChar = cleanTitle.firstOrNull()?.uppercaseChar()
-        val groupKey = when {
-            firstChar?.isDigit() == true -> "0-9"
-            firstChar == null || !firstChar.isLetterOrDigit() -> "#"
-            else -> firstChar.toString()
-        }
-        
-        val rawPosterUrl = firstShow.attributes["tvg-logo"]
-        val verifiedPosterUrl = checkPosterUrl(rawPosterUrl)
-        val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
-        val score = shows.mapNotNull { it.score }.maxOrNull()
-        val isDubbed = isDubbed(firstShow)
-        val isSubbed = isSubbed(firstShow)
 
-        val loadData = LoadData(
-            items = shows,
-            title = cleanTitle,
-            poster = finalPosterUrl,
-            group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
-            nation = firstShow.attributes["tvg-country"] ?: "TR",
-            isDubbed = isDubbed,
-            isSubbed = isSubbed,
-            score = score
-        )
-
-        val searchResponse = newAnimeSearchResponse(cleanTitle, loadData.toJson()).apply {
-            posterUrl = loadData.poster
-            type = TvType.Anime
-            this.score = score?.let { Score.from10(it) }
-            this.quality = SearchQuality.HD
-            addDubStatus(dubExist = isDubbed, subExist = isSubbed)
-        }
-        
-        Pair(groupKey, searchResponse)
-    }.groupBy { it.first }.mapValues { it.value.map { it.second } }.toSortedMap()
-
-    // Her grup için ayrı bir liste oluştur ve sonsuz döngü hissi ver
-    fullAlphabet.forEach { char ->
-        val shows = alphabeticGroups[char]
-        if (shows != null && shows.isNotEmpty()) {
-            // Liste elemanlarını 3 kez çoğaltarak sonsuz döngü hissi yarat
-            val infiniteList = shows + shows + shows
-            
-            val listTitle = when (char) {
-                "0-9" -> "🔢 0-9"
-                "#" -> "🔣 #"
-                else -> "🎬 $char"
-            }
-            finalHomePageLists.add(HomePageList(listTitle, infiniteList, isHorizontalImages = true))
-        }
-    }
-
-    return newHomePageResponse(finalHomePageLists, hasNext = false)
-}
-
-
-override suspend fun search(query: String): List<SearchResponse> {
-    val kanallar = getOrFetchPlaylist()
-    val groupedByCleanTitle = kanallar.items.groupBy {
-        val (cleanTitle, _, _) = parseEpisodeInfo(it.title.toString())
-        cleanTitle
-    }
-
-    return groupedByCleanTitle.filter { (cleanTitle, _) ->
-        cleanTitle.lowercase(Locale.getDefault()).contains(query.lowercase(Locale.getDefault()))
-    }.map { (cleanTitle, shows) ->
-        val firstShow = shows.firstOrNull() ?: return@map newAnimeSearchResponse(cleanTitle, "")
-
+        // POSTER ATAMASI:
         val rawPosterUrl = firstShow.attributes["tvg-logo"]
         val verifiedPosterUrl = checkPosterUrl(rawPosterUrl)
         val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
 
+        // Düzeltme: Tüm bölümlerin puanlarından en yükseğini al.
         val score = shows.mapNotNull { it.score }.maxOrNull()
+
         val isDubbed = isDubbed(firstShow)
         val isSubbed = isSubbed(firstShow)
+
+
+
 
         val loadData = LoadData(
             items = shows,
@@ -305,10 +240,111 @@ override suspend fun search(query: String): List<SearchResponse> {
         val searchResponse = newAnimeSearchResponse(cleanTitle, loadData.toJson())
         searchResponse.apply {
             posterUrl = loadData.poster
-            type = TvType.Anime           
+            type = TvType.Anime
             this.score = score?.let { Score.from10(it) }
             this.quality = SearchQuality.HD
-            if (isDubbed || isSubbed) {
+			if (isDubbed || isSubbed) {
+                addDubStatus(dubExist = isDubbed, subExist = isSubbed)
+            }
+        }
+
+        val firstChar = cleanTitle.firstOrNull()?.uppercaseChar() ?: '#'
+        val groupKey = when {
+            firstChar.isLetter() -> firstChar.toString()
+            firstChar.isDigit() -> "0-9"
+            else -> "#"
+        }
+        Pair(groupKey, searchResponse)
+    }.groupBy { it.first }.mapValues { it.value.map { it.second } }.toSortedMap()
+
+
+    val finalHomePageLists = mutableListOf<HomePageList>()
+    val turkishAlphabet = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUVYZ".split("").filter { it.isNotBlank() }
+    // Alfabedeki Q, W, X gibi Türkçe'de olmayan ama listede olabilecek harfleri de ekler
+    val fullAlphabet = turkishAlphabet + listOf("Q", "W", "X")
+
+    // Grupları işleme listesine ekler.
+    val allGroupsToProcess = mutableListOf<String>()
+    if (alphabeticGroups.containsKey("0-9")) allGroupsToProcess.add("0-9")
+    fullAlphabet.forEach { char ->
+        if (alphabeticGroups.containsKey(char)) {
+            allGroupsToProcess.add(char)
+        }
+    }
+    if (alphabeticGroups.containsKey("#")) allGroupsToProcess.add("#")
+
+    // Her harf grubunu dolaşır ve ana sayfa listelerini oluşturur.
+    allGroupsToProcess.forEach { char ->
+        val shows = alphabeticGroups[char]
+        if (shows != null && shows.isNotEmpty()) {
+        
+  // Liste elemanlarını 3 kez çoğaltarak sonsuz döngü hissi yarat
+            val infiniteList = shows + shows + shows
+
+		val listTitle = when (char) {
+                "0-9" -> "🔢 0-9 ${fullAlphabet.joinToString(" ") { it.lowercase(Locale.getDefault()) }}"
+                "#" -> "🔣 # ${fullAlphabet.joinToString(" ") { it.lowercase(Locale.getDefault()) }}"
+                else -> {
+                    val startIndex = fullAlphabet.indexOf(char)
+                    if (startIndex != -1) {
+                        val remainingAlphabet = fullAlphabet.subList(startIndex, fullAlphabet.size).joinToString(" ") { it }
+                        "🎬 $char ${remainingAlphabet.substring(1).lowercase(Locale.getDefault())}"
+                    } else {
+                        // Eğer harf alfabede yoksa yedek başlık
+                        "🎬 $char"
+                    }
+                }
+            }
+         //   finalHomePageLists.add(HomePageList(listTitle, shows, isHorizontalImages = true))
+         finalHomePageLists.add(HomePageList(listTitle, infiniteList, isHorizontalImages = true))
+		}
+    }
+
+    return newHomePageResponse(finalHomePageLists, hasNext = false)
+}
+
+override suspend fun search(query: String): List<SearchResponse> {
+    val kanallar = getOrFetchPlaylist()
+    val groupedByCleanTitle = kanallar.items.groupBy {
+        val (cleanTitle, _, _) = parseEpisodeInfo(it.title.toString())
+        cleanTitle
+    }
+
+    return groupedByCleanTitle.filter { (cleanTitle, _) ->
+        cleanTitle.lowercase(Locale.getDefault()).contains(query.lowercase(Locale.getDefault()))
+    }.map { (cleanTitle, shows) ->
+        val firstShow = shows.firstOrNull() ?: return@map newAnimeSearchResponse(cleanTitle, "")
+
+        // POSTER ATAMASI:
+        val rawPosterUrl = firstShow.attributes["tvg-logo"]
+        val verifiedPosterUrl = checkPosterUrl(rawPosterUrl)
+        val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
+
+        // Düzeltme: Tüm bölümlerin puanlarından en yükseğini al.
+        val score = shows.mapNotNull { it.score }.maxOrNull()
+ 
+        val isDubbed = isDubbed(firstShow)
+        val isSubbed = isSubbed(firstShow)
+
+ 
+        val loadData = LoadData(
+            items = shows,
+            title = cleanTitle,
+            poster = finalPosterUrl,
+            group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
+            nation = firstShow.attributes["tvg-country"] ?: "TR",
+            isDubbed = isDubbed,
+            isSubbed = isSubbed,
+            score = score
+        )
+
+        val searchResponse = newAnimeSearchResponse(cleanTitle, loadData.toJson())
+        searchResponse.apply {
+            posterUrl = loadData.poster
+            type = TvType.Anime           
+			this.score = score?.let { Score.from10(it) }
+            this.quality = SearchQuality.HD
+		   if (isDubbed || isSubbed) {
                 addDubStatus(dubExist = isDubbed, subExist = isSubbed)
             }
         }
@@ -322,10 +358,21 @@ override suspend fun load(url: String): LoadResponse {
 
     val finalPosterUrl = loadData.poster
     val plot = "TMDB'den özet alınamadı."
+    // loadData'dan gelen puanı kullan
     val scoreToUse = loadData.score
-    val dubbedEpisodes = mutableListOf<Episode>()
-    val subbedEpisodes = mutableListOf<Episode>()
+   
+        val isDubbed = isDubbed(firstShow)
+        val isSubbed = isSubbed(firstShow)
+
+
+
+
+
+     val dubbedEpisodes = mutableListOf<Episode>()
+     val subbedEpisodes = mutableListOf<Episode>()
     
+ 
+    // Bölümleri sezon ve bölüme göre gruplandırıp, aynı bölümün tüm kaynaklarını bir arada tutar.
     val groupedEpisodes = allShows.groupBy {
         val (_, season, episode) = parseEpisodeInfo(it.title.toString())
         Pair(season, episode)
@@ -336,12 +383,10 @@ override suspend fun load(url: String): LoadResponse {
         val (itemCleanTitle, _, _) = parseEpisodeInfo(item.title.toString())
         val finalSeason = season ?: 1
         val finalEpisode = episode ?: 1
-        val isDubbed = isDubbed(item)
-        val isSubbed = isSubbed(item)
         val episodePoster = item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: finalPosterUrl
 
         val episodeLoadData = LoadData(
-            items = episodeItems,
+            items = episodeItems, // Tüm kaynakları bu listeye ekle
             title = itemCleanTitle,
             poster = finalPosterUrl,
             group = item.attributes["group-title"] ?: "Bilinmeyen Grup",
@@ -367,6 +412,7 @@ override suspend fun load(url: String): LoadResponse {
         if (isDubbed) {
             dubbedEpisodes.add(episodeObj)
         } else {
+            // Eğer Dublajlı değilse ve Altyazı veya Etiketsiz ise buraya ekle
             subbedEpisodes.add(episodeObj)
         }
     }
@@ -387,11 +433,12 @@ override suspend fun load(url: String): LoadResponse {
         ActorData(
             actor = Actor("MoOnCrOwN","https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"),
             roleString = "yazılım amalesi"
-        )
+		)
     )
     val tags = mutableListOf<String>()
     tags.add(loadData.group)
     tags.add(loadData.nation)
+    // Sadece gerçekten dublajlı veya altyazılı bölüm varsa etiket eklenir.
     if (dubbedEpisodes.isNotEmpty()) {
         tags.add("Türkçe Dublaj")
     }
@@ -400,7 +447,7 @@ override suspend fun load(url: String): LoadResponse {
     }
 
     val recommendedList = (dubbedEpisodes + subbedEpisodes)
-    
+     //   .shuffled()
         .take(24)
         .mapNotNull { episode ->
             val episodeLoadData = parseJson<LoadData>(episode.data)
@@ -430,15 +477,14 @@ override suspend fun load(url: String): LoadResponse {
         this.tags = tags
         this.episodes = episodesMap
         this.recommendations = recommendedList
-    
-    this.actors = listOf(
-                ActorData(
-                    Actor(loadData.title, finalPosterUrl),
-                    roleString = "KANAL İSMİ"
-                )
-            ) + actorsList
-        
-    }
+	    this.actors = listOf(
+                    ActorData(
+                        Actor(loadData.title, finalPosterUrl),
+                        roleString = "KANAL İSMİ"
+                    )
+                ) + actorsList
+		
+	}
 }
 
 override suspend fun loadLinks(
@@ -449,13 +495,17 @@ override suspend fun loadLinks(
 ): Boolean {
     val loadData = parseJson<LoadData>(data)
     
+    // loadData'nın içindeki tüm kaynakları döngüye al
     loadData.items.forEachIndexed { index, item ->
+      //  val linkQuality = Qualities.Unknown.value
         
-        val linkName =loadData.title+ "Kaynak ${index + 1}"
+        // isim ve Kaynak +no
+         val linkName =loadData.title+ "Kaynak ${index + 1}"
         
-        val linkQuality = Qualities.P1080.value 
-        
-        
+		 val linkQuality = Qualities.P1080.value 
+		
+		
+        // ExtractorLink'i oluştur ve callback'e gönder
         callback.invoke(
             newExtractorLink(
                 source = this.name,
