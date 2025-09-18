@@ -19,6 +19,7 @@ import com.lagradost.cloudstream3.Score
 import com.lagradost.cloudstream3.mvvm.suspendSafeApiCall
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.ui.settings.SettingsFragment
+import com.lagradost.cloudstream3.ui.settings.SettingsFragment.Companion.add
 import com.lagradost.cloudstream3.ui.settings.SettingsFragment.Companion.textSetting
 import com.lagradost.cloudstream3.ui.settings.SettingsFragment.Companion.singleSelectionSettings
 
@@ -69,28 +70,34 @@ class AnimeDizi(val plugin: CloudstreamPlugin) : MainAPI() {
 // --- Yeni Ayarlar Menüsü Sınıfı ---
     override fun SettingsFragment.addSettings() {
         // Eklenti adı ayarı
-        textSetting(
-            name = "Eklenti Adı",
-            defaultValue = DEFAULT_NAME,
-            key = "plugin_name_key",
-            description = "Eklentinin görünen adını değiştirin.",
+        add(
+            textSetting(
+                name = "Eklenti Adı",
+                defaultValue = DEFAULT_NAME,
+                key = "plugin_name_key",
+                description = "Eklentinin görünen adını değiştirin."
             )
-        
+        )
+
         // M3U URL'si ayarı
-        textSetting(
-            name = "M3U URL",
-            defaultValue = DEFAULT_M3U_URL,
-            key = "m3u_url_key",
-            description = "Özel bir M3U listesi URL'si girin.",
+        add(
+            textSetting(
+                name = "M3U URL",
+                defaultValue = DEFAULT_M3U_URL,
+                key = "m3u_url_key",
+                description = "Özel bir M3U listesi URL'si girin."
+            )
         )
 
         // Liste düzeni ayarı
         val layoutOptions = listOf("Yatay", "Dikey")
-        singleSelectionSettings(
-            name = "Liste Düzeni",
-            defaultValue = 0, // 0 = Yatay, 1 = Dikey
-            entries = layoutOptions,
-            key = "layout_preference_key"
+        add(
+            singleSelectionSettings(
+                name = "Liste Düzeni",
+                defaultValue = 0, // 0 = Yatay, 1 = Dikey
+                entries = layoutOptions,
+                key = "layout_preference_key"
+            )
         )
     }
 
