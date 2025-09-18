@@ -360,18 +360,9 @@ override suspend fun load(url: String): LoadResponse {
     val plot = "TMDB'den özet alınamadı."
     // loadData'dan gelen puanı kullan
     val scoreToUse = loadData.score
-   
-        val isDubbed = isDubbed(firstShow)
-        val isSubbed = isSubbed(firstShow)
-
-
-
-
-
      val dubbedEpisodes = mutableListOf<Episode>()
      val subbedEpisodes = mutableListOf<Episode>()
     
- 
     // Bölümleri sezon ve bölüme göre gruplandırıp, aynı bölümün tüm kaynaklarını bir arada tutar.
     val groupedEpisodes = allShows.groupBy {
         val (_, season, episode) = parseEpisodeInfo(it.title.toString())
@@ -383,7 +374,10 @@ override suspend fun load(url: String): LoadResponse {
         val (itemCleanTitle, _, _) = parseEpisodeInfo(item.title.toString())
         val finalSeason = season ?: 1
         val finalEpisode = episode ?: 1
-        val episodePoster = item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: finalPosterUrl
+        val isDubbed = isDubbed(firstShow)
+        val isSubbed = isSubbed(firstShow)
+
+	   val episodePoster = item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: finalPosterUrl
 
         val episodeLoadData = LoadData(
             items = episodeItems, // Tüm kaynakları bu listeye ekle
