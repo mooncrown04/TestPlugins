@@ -11,7 +11,6 @@ import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.DubStatus
 import com.lagradost.cloudstream3.addDubStatus
-import com.lagradost.cloudstream3.AcraApplication
 import java.io.InputStream
 import java.util.Locale
 import com.lagradost.cloudstream3.ActorData
@@ -22,7 +21,6 @@ import com.lagradost.cloudstream3.ui.settings.SettingsFragment
 import com.lagradost.cloudstream3.ui.settings.SettingsFragment.Companion.add
 import com.lagradost.cloudstream3.ui.settings.SettingsFragment.Companion.textSetting
 import com.lagradost.cloudstream3.ui.settings.SettingsFragment.Companion.singleSelectionSettings
-import com.lagradost.cloudstream3.AcraApplication.Companion.context
 
 class AnimeDizi(val plugin: CloudstreamPlugin) : MainAPI() {
     private val DEFAULT_M3U_URL = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
@@ -30,7 +28,7 @@ class AnimeDizi(val plugin: CloudstreamPlugin) : MainAPI() {
     private val CACHE_KEY = "iptv_playlist_cache"
     
     private val sharedPreferences: SharedPreferences?
-        get() = plugin.context.getSharedPreferences("com.lagradost.cloudstream3.app_settings", 0)
+        get() = plugin.context?.getSharedPreferences("com.lagradost.cloudstream3.app_settings", 0)
 
     override var mainUrl: String
         get() = sharedPreferences?.getString("m3u_url_key", DEFAULT_M3U_URL) ?: DEFAULT_M3U_URL
