@@ -21,6 +21,7 @@ import com.lagradost.cloudstream3.ui.settings.SettingsFragment
 import com.lagradost.cloudstream3.ui.settings.SettingsFragment.Companion.add
 import com.lagradost.cloudstream3.ui.settings.SettingsFragment.Companion.textSetting
 import com.lagradost.cloudstream3.ui.settings.SettingsFragment.Companion.singleSelectionSettings
+import android.content.Context
 
 class AnimeDizi(val plugin: CloudstreamPlugin) : MainAPI() {
     private val DEFAULT_M3U_URL = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
@@ -66,34 +67,37 @@ class AnimeDizi(val plugin: CloudstreamPlugin) : MainAPI() {
         } ?: null
     }
 
-    override fun SettingsFragment.addSettings() {
-        this.add(
-            this.textSetting(
-                name = "Eklenti Adı",
-                defaultValue = DEFAULT_NAME,
-                key = "plugin_name_key",
-                description = "Eklentinin görünen adını değiştirin."
+    override fun load(context: Context) {
+        // Ayarları burada tanımlayın, addSettings fonksiyonu artık gerekli değil
+        CloudstreamPlugin.addSettings(this) {
+            this.add(
+                this.textSetting(
+                    name = "Eklenti Adı",
+                    defaultValue = DEFAULT_NAME,
+                    key = "plugin_name_key",
+                    description = "Eklentinin görünen adını değiştirin."
+                )
             )
-        )
 
-        this.add(
-            this.textSetting(
-                name = "M3U URL",
-                defaultValue = DEFAULT_M3U_URL,
-                key = "m3u_url_key",
-                description = "Özel bir M3U listesi URL'si girin."
+            this.add(
+                this.textSetting(
+                    name = "M3U URL",
+                    defaultValue = DEFAULT_M3U_URL,
+                    key = "m3u_url_key",
+                    description = "Özel bir M3U listesi URL'si girin."
+                )
             )
-        )
 
-        val layoutOptions = listOf("Yatay", "Dikey")
-        this.add(
-            this.singleSelectionSettings(
-                name = "Liste Düzeni",
-                defaultValue = 0,
-                entries = layoutOptions,
-                key = "layout_preference_key"
+            val layoutOptions = listOf("Yatay", "Dikey")
+            this.add(
+                this.singleSelectionSettings(
+                    name = "Liste Düzeni",
+                    defaultValue = 0,
+                    entries = layoutOptions,
+                    key = "layout_preference_key"
+                )
             )
-        )
+        }
     }
 
     data class Playlist(val items: List<PlaylistItem> = emptyList())
