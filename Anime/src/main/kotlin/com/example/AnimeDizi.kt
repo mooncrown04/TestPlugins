@@ -20,7 +20,7 @@ import com.lagradost.cloudstream3.Score
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 Anime Dizi son 🎬"
+    override var name = "35 Anime Dizi 04 🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -468,10 +468,20 @@ override suspend fun load(url: String): LoadResponse {
         this.episodes = episodesMap
         this.recommendations = recommendedList
         val actor = Actor(loadData.title, finalPosterUrl)
-        this.actors = listOf(
-            ActorData(actor, null)
-        ) + actorsList
-    }
+       // this.actors = listOf(
+       //     ActorData(actor, null)
+       // ) + actorsList
+    
+	   this.actors = listOf(
+                    ActorData(
+                        Actor(actor, null),
+                        roleString = "yazılım amalesi"
+                    )
+                )
+	
+	
+	
+	}
 }
 
 
