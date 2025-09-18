@@ -67,8 +67,8 @@ class AnimeDizi(val plugin: CloudstreamPlugin) : MainAPI() {
     }
 
     override fun SettingsFragment.addSettings() {
-        add(
-            textSetting(
+        this.add(
+            this.textSetting(
                 name = "Eklenti Adı",
                 defaultValue = DEFAULT_NAME,
                 key = "plugin_name_key",
@@ -76,8 +76,8 @@ class AnimeDizi(val plugin: CloudstreamPlugin) : MainAPI() {
             )
         )
 
-        add(
-            textSetting(
+        this.add(
+            this.textSetting(
                 name = "M3U URL",
                 defaultValue = DEFAULT_M3U_URL,
                 key = "m3u_url_key",
@@ -86,8 +86,8 @@ class AnimeDizi(val plugin: CloudstreamPlugin) : MainAPI() {
         )
 
         val layoutOptions = listOf("Yatay", "Dikey")
-        add(
-            singleSelectionSettings(
+        this.add(
+            this.singleSelectionSettings(
                 name = "Liste Düzeni",
                 defaultValue = 0,
                 entries = layoutOptions,
