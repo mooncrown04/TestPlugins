@@ -21,7 +21,7 @@ import java.io.BufferedReader
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always 007 "
+    override var name = "35 mooncrown always deneme "
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -522,8 +522,17 @@ override suspend fun loadLinks(
       // isim ve Kaynak +no
           val linkName =loadData.title+ "Kaynak ${index + 1}"
         
-         val linkQuality = Qualities.P1080.value 
-        
+         val linkQuality = Qualities.P1080.value
+         
+         val linkUrl = item.url.toString()
+         val linkType = if (linkUrl.endsWith(".mkv", true) || linkUrl.endsWith(".mp4", true) || linkUrl.endsWith(".mpeg", true) || linkUrl.endsWith(".mpg", true)) {
+             // Eğer link bu uzantılardan biriyle bitiyorsa doğrudan dosya linki olarak belirle
+             ExtractorLinkType.DIRECT_LINK
+         } else {
+             // Aksi halde varsayılan olarak M3U8 olarak kabul et
+             ExtractorLinkType.M3U8
+         }
+
         val headersMap = mutableMapOf<String, String>()
         headersMap["Referer"] = mainUrl
 
@@ -538,7 +547,7 @@ override suspend fun loadLinks(
                 source = this.name,
                 name = linkName,
                 url = item.url.toString(),
-                type = ExtractorLinkType.M3U8
+                type = linkType
             ) {
                 quality = linkQuality
                 headers = headersMap
