@@ -1,9 +1,10 @@
 package com.mooncrown
 
 import com.lagradost.cloudstream3.MainAPI
+import com.lagradost.cloudstream3.extractors.ExtractorApi
+import com.lagradost.cloudstream3.plugins.Plugin
 import kotlinx.coroutines.*
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
@@ -13,16 +14,17 @@ class MoOnCrOwNAlways : MainAPI() {
 
     // MainAPI gereksinimlerini karşılamak için gerekli özellikleri tanımlayın.
     // tvgUrl artık bir yapıcı parametresi değil, sınıfın bir özelliğidir.
-    override var tvgUrl = "https://example.com/epg/tvg.xml" // Kendi tvg URL'nizi buraya ekleyin
-    override val name = "MoOnCrOwN Always"
-    override val mainUrl = "https://example.com" // Ana URL'niz
+    // 'var' anahtar kelimesini kullanmalısınız, çünkü MainAPI'deki özellikler de 'var' olarak tanımlanmıştır.
+    override var name = "MoOnCrOwN Always"
+    override var mainUrl = "https://example.com" // Ana URL'niz
+    var tvgUrl = "https://example.com/epg/tvg.xml" // Kendi tvg URL'nizi buraya ekleyin
 
     // MainAPI arayüzünden gelen zorunlu metotları uygulayın.
-    override fun start() {
+    override suspend fun start() {
         // Plugin başladığında yapılacak işlemleri buraya ekleyin.
         // Şimdilik boş bırakılabilir.
     }
-    
+
     // Kotlin Serialization hatalarını çözmek için Serializable annotation'ı doğru bir şekilde kullanıldı.
     @Serializable
     data class ChannelData(
