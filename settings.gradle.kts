@@ -11,7 +11,7 @@ pluginManagement {
     }
 }
 
-rootProject.name = "CloudstreamPlugins"
+rootProject.name = "TestPlugins"
 
 // Bu dosya, hangi projelerin dahil edildiğini ayarlar.
 // Tüm yeni projeler, "disabled" değişkeninde belirtilmedikçe otomatik olarak dahil edilmelidir.
