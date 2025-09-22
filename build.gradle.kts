@@ -16,7 +16,8 @@ buildscript {
         // Cloudstream gradle plugin which makes everything work and builds plugins
         classpath("com.github.recloudstream:gradle:-SNAPSHOT")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.0")
-    }
+ classpath("org.jetbrains.kotlin:kotlin-serialization:2.1.0") // Bu satırı ekleyin
+}
 }
 
 allprojects {
@@ -35,8 +36,9 @@ subprojects {
     apply(plugin = "com.android.library")
     apply(plugin = "kotlin-android")
     apply(plugin = "com.lagradost.cloudstream3.gradle")
-
-    cloudstream {
+    apply(plugin = "kotlinx-serialization") // yeni plugin serialization hatası bu şekilde çözülür
+    
+cloudstream {
         // when running through github workflow, GITHUB_REPOSITORY should contain current repository name
         setRepo(System.getenv("GITHUB_REPOSITORY") ?: "https://github.com/mooncrown04/TestPlugins")
     }
@@ -84,7 +86,8 @@ subprojects {
         implementation("com.fasterxml.jackson.core:jackson-databind:2.16.0")          // JSON-nesne dönüştürme kütüphanesi
         implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1")      // Kotlin için asenkron işlemler
         implementation("com.github.vidstige:jadb:v1.2.1")
-    }
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3") //yeni
+  }
 }
 
 task<Delete>("clean") {
