@@ -10,7 +10,7 @@ import kotlinx.coroutines.coroutineScope
 
 // --- Ana Eklenti Sınıfı ---
 class MoOnCrOwNTV : MainAPI() {
-    override var mainUrl = "https://dl.dropbox.com/scl/fi/r4p9v7g76ikwt8zsyuhyn/sile.m3u?rlkey=esnalbpm4kblxgkvym51gjokm"
+  override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
     override var name = "35 MoOnCrOwN d TV"
     override val hasMainPage = true
     override var lang = "tr"
