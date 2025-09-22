@@ -20,7 +20,7 @@ import com.lagradost.cloudstream3.Score
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 Anime Diziler  🎬"
+    override var name = "35 mooncrown F  🎬"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -286,7 +286,7 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
         if (shows != null && shows.isNotEmpty()) {
         
   // Liste elemanlarını 3 kez çoğaltarak sonsuz döngü hissi yarat
-            val infiniteList = shows + shows + shows
+            val infiniteList = shows    //+ shows + shows
 
 		val listTitle = when (char) {
                 "0-9" -> "🔢 0-9 ${fullAlphabet.joinToString(" ") { it.lowercase(Locale.getDefault()) }}"
