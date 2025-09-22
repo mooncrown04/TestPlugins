@@ -423,13 +423,11 @@ override suspend fun load(url: String): LoadResponse {
             dubbedEpisodes.add(episodeObj)
         } 
 
-		 if (isSubbed) {
-           subbedEpisodes.add(episodeObj)
-        } 
-	//	else {
-      //      // Eğer Dublajlı değilse ve Altyazı veya Etiketsiz ise buraya ekle
-       //     subbedEpisodes.add(episodeObj)
-       // }
+	
+		else {
+            // Eğer Dublajlı değilse ve Altyazı veya Etiketsiz ise buraya ekle
+            subbedEpisodes.add(episodeObj)
+        }
     }
     
     dubbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
