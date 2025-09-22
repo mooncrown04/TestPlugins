@@ -7,23 +7,20 @@ import kotlinx.serialization.json.Json
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
 
-// Sınıf artık bir plugin olarak doğru şekilde tanınabilmesi için MainAPI'den türetiliyor.
+// MoOnCrOwNAlways sınıfı, MainAPI'den doğru şekilde miras alınır.
 class MoOnCrOwNAlways : MainAPI() {
 
-    // MainAPI gereksinimlerini karşılamak için gerekli özellikleri tanımlayın.
-    // 'var' anahtar kelimesini kullanmalısınız, çünkü MainAPI'deki özellikler de 'var' olarak tanımlanmıştır.
+    // MainAPI arayüzünden gelen zorunlu özellikleri tanımlayın.
     override var name = "MoOnCrOwN Always"
-    override var mainUrl = "https://example.com" // Ana URL'niz
-    var tvgUrl = "https://example.com/epg/tvg.xml" // Kendi tvg URL'nizi buraya ekleyin
+    override var mainUrl = "https://example.com"
+    var tvgUrl = "https://example.com/epg/tvg.xml"
 
-    // MainAPI sınıfındaki 'start' metodu 'override' anahtar kelimesi olmadan da uygulanabilir.
-    // Bu, derleyicinin "overrides nothing" hatasını önler.
+    // 'start' metodu 'override' anahtar kelimesi olmadan tanımlandı.
     suspend fun start() {
         // Plugin başladığında yapılacak işlemleri buraya ekleyin.
-        // Şimdilik boş bırakılabilir.
     }
 
-    // Kotlin Serialization hatalarını çözmek için Serializable annotation'ı doğru bir şekilde kullanıldı.
+    // @Serializable annotation'ı doğru şekilde kullanıldı.
     @Serializable
     data class ChannelData(
         val tvgName: String,
@@ -35,9 +32,9 @@ class MoOnCrOwNAlways : MainAPI() {
     companion object {
         private val cache = ConcurrentHashMap<String, List<ChannelData>>()
         private val lastUpdated = ConcurrentHashMap<String, Long>()
-        private const val CACHE_EXPIRY_MS = 60 * 60 * 1000L // 1 hour
+        private const val CACHE_EXPIRY_MS = 60 * 60 * 1000L // 1 saat
 
-        // Json nesnesi doğru şekilde tanımlandı.
+        // Kotlinx.serialization Json nesnesi doğru şekilde yapılandırıldı.
         private val json = Json { ignoreUnknownKeys = true }
 
         private suspend fun fetchAndParseM3u(url: String): List<ChannelData> = withContext(Dispatchers.IO) {
