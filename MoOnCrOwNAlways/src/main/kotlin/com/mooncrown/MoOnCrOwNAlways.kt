@@ -12,7 +12,7 @@ class MoOnCrOwNAlways : MainAPI() {
 
     // MainAPI arayüzünden gelen zorunlu özellikleri tanımlayın.
     override var name = "MoOnCrOwN Always"
-    override var mainUrl = "https://example.com"
+    override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
 
     // 'start' metodu 'override' anahtar kelimesi olmadan tanımlandı.
     suspend fun start() {
