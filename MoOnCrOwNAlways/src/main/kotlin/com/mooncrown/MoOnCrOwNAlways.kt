@@ -421,10 +421,15 @@ override suspend fun load(url: String): LoadResponse {
 
         if (isDubbed) {
             dubbedEpisodes.add(episodeObj)
-        } else {
-            // Eğer Dublajlı değilse ve Altyazı veya Etiketsiz ise buraya ekle
-            subbedEpisodes.add(episodeObj)
-        }
+        } 
+
+		 if (isSubbed) {
+           subbedEpisodes.add(episodeObj)
+        } 
+	//	else {
+      //      // Eğer Dublajlı değilse ve Altyazı veya Etiketsiz ise buraya ekle
+       //     subbedEpisodes.add(episodeObj)
+       // }
     }
     
     dubbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
@@ -524,7 +529,9 @@ override suspend fun loadLinks(
                 type = ExtractorLinkType.M3U8
             ) {
                 quality = linkQuality
-            }
+				// **EKLEME**: Güvenlik kontrollerini atlamak için Referer başlığını ekle
+               headers = mapOf("Referer" to mainUrl)    
+			}
         )
     }
     return true
