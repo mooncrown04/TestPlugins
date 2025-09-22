@@ -31,8 +31,7 @@ fun File.eachDir(block: (File) -> Unit) {
 // Yalnızca tek bir projeyi dahil etmek için, önceki satırları (ilk hariç) yorumlayın ve eklentinizi şöyle dahil edin:
 //include(":dizi",":Sinema")
 //  :TV
-include(":plugins") // Bu satırın eklendiğinden emin olun
-include(":MoOnCrOwNAlways")
+
 
 
 
