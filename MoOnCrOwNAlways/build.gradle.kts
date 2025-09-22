@@ -9,7 +9,7 @@ android {
         buildConfig = true
     }
 
-
+}
 
 cloudstream {
     authors     = listOf("MoOnCrOwN","GitLatte", "patr0nq", "keyiflerolsun")
