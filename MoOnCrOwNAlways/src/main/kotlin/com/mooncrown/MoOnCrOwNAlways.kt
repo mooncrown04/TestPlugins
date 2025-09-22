@@ -1,21 +1,29 @@
 package com.mooncrown
 
-import java.io.Serializable
-import java.net.URL
+import com.lagradost.cloudstream3.MainAPI
 import kotlinx.coroutines.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
 
-// hasEpg parametresi yapıcı metottan (constructor) kaldırıldı.
-// Bu, "çok fazla argüman" hatasını çözecektir.
-class MoOnCrOwNAlways(
-    val tvgUrl: String
-) {
+// Sınıf artık bir plugin olarak doğru şekilde tanınabilmesi için MainAPI'den türetiliyor.
+class MoOnCrOwNAlways : MainAPI() {
 
+    // MainAPI gereksinimlerini karşılamak için gerekli özellikleri tanımlayın.
+    // tvgUrl artık bir yapıcı parametresi değil, sınıfın bir özelliğidir.
+    override var tvgUrl = "https://example.com/epg/tvg.xml" // Kendi tvg URL'nizi buraya ekleyin
+    override val name = "MoOnCrOwN Always"
+    override val mainUrl = "https://example.com" // Ana URL'niz
+
+    // MainAPI arayüzünden gelen zorunlu metotları uygulayın.
+    override fun start() {
+        // Plugin başladığında yapılacak işlemleri buraya ekleyin.
+        // Şimdilik boş bırakılabilir.
+    }
+    
+    // Kotlin Serialization hatalarını çözmek için Serializable annotation'ı doğru bir şekilde kullanıldı.
     @Serializable
     data class ChannelData(
         val tvgName: String,
@@ -29,6 +37,7 @@ class MoOnCrOwNAlways(
         private val lastUpdated = ConcurrentHashMap<String, Long>()
         private const val CACHE_EXPIRY_MS = 60 * 60 * 1000L // 1 hour
 
+        // Json nesnesi doğru şekilde tanımlandı.
         private val json = Json { ignoreUnknownKeys = true }
 
         private suspend fun fetchAndParseM3u(url: String): List<ChannelData> = withContext(Dispatchers.IO) {
