@@ -32,7 +32,7 @@ fun File.eachDir(block: (File) -> Unit) {
 //include(":dizi",":Sinema")
 //  :TV
 include(":plugins") // Bu satırın eklendiğinden emin olun
-include(":src:MoOnCrOwNAlways")
+include(":MoOnCrOwNAlways")
 
 
 
