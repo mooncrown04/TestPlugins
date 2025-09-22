@@ -5,10 +5,9 @@ import com.lagradost.cloudstream3.plugins.Plugin
 import android.content.Context
 
 @CloudstreamPlugin
-class MoOnCrOwNAlwaysPlugin: Plugin() {
+class AnimeDiziPlugin: Plugin() {
     override fun load(context: Context) {
-        // Tüm eklenti kodlarını buraya ekleyin
-        // Cloudstream'e sağlayıcıları ve yükleyicileri kaydet
-        registerMainAPI(MoOnCrOwNAlways())
+    registerMainAPI(AnimeDizi(context.getSharedPreferences("AnimeDizi", 0)))
+ 
     }
 }
