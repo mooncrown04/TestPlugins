@@ -168,7 +168,7 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
     val matchResult3 = format3Regex.find(textWithCleanedChars)
     if (matchResult3 != null) {
         val (title, seasonStr, episodeStr) = matchResult3.destructured
-        return Triple(title.trim(), seasonStr.toIntOrNull(), episodeStr.toIntOrNull())
+        return Triple(title.trim(), seasonStr.toIntOrNull(), episodeStr.toIntOr-Null())
     }
     val matchResult4 = format4Regex.find(textWithCleanedChars)
     if (matchResult4 != null) {
@@ -527,7 +527,7 @@ override suspend fun loadLinks(
          val linkUrl = item.url.toString()
          val linkType = if (linkUrl.endsWith(".mkv", true) || linkUrl.endsWith(".mp4", true) || linkUrl.endsWith(".mpeg", true) || linkUrl.endsWith(".mpg", true)) {
              // Eğer link bu uzantılardan biriyle bitiyorsa doğrudan dosya linki olarak belirle
-             ExtractorLinkType.DIRECT_LINK
+             ExtractorLinkType.STREAM
          } else {
              // Aksi halde varsayılan olarak M3U8 olarak kabul et
              ExtractorLinkType.M3U8
