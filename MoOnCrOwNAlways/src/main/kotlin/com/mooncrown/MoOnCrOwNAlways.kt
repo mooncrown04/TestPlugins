@@ -509,39 +509,32 @@ override suspend fun loadLinks(
     
     // loadData'nın içindeki tüm kaynakları döngüye al
     loadData.items.forEachIndexed { index, item ->
-      // val linkQuality = Qualities.Unknown.value
-        
-      // isim ve Kaynak +no
-        val linkName =loadData.title+ "Kaynak ${index + 1}"
-        
-        val linkQuality = Qualities.P1080.value
-        
+        val linkName = loadData.title + " Kaynak ${index + 1}"
         val linkUrl = item.url.toString()
-        val linkType = if (linkUrl.endsWith(".mkv", true) || linkUrl.endsWith(".mp4", true) || linkUrl.endsWith(".mpeg", true) || linkUrl.endsWith(".mpg", true)) {
-             // Eğer link bu uzantılardan biriyle bitiyorsa doğrudan dosya linki olarak belirle
-             ExtractorLinkType.DIRECT_LINK
-           } else {
-             // Aksi halde varsayılan olarak M3U8 olarak kabul et
-             ExtractorLinkType.M3U8
-           }
+        val linkType = when {
+            linkUrl.endsWith(".mkv", true) || linkUrl.endsWith(".mp4", true) || linkUrl.endsWith(".mpeg", true) || linkUrl.endsWith(".mpg", true) -> {
+                ExtractorLinkType.DIRECT_LINK
+            }
+            else -> {
+                ExtractorLinkType.M3U8
+            }
+        }
 
         val headersMap = mutableMapOf<String, String>()
         headersMap["Referer"] = mainUrl
 
-        // Eğer PlaylistItem'de User-Agent varsa, onu da ekle
         item.userAgent?.let {
             headersMap["User-Agent"] = it
         }
 
-        // ExtractorLink'i oluştur ve callback'e gönder
         callback.invoke(
             newExtractorLink(
                 source = this.name,
                 name = linkName,
-                url = item.url.toString(),
+                url = linkUrl,
                 type = linkType
             ) {
-                quality = linkQuality
+                quality = Qualities.Unknown.value
                 headers = headersMap
             }
         )
