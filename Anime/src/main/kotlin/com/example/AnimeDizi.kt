@@ -286,7 +286,7 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
         if (shows != null && shows.isNotEmpty()) {
         
   // Liste elemanlarını 3 kez çoğaltarak sonsuz döngü hissi yarat
-            val infiniteList = shows + shows + shows
+            val infiniteList = shows  //+ shows + shows
 
 		val listTitle = when (char) {
                 "0-9" -> "🔢 0-9 ${fullAlphabet.joinToString(" ") { it.lowercase(Locale.getDefault()) }}"
