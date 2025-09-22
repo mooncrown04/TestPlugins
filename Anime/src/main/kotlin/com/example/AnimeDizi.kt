@@ -20,7 +20,7 @@ import com.lagradost.cloudstream3.Score
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 Anime "
+    override var name = "35 Anime yeni "
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -141,7 +141,7 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
     val format2Regex = Regex("""(.*?)\s*s(\d+)e(\d+)""", RegexOption.IGNORE_CASE)
     val format3Regex = Regex("""(.*?)\s*Sezon\s*(\d+)\s*Bölüm\s*(\d+).*""", RegexOption.IGNORE_CASE)
     val format4Regex = Regex("""(.*?)\s*(\d+)\s*Bölüm.*""", RegexOption.IGNORE_CASE)
-
+    val format5Regex = Regex("""(.*?)\s*S(\d+)E(\d+).*""", RegexOption.IGNORE_CASE)
 
     val matchResult1 = format1Regex.find(textWithCleanedChars)
     if (matchResult1 != null) {
@@ -166,6 +166,16 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
         return Triple(title.trim(), 1, episodeStr.toIntOrNull())
     }
 
+    val matchResult5 = format5Regex.find(textWithCleanedChars)
+    if (matchResult5 != null) {
+        val (title, episodeStr) = matchResult5.destructured
+        return Triple(title.trim(), 1, episodeStr.toIntOrNull())
+    }
+
+
+
+
+	
     return Triple(textWithCleanedChars.trim(), null, null)
 }
 
