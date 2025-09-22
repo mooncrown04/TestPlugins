@@ -176,7 +176,6 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
         return Triple(title.trim(), 1, episodeStr.toIntOrNull())
     }
 
-    // `format5Regex` üç yakalama grubuna sahip olduğu için üç değişkene ayrıştırılmalıdır.
     val matchResult5 = format5Regex.find(textWithCleanedChars)
     if (matchResult5 != null) {
         val (title, seasonStr, episodeStr) = matchResult5.destructured
@@ -258,7 +257,7 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
             score = score
         )
 
-        val searchResponse = newSearchResponse(cleanTitle, loadData.toJson())
+        val searchResponse = newAnimeSearchResponse(cleanTitle, loadData.toJson())
         searchResponse.apply {
             posterUrl = loadData.poster
             type = TvType.Anime
@@ -333,7 +332,7 @@ override suspend fun search(query: String): List<SearchResponse> {
     return groupedByCleanTitle.filter { (cleanTitle, _) ->
         cleanTitle.lowercase(Locale.getDefault()).contains(query.lowercase(Locale.getDefault()))
     }.map { (cleanTitle, shows) ->
-        val firstShow = shows.firstOrNull() ?: return@map newSearchResponse(cleanTitle, "")
+        val firstShow = shows.firstOrNull() ?: return@map newAnimeSearchResponse(cleanTitle, "")
 
         // POSTER ATAMASI:
         val rawPosterUrl = firstShow.attributes["tvg-logo"]
@@ -358,7 +357,7 @@ override suspend fun search(query: String): List<SearchResponse> {
             score = score
         )
 
-        val searchResponse = newSearchResponse(cleanTitle, loadData.toJson())
+        val searchResponse = newAnimeSearchResponse(cleanTitle, loadData.toJson())
         searchResponse.apply {
             posterUrl = loadData.poster
             type = TvType.Anime
@@ -470,7 +469,7 @@ override suspend fun load(url: String): LoadResponse {
                 episodeLoadData.title
             }
             
-            newSearchResponse(episodeTitleWithNumber, episode.data).apply {
+            newAnimeSearchResponse(episodeTitleWithNumber, episode.data).apply {
                 posterUrl = episodeLoadData.poster
                 type = TvType.Anime
                 if (episodeLoadData.isDubbed || episodeLoadData.isSubbed) {
@@ -479,7 +478,7 @@ override suspend fun load(url: String): LoadResponse {
             }
         }
 
-    return newLoadResponse(
+    return newAnimeLoadResponse(
         loadData.title,
         url,
         TvType.TvSeries
