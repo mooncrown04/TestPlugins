@@ -1,8 +1,6 @@
 package com.mooncrown
 
 import com.lagradost.cloudstream3.MainAPI
-import com.lagradost.cloudstream3.extractors.ExtractorApi
-import com.lagradost.cloudstream3.plugins.Plugin
 import kotlinx.coroutines.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -13,14 +11,14 @@ import java.util.concurrent.ConcurrentHashMap
 class MoOnCrOwNAlways : MainAPI() {
 
     // MainAPI gereksinimlerini karşılamak için gerekli özellikleri tanımlayın.
-    // tvgUrl artık bir yapıcı parametresi değil, sınıfın bir özelliğidir.
     // 'var' anahtar kelimesini kullanmalısınız, çünkü MainAPI'deki özellikler de 'var' olarak tanımlanmıştır.
     override var name = "MoOnCrOwN Always"
     override var mainUrl = "https://example.com" // Ana URL'niz
     var tvgUrl = "https://example.com/epg/tvg.xml" // Kendi tvg URL'nizi buraya ekleyin
 
-    // MainAPI arayüzünden gelen zorunlu metotları uygulayın.
-    override suspend fun start() {
+    // MainAPI sınıfındaki 'start' metodu 'override' anahtar kelimesi olmadan da uygulanabilir.
+    // Bu, derleyicinin "overrides nothing" hatasını önler.
+    suspend fun start() {
         // Plugin başladığında yapılacak işlemleri buraya ekleyin.
         // Şimdilik boş bırakılabilir.
     }
