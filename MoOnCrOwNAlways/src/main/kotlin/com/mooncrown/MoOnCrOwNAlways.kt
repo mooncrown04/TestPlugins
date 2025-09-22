@@ -15,12 +15,13 @@ import java.io.InputStream
 import java.util.Locale
 import com.lagradost.cloudstream3.ActorData
 import com.lagradost.cloudstream3.Score
+import java.io.BufferedReader
 
 
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always deneme "
+    override var name = "35 mooncrown always 007 "
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -78,25 +79,32 @@ class IptvPlaylistParser {
         if (!reader.readLine().isExtendedM3u()) throw PlaylistParserException.InvalidHeader()
 
         val playlistItems: MutableList<PlaylistItem> = mutableListOf()
-        var currentIndex = 0
         var line: String? = reader.readLine()
+        var currentItem: PlaylistItem? = null
 
         while (line != null) {
             if (line.isNotEmpty()) {
-                if (line.startsWith(PlaylistItem.EXT_INF)) {
-                    val title = line.getTitle()
-                    val attributes = line.getAttributes()
-                    
-                    val score = attributes["tvg-score"]?.toDoubleOrNull()
-                    playlistItems.add(PlaylistItem(title, attributes, score = score))
-                } else if (!line.startsWith("#")) {
-                    val item = playlistItems.getOrNull(currentIndex)
-                    if (item != null) {
-                        val url = line.getUrl()
-                        playlistItems[currentIndex] = item.copy(url = url)
-                        currentIndex++
-                    } else {
-                        Log.w("IptvPlaylistParser", "URL eşleşmedi, atlanıyor: $line")
+                when {
+                    line.startsWith(PlaylistItem.EXT_INF) -> {
+                        currentItem = PlaylistItem(
+                            title = line.getTitle(),
+                            attributes = line.getAttributes(),
+                            score = line.getAttributes()["tvg-score"]?.toDoubleOrNull()
+                        )
+                    }
+                    line.startsWith(PlaylistItem.EXT_VLC_OPT) -> {
+                        if (currentItem != null) {
+                            val userAgent = line.getVlcOptUserAgent()
+                            currentItem = currentItem.copy(userAgent = userAgent)
+                        }
+                    }
+                    !line.startsWith("#") -> {
+                        if (currentItem != null) {
+                            val url = line.getUrl()
+                            currentItem = currentItem.copy(url = url)
+                            playlistItems.add(currentItem)
+                            currentItem = null
+                        }
                     }
                 }
             }
@@ -129,6 +137,8 @@ class IptvPlaylistParser {
     }
 
     private fun String.getUrl(): String? = split("|").firstOrNull()?.trim()
+    private fun String.getVlcOptUserAgent(): String? =
+        substringAfter("http-user-agent=").trim()
 }
 
 sealed class PlaylistParserException(message: String) : Exception(message) {
@@ -175,7 +185,7 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 
 
 
-	
+    
     return Triple(textWithCleanedChars.trim(), null, null)
 }
 
@@ -260,7 +270,7 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
             type = TvType.Anime
             this.score = score?.let { Score.from10(it) }
             this.quality = SearchQuality.HD
-			if (isDubbed || isSubbed) {
+            if (isDubbed || isSubbed) {
                 addDubStatus(dubExist = isDubbed, subExist = isSubbed)
             }
         }
@@ -295,10 +305,10 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
         val shows = alphabeticGroups[char]
         if (shows != null && shows.isNotEmpty()) {
         
-  // Liste elemanlarını 3 kez çoğaltarak sonsuz döngü hissi yarat
+    // Liste elemanlarını 3 kez çoğaltarak sonsuz döngü hissi yarat
             val infiniteList = shows  //+ shows + shows
 
-		val listTitle = when (char) {
+        val listTitle = when (char) {
                 "0-9" -> "🔢 0-9 ${fullAlphabet.joinToString(" ") { it.lowercase(Locale.getDefault()) }}"
                 "#" -> "🔣 # ${fullAlphabet.joinToString(" ") { it.lowercase(Locale.getDefault()) }}"
                 else -> {
@@ -314,7 +324,7 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
             }
          //   finalHomePageLists.add(HomePageList(listTitle, shows, isHorizontalImages = true))
          finalHomePageLists.add(HomePageList(listTitle, infiniteList, isHorizontalImages = true))
-		}
+        }
     }
 
     return newHomePageResponse(finalHomePageLists, hasNext = false)
@@ -358,10 +368,10 @@ override suspend fun search(query: String): List<SearchResponse> {
         val searchResponse = newAnimeSearchResponse(cleanTitle, loadData.toJson())
         searchResponse.apply {
             posterUrl = loadData.poster
-            type = TvType.Anime           
-			this.score = score?.let { Score.from10(it) }
+            type = TvType.Anime             
+            this.score = score?.let { Score.from10(it) }
             this.quality = SearchQuality.HD
-		   if (isDubbed || isSubbed) {
+            if (isDubbed || isSubbed) {
                 addDubStatus(dubExist = isDubbed, subExist = isSubbed)
             }
         }
@@ -393,7 +403,7 @@ override suspend fun load(url: String): LoadResponse {
         val finalEpisode = episode ?: 1
         val isDubbed = isDubbed(item)
         val isSubbed = isSubbed(item)
-	   val episodePoster = item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: finalPosterUrl
+        val episodePoster = item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: finalPosterUrl
 
         val episodeLoadData = LoadData(
             items = episodeItems, // Tüm kaynakları bu listeye ekle
@@ -421,10 +431,7 @@ override suspend fun load(url: String): LoadResponse {
 
         if (isDubbed) {
             dubbedEpisodes.add(episodeObj)
-        } 
-
-	
-		else {
+        } else {
             // Eğer Dublajlı değilse ve Altyazı veya Etiketsiz ise buraya ekle
             subbedEpisodes.add(episodeObj)
         }
@@ -446,7 +453,7 @@ override suspend fun load(url: String): LoadResponse {
         ActorData(
             actor = Actor("MoOnCrOwN","https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"),
             roleString = "yazılım amalesi"
-		)
+        )
     )
     val tags = mutableListOf<String>()
     tags.add(loadData.group)
@@ -460,7 +467,7 @@ override suspend fun load(url: String): LoadResponse {
     }
 
     val recommendedList = (dubbedEpisodes + subbedEpisodes)
-     //   .shuffled()
+      // .shuffled()
         .take(24)
         .mapNotNull { episode ->
             val episodeLoadData = parseJson<LoadData>(episode.data)
@@ -490,14 +497,14 @@ override suspend fun load(url: String): LoadResponse {
         this.tags = tags
         this.episodes = episodesMap
         this.recommendations = recommendedList
-	    this.actors = listOf(
-                    ActorData(
-                        Actor(loadData.title, finalPosterUrl),
-                        roleString = "KANAL İSMİ"
-                    )
-                ) + actorsList
-		
-	}
+         this.actors = listOf(
+                     ActorData(
+                         Actor(loadData.title, finalPosterUrl),
+                         roleString = "KANAL İSMİ"
+                     )
+                 ) + actorsList
+        
+    }
 }
 
 override suspend fun loadLinks(
@@ -510,14 +517,21 @@ override suspend fun loadLinks(
     
     // loadData'nın içindeki tüm kaynakları döngüye al
     loadData.items.forEachIndexed { index, item ->
-      //  val linkQuality = Qualities.Unknown.value
+      // val linkQuality = Qualities.Unknown.value
         
-        // isim ve Kaynak +no
-         val linkName =loadData.title+ "Kaynak ${index + 1}"
+      // isim ve Kaynak +no
+          val linkName =loadData.title+ "Kaynak ${index + 1}"
         
-		 val linkQuality = Qualities.P1080.value 
-		
-		
+         val linkQuality = Qualities.P1080.value 
+        
+        val headersMap = mutableMapOf<String, String>()
+        headersMap["Referer"] = mainUrl
+
+        // Eğer PlaylistItem'de User-Agent varsa, onu da ekle
+        item.userAgent?.let {
+            headersMap["User-Agent"] = it
+        }
+
         // ExtractorLink'i oluştur ve callback'e gönder
         callback.invoke(
             newExtractorLink(
@@ -527,9 +541,8 @@ override suspend fun loadLinks(
                 type = ExtractorLinkType.M3U8
             ) {
                 quality = linkQuality
-				// **EKLEME**: Güvenlik kontrollerini atlamak için Referer başlığını ekle
-               headers = mapOf("Referer" to mainUrl)    
-			}
+                headers = headersMap
+            }
         )
     }
     return true
