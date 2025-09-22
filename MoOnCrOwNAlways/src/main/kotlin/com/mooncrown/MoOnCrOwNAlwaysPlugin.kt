@@ -7,7 +7,8 @@ import android.content.Context
 @CloudstreamPlugin
 class MoOnCrOwNAlwaysPlugin: Plugin() {
     override fun load(context: Context) {
-     //  registerMainAPI(MoOnCrOwNAlways(context.getSharedPreferences("MoOnCrOwNAlways", 0)))
-  registerMainAPI(MoOnCrOwNAlways(context, null))
+        // Tüm eklenti kodlarını buraya ekleyin
+        // Cloudstream'e sağlayıcıları ve yükleyicileri kaydet
+        registerMainAPI(MoOnCrOwNAlways())
     }
 }
