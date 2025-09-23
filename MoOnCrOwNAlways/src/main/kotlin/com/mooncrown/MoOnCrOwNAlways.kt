@@ -21,7 +21,7 @@ import java.io.BufferedReader
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always 007 "
+    override var name = "35 mooncrown always deneme08 "
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -516,7 +516,7 @@ override suspend fun loadLinks(
     // loadData'nın içindeki tüm kaynakları döngüye al
     loadData.items.forEachIndexed { index, item ->
       
-        val linkName =loadData.title+ "Kaynak ${index + 1}"
+        val linkName = loadData.title + " Kaynak ${index + 1}"
           
         val linkQuality = Qualities.P1080.value  
           
@@ -528,10 +528,15 @@ override suspend fun loadLinks(
         }
           
         val headersMap = mutableMapOf<String, String>()
-        // Önemli Değişiklik: Referer başlığını video URL'sinin kendisi olarak ayarla
-        headersMap["Referer"] = videoUrl
+        
+        // **Önemli Değişiklik: Referer'ı tvg-logo'dan alıyoruz**
+        val refererUrl = item.attributes["tvg-logo"]?.let {
+            it.substringBeforeLast("/")
+        } ?: "https://m.prectv49.sbs" // Yedek olarak varsayılan bir değer belirle
+        
+        headersMap["Referer"] = refererUrl
 
-        // Eğer PlaylistItem'de User-Agent varsa, onu da ekle
+        // User-Agent'i PlaylistItem'den alıyoruz
         item.userAgent?.let {
             headersMap["User-Agent"] = it
         }
