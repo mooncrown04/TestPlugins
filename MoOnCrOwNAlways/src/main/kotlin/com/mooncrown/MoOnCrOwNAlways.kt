@@ -183,8 +183,6 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
     }
 
 
-
-
     
     return Triple(textWithCleanedChars.trim(), null, null)
 }
@@ -304,7 +302,7 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
     allGroupsToProcess.forEach { char ->
         val shows = alphabeticGroups[char]
         if (shows != null && shows.isNotEmpty()) {
-        
+            
     // Liste elemanlarını 3 kez çoğaltarak sonsuz döngü hissi yarat
             val infiniteList = shows  //+ shows + shows
 
@@ -322,8 +320,8 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
                     }
                 }
             }
-         //   finalHomePageLists.add(HomePageList(listTitle, shows, isHorizontalImages = true))
-         finalHomePageLists.add(HomePageList(listTitle, infiniteList, isHorizontalImages = true))
+          //    finalHomePageLists.add(HomePageList(listTitle, shows, isHorizontalImages = true))
+          finalHomePageLists.add(HomePageList(listTitle, infiniteList, isHorizontalImages = true))
         }
     }
 
@@ -349,11 +347,11 @@ override suspend fun search(query: String): List<SearchResponse> {
 
         // Düzeltme: Tüm bölümlerin puanlarından en yükseğini al.
         val score = shows.mapNotNull { it.score }.maxOrNull()
- 
+    
         val isDubbed = isDubbed(firstShow)
         val isSubbed = isSubbed(firstShow)
 
- 
+    
         val loadData = LoadData(
             items = shows,
             title = cleanTitle,
@@ -368,7 +366,7 @@ override suspend fun search(query: String): List<SearchResponse> {
         val searchResponse = newAnimeSearchResponse(cleanTitle, loadData.toJson())
         searchResponse.apply {
             posterUrl = loadData.poster
-            type = TvType.Anime             
+            type = TvType.Anime              
             this.score = score?.let { Score.from10(it) }
             this.quality = SearchQuality.HD
             if (isDubbed || isSubbed) {
@@ -387,8 +385,8 @@ override suspend fun load(url: String): LoadResponse {
     val plot = "TMDB'den özet alınamadı."
     // loadData'dan gelen puanı kullan
     val scoreToUse = loadData.score
-     val dubbedEpisodes = mutableListOf<Episode>()
-     val subbedEpisodes = mutableListOf<Episode>()
+      val dubbedEpisodes = mutableListOf<Episode>()
+      val subbedEpisodes = mutableListOf<Episode>()
     
     // Bölümleri sezon ve bölüme göre gruplandırıp, aynı bölümün tüm kaynaklarını bir arada tutar.
     val groupedEpisodes = allShows.groupBy {
@@ -436,7 +434,7 @@ override suspend fun load(url: String): LoadResponse {
             subbedEpisodes.add(episodeObj)
         }
     }
-    
+      
     dubbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
     subbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
 
@@ -497,12 +495,12 @@ override suspend fun load(url: String): LoadResponse {
         this.tags = tags
         this.episodes = episodesMap
         this.recommendations = recommendedList
-         this.actors = listOf(
-                     ActorData(
-                         Actor(loadData.title, finalPosterUrl),
-                         roleString = "KANAL İSMİ"
-                     )
-                 ) + actorsList
+          this.actors = listOf(
+                      ActorData(
+                          Actor(loadData.title, finalPosterUrl),
+                          roleString = "KANAL İSMİ"
+                      )
+                  ) + actorsList
         
     }
 }
@@ -514,16 +512,21 @@ override suspend fun loadLinks(
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     val loadData = parseJson<LoadData>(data)
-    
+      
     // loadData'nın içindeki tüm kaynakları döngüye al
     loadData.items.forEachIndexed { index, item ->
-      // val linkQuality = Qualities.Unknown.value
-        
-      // isim ve Kaynak +no
-          val linkName =loadData.title+ "Kaynak ${index + 1}"
-        
-         val linkQuality = Qualities.P1080.value 
-        
+      
+        val linkName =loadData.title+ "Kaynak ${index + 1}"
+          
+        val linkQuality = Qualities.P1080.value  
+          
+        val videoUrl = item.url.toString()
+        val videoType = when {
+            videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.VIDEO
+            videoUrl.endsWith(".mp4", ignoreCase = true) -> ExtractorLinkType.VIDEO
+            else -> ExtractorLinkType.M3U8
+        }
+          
         val headersMap = mutableMapOf<String, String>()
         headersMap["Referer"] = mainUrl
 
@@ -537,8 +540,8 @@ override suspend fun loadLinks(
             newExtractorLink(
                 source = this.name,
                 name = linkName,
-                url = item.url.toString(),
-                type = ExtractorLinkType.M3U8
+                url = videoUrl,
+                type = videoType
             ) {
                 quality = linkQuality
                 headers = headersMap
