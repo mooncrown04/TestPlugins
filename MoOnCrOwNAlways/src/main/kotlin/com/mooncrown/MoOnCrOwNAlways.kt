@@ -18,10 +18,14 @@ import com.lagradost.cloudstream3.Score
 import java.io.BufferedReader
 
 
+import org.json.JSONObject
+import java.net.URL
+import java.net.URLEncoder
+
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always deneme08 "
+    override var name = "35 mooncrown always 04ayt "
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
