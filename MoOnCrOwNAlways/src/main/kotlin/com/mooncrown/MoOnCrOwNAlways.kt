@@ -21,7 +21,7 @@ import java.io.BufferedReader
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always deneme08 "
+    override var name = "35 mooncrown always den04 "
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -529,17 +529,16 @@ override suspend fun loadLinks(
           
         val headersMap = mutableMapOf<String, String>()
         
-        // **Önemli Değişiklik: Referer'ı tvg-logo'dan alıyoruz**
+        // Referer'ı tvg-logo'dan alıyoruz
         val refererUrl = item.attributes["tvg-logo"]?.let {
             it.substringBeforeLast("/")
-        } ?: "https://m.prectv49.sbs" // Yedek olarak varsayılan bir değer belirle
-        
+        } ?: videoUrl.substringBeforeLast("/") // Yedek olarak video URL'sinin kendisini kullan
+
         headersMap["Referer"] = refererUrl
 
-        // User-Agent'i PlaylistItem'den alıyoruz
-        item.userAgent?.let {
-            headersMap["User-Agent"] = it
-        }
+        // User-Agent'i belirleme: M3U dosyasında varsa onu kullan, yoksa genel bir tarayıcı User-Agent'i kullan
+        val userAgent = item.userAgent ?: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        headersMap["User-Agent"] = userAgent
 
         // ExtractorLink'i oluştur ve callback'e gönder
         callback.invoke(
