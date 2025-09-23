@@ -21,7 +21,7 @@ import java.io.BufferedReader
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always den04 "
+    override var name = "35 mooncrown always deneme08 "
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -529,10 +529,10 @@ override suspend fun loadLinks(
           
         val headersMap = mutableMapOf<String, String>()
         
-        // Referer'ı tvg-logo'dan alıyoruz
-        val refererUrl = item.attributes["tvg-logo"]?.let {
+        // Önce M3U dosyasında tanımlanan referer başlığını ara
+        val refererUrl = item.headers["Referer"] ?: item.headers["referer"] ?: item.attributes["tvg-logo"]?.let {
             it.substringBeforeLast("/")
-        } ?: videoUrl.substringBeforeLast("/") // Yedek olarak video URL'sinin kendisini kullan
+        } ?: videoUrl.substringBeforeLast("/")
 
         headersMap["Referer"] = refererUrl
 
