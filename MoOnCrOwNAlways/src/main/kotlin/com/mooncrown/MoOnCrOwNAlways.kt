@@ -27,7 +27,7 @@ import java.net.URLEncoder
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always s007n "
+    override var name = "35 mooncrown always s004n "
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -213,18 +213,30 @@ private suspend fun getOrFetchPlaylist(): Playlist {
     return newPlaylist
 }
 
+
+
 // isDubbed ve isSubbed fonksiyonları, kodun tekrarını önlemek için yardımcı fonksiyonlar olarak eklendi
 private fun isDubbed(item: PlaylistItem): Boolean {
     val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
-    val language = item.attributes["tvg-language"]?.lowercase()
-    return dubbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish"|| language == "dublaj"|| language == "TÜRKÇE"
+    val language = item.attributes["tvg-language"]?.lowercase(Locale.getDefault())
+    val titleLower = item.title.toString().lowercase(Locale.getDefault())
+
+    // Başlıkta veya dil bilgisinde "dublaj", "türkçe" gibi kelimeler var mı kontrol eder.
+    return dubbedKeywords.any { keyword -> titleLower.contains(keyword) } || language?.contains("dublaj") == true || language?.contains("tr") == true || language?.contains("turkish") == true
 }
 
 private fun isSubbed(item: PlaylistItem): Boolean {
     val subbedKeywords = listOf("altyazılı", "altyazi")
-    val language = item.attributes["tvg-language"]?.lowercase()
-    return subbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "en" || language == "eng"
+    val language = item.attributes["tvg-language"]?.lowercase(Locale.getDefault())
+    val titleLower = item.title.toString().lowercase(Locale.getDefault())
+
+    // Başlıkta veya dil bilgisinde "altyazılı" veya "eng" kelimeleri var mı kontrol eder.
+    return subbedKeywords.any { keyword -> titleLower.contains(keyword) } || language?.contains("en") == true || language?.contains("eng") == true || language?.contains("altyazi") == true
 }
+
+
+
+
 
 
 // Yeni eklenen yardımcı fonksiyon
