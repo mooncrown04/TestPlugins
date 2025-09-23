@@ -227,6 +227,53 @@ private fun isSubbed(item: PlaylistItem): Boolean {
 }
 
 
+// Yeni eklenen yardımcı fonksiyon
+// Bu fonksiyon, hem ana sayfa hem de arama sonuçları için ortak SearchResponse objesini oluşturur.
+private suspend fun createSearchResponse(cleanTitle: String, shows: List<PlaylistItem>): SearchResponse? {
+    val firstShow = shows.firstOrNull() ?: return null
+
+    // POSTER ATAMASI:
+    val rawPosterUrl = firstShow.attributes["tvg-logo"]
+    val verifiedPosterUrl = checkPosterUrl(rawPosterUrl)
+    val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
+    
+    // Düzeltme: Tüm bölümlerin puanlarından en yükseğini al.
+    val score = shows.mapNotNull { it.score }.maxOrNull()
+    val isDubbed = isDubbed(firstShow)
+    val isSubbed = isSubbed(firstShow)
+
+    val loadData = LoadData(
+        items = shows,
+        title = cleanTitle,
+        poster = finalPosterUrl,
+        group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
+        nation = firstShow.attributes["tvg-country"] ?: "TR",
+        isDubbed = isDubbed,
+        isSubbed = isSubbed,
+        score = score
+    )
+
+    return newAnimeSearchResponse(cleanTitle, loadData.toJson()).apply {
+        posterUrl = loadData.poster
+        type = TvType.Anime
+        this.score = score?.let { Score.from10(it) }
+
+        // tvg-quality'den gelen bilgiye göre SearchQuality ataması
+        val qualityString = firstShow.attributes["tvg-quality"]
+        this.quality = when (qualityString) {
+            "P360", "P480" -> SearchQuality.SD
+            "P720", "P1080" -> SearchQuality.HD
+            "P2160" -> SearchQuality.UHD
+            else -> null
+        }
+
+        if (isDubbed || isSubbed) {
+            addDubStatus(dubExist = isDubbed, subExist = isSubbed)
+        }
+    }
+}
+
+
 override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
     val kanallar = getOrFetchPlaylist()
     val groupedByCleanTitle = kanallar.items.groupBy {
@@ -235,50 +282,9 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
     }
 
     val alphabeticGroups = groupedByCleanTitle.toSortedMap().mapNotNull { (cleanTitle, shows) ->
-        val firstShow = shows.firstOrNull() ?: return@mapNotNull null
-   // POSTER ATAMASI:
-        val rawPosterUrl = firstShow.attributes["tvg-logo"]
-        val verifiedPosterUrl = checkPosterUrl(rawPosterUrl)
-        val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
-   
-   // Düzeltme: Tüm bölümlerin puanlarından en yükseğini al.
-        val score = shows.mapNotNull { it.score }.maxOrNull()
-        val isDubbed = isDubbed(firstShow)
-        val isSubbed = isSubbed(firstShow)
+        // Ortak fonksiyonu burada çağırıyoruz
+        val searchResponse = createSearchResponse(cleanTitle, shows) ?: return@mapNotNull null
 
-        val loadData = LoadData(
-            items = shows,
-            title = cleanTitle,
-            poster = finalPosterUrl,
-            group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
-            nation = firstShow.attributes["tvg-country"] ?: "TR",
-            isDubbed = isDubbed,
-            isSubbed = isSubbed,
-            score = score
-        )
-
-        val searchResponse = newAnimeSearchResponse(cleanTitle, loadData.toJson())
-        searchResponse.apply {
-            posterUrl = loadData.poster
-            type = TvType.Anime
-            this.score = score?.let { Score.from10(it) }
-
-            // tvg-quality'den gelen bilgiye göre SearchQuality ataması
-            val qualityString = firstShow.attributes["tvg-quality"]
-            this.quality = when (qualityString) {
-                "P360" -> SearchQuality.SD
-                "P480" -> SearchQuality.SD
-                "P720" -> SearchQuality.SD
-                "P1080" -> SearchQuality.HD
-                "P2160" -> SearchQuality.UHD
-                else -> null // Kalite bilgisi yoksa veya tanımsızsa
-            }
-
-            if (isDubbed || isSubbed) {
-                addDubStatus(dubExist = isDubbed, subExist = isSubbed)
-            }
-        }
-        
         val firstChar = cleanTitle.firstOrNull()?.uppercaseChar() ?: '#'
         val groupKey = when {
             firstChar.isLetter() -> firstChar.toString()
@@ -290,26 +296,20 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
 
     val finalHomePageLists = mutableListOf<HomePageList>()
     val turkishAlphabet = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUVYZ".split("").filter { it.isNotBlank() }
-      // Alfabedeki Q, W, X gibi Türkçe'de olmayan ama listede olabilecek harfleri de ekler
-   val fullAlphabet = turkishAlphabet + listOf("Q", "W", "X")
- // Grupları işleme listesine ekler.
+    val fullAlphabet = turkishAlphabet + listOf("Q", "W", "X")
     val allGroupsToProcess = mutableListOf<String>()
     if (alphabeticGroups.containsKey("0-9")) allGroupsToProcess.add("0-9")
- 
- fullAlphabet.forEach { char ->
+    fullAlphabet.forEach { char ->
         if (alphabeticGroups.containsKey(char)) {
             allGroupsToProcess.add(char)
         }
     }
     if (alphabeticGroups.containsKey("#")) allGroupsToProcess.add("#")
-// Her harf grubunu dolaşır ve ana sayfa listelerini oluşturur.
+
     allGroupsToProcess.forEach { char ->
         val shows = alphabeticGroups[char]
         if (shows != null && shows.isNotEmpty()) {
-          
-		     // Liste elemanlarını 3 kez çoğaltarak sonsuz döngü hissi yarat
-            val infiniteList = shows  //+ shows + shows
-
+            val infiniteList = shows
             val listTitle = when (char) {
                 "0-9" -> "🔢 0-9 ${fullAlphabet.joinToString(" ") { it.lowercase(Locale.getDefault()) }}"
                 "#" -> "🔣 # ${fullAlphabet.joinToString(" ") { it.lowercase(Locale.getDefault()) }}"
@@ -323,14 +323,13 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
                     }
                 }
             }
-			
-			 //    finalHomePageLists.add(HomePageList(listTitle, shows, isHorizontalImages = true))
             finalHomePageLists.add(HomePageList(listTitle, infiniteList, isHorizontalImages = true))
         }
     }
 
     return newHomePageResponse(finalHomePageLists, hasNext = false)
 }
+
 
 override suspend fun search(query: String): List<SearchResponse> {
     val kanallar = getOrFetchPlaylist()
@@ -341,50 +340,9 @@ override suspend fun search(query: String): List<SearchResponse> {
 
     return groupedByCleanTitle.filter { (cleanTitle, _) ->
         cleanTitle.lowercase(Locale.getDefault()).contains(query.lowercase(Locale.getDefault()))
-    }.map { (cleanTitle, shows) ->
-        val firstShow = shows.firstOrNull() ?: return@map newAnimeSearchResponse(cleanTitle, "")
-// POSTER ATAMASI:
-        val rawPosterUrl = firstShow.attributes["tvg-logo"]
-        val verifiedPosterUrl = checkPosterUrl(rawPosterUrl)
-        val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
- // Düzeltme: Tüm bölümlerin puanlarından en yükseğini al.
-        val score = shows.mapNotNull { it.score }.maxOrNull()
-        
-        val isDubbed = isDubbed(firstShow)
-        val isSubbed = isSubbed(firstShow)
-
-        val loadData = LoadData(
-            items = shows,
-            title = cleanTitle,
-            poster = finalPosterUrl,
-            group = firstShow.attributes["group-title"] ?: "Bilinmeyen Grup",
-            nation = firstShow.attributes["tvg-country"] ?: "TR",
-            isDubbed = isDubbed,
-            isSubbed = isSubbed,
-            score = score
-        )
-
-        val searchResponse = newAnimeSearchResponse(cleanTitle, loadData.toJson())
-        searchResponse.apply {
-            posterUrl = loadData.poster
-            type = TvType.Anime              
-            this.score = score?.let { Score.from10(it) }
-
-            // tvg-quality'den gelen bilgiye göre SearchQuality ataması
-            val qualityString = firstShow.attributes["tvg-quality"]
-            this.quality = when (qualityString) {
-                "P360" -> SearchQuality.SD
-                "P480" -> SearchQuality.SD
-                "P720" -> SearchQuality.SD
-                "P1080" -> SearchQuality.HD
-                "P2160" -> SearchQuality.UHD
-                else -> null // Kalite bilgisi yoksa veya tanımsızsa
-            }
-
-            if (isDubbed || isSubbed) {
-                addDubStatus(dubExist = isDubbed, subExist = isSubbed)
-            }
-        }
+    }.mapNotNull { (cleanTitle, shows) ->
+        // Ortak fonksiyonu burada çağırıyoruz
+        createSearchResponse(cleanTitle, shows)
     }
 }
 
@@ -395,11 +353,11 @@ override suspend fun load(url: String): LoadResponse {
 
     val finalPosterUrl = loadData.poster
     val plot = "TMDB'den özet alınamadı."
-     // loadData'dan gelen puanı kullan
-	val scoreToUse = loadData.score
+      // loadData'dan gelen puanı kullan
+    val scoreToUse = loadData.score
     val dubbedEpisodes = mutableListOf<Episode>()
     val subbedEpisodes = mutableListOf<Episode>()
-     // Bölümleri sezon ve bölüme göre gruplandırıp, aynı bölümün tüm kaynaklarını bir arada tutar.
+      // Bölümleri sezon ve bölüme göre gruplandırıp, aynı bölümün tüm kaynaklarını bir arada tutar.
     val groupedEpisodes = allShows.groupBy {
         val (_, season, episode) = parseEpisodeInfo(it.title.toString())
         Pair(season, episode)
@@ -467,10 +425,10 @@ override suspend fun load(url: String): LoadResponse {
     tags.add(loadData.group)
     tags.add(loadData.nation)
       // Doğru bir şekilde tvg-language bilgisini ekle
-	loadData.items.firstOrNull()?.attributes?.get("tvg-language")?.let {
+    loadData.items.firstOrNull()?.attributes?.get("tvg-language")?.let {
         tags.add(it)
     }
-   // LoadData içindeki bilgiyi kullanarak doğrudan etiket ekle
+    // LoadData içindeki bilgiyi kullanarak doğrudan etiket ekle
     if (loadData.isDubbed) {
         tags.add("Türkçe Dublaj")
     }
@@ -479,8 +437,8 @@ override suspend fun load(url: String): LoadResponse {
     }
 
     val recommendedList = (dubbedEpisodes + subbedEpisodes)
-        // .shuffled()
-		.take(24)
+         // .shuffled()
+        .take(24)
         .mapNotNull { episode ->
             val episodeLoadData = parseJson<LoadData>(episode.data)
             val episodeTitleWithNumber = if (episodeLoadData.episode > 0) {
@@ -525,7 +483,7 @@ override suspend fun loadLinks(
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     val loadData = parseJson<LoadData>(data)
-     // loadData'nın içindeki tüm kaynakları döngüye al
+      // loadData'nın içindeki tüm kaynakları döngüye al
     loadData.items.forEachIndexed { index, item ->
         
         val linkName = loadData.title + " Kaynak ${index + 1}"
