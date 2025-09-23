@@ -21,7 +21,7 @@ import java.io.BufferedReader
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always son "
+    override var name = "35 mooncrown always s4n "
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -146,45 +146,47 @@ sealed class PlaylistParserException(message: String) : Exception(message) {
 }
 
 fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
-      // Unicode karakterleri temizle
     val textWithCleanedChars = text.replace(Regex("[\\u200E\\u200F]"), "")
+    val format1Regex = Regex("""(.*?)[^\w\d]+(\d+)\.\s*Sezon\s*(\d+)\.\s*Bölüm.*""", RegexOption.IGNORE_CASE)
+    val format2Regex = Regex("""(.*?)\s*s(\d+)e(\d+)""", RegexOption.IGNORE_CASE)
+    val format3Regex = Regex("""(.*?)\s*Sezon\s*(\d+)\s*Bölüm\s*(\d+).*""", RegexOption.IGNORE_CASE)
+    val format4Regex = Regex("""(.*?)\s*(\d+)\s*Bölüm.*""", RegexOption.IGNORE_CASE)
+    val format5Regex = Regex("""(.*?)\s*S(\d+)E(\d+).*""", RegexOption.IGNORE_CASE)
 
-    // Regex desenleri - En spesifik olandan en genel olana doğru
-    val regexPatterns = listOf(
-        // Desene örnek: "Başlık 1. Sezon 2. Bölüm"
-        Regex("""(.*?)[^\w\d]+(\d+)\.\s*Sezon\s*(\d+)\.\s*Bölüm.*""", RegexOption.IGNORE_CASE),
-        // Desene örnek: "Başlık S1E2" veya "Başlık s1e2"
-        Regex("""(.*?)\s*[Ss](\d+)[Ee](\d+).*""", RegexOption.IGNORE_CASE),
-        // Desene örnek: "Başlık Sezon 1 Bölüm 2"
-        Regex("""(.*?)\s*Sezon\s*(\d+)\s*Bölüm\s*(\d+).*""", RegexOption.IGNORE_CASE),
-        // Desene örnek: "Başlık 5. Sezon"
-        Regex("""(.*?)[^\w\d]+(\d+)\.\s*Sezon.*""", RegexOption.IGNORE_CASE),
-        // Desene örnek: "Başlık 2. Bölüm" veya "Başlık 2 Bölüm"
-        Regex("""(.*?)[^\w\d]+(\d+)\.\s*Bölüm.*""", RegexOption.IGNORE_CASE),
-        // Desene örnek: "Başlık 2"
-        Regex("""(.*?)\s*(\d+)$""", RegexOption.IGNORE_CASE)
-    )
-
-    for (regex in regexPatterns) {
-        val matchResult = regex.find(textWithCleanedChars)
-        if (matchResult != null) {
-            val (title, season, episode) = when (matchResult.groups.size) {
-                // Sadece başlık ve bölüm
-                3 -> Triple(matchResult.groups[1]?.value, null, matchResult.groups[2]?.value)
-                // Başlık, sezon ve bölüm
-                4 -> Triple(matchResult.groups[1]?.value, matchResult.groups[2]?.value, matchResult.groups[3]?.value)
-                else -> Triple(null, null, null)
-            }
-            if (title != null) {
-                // Log.d("parseEpisodeInfo", "Metin: '$text' -> Başlık: '${title.trim()}', Sezon: ${season?.toIntOrNull()}, Bölüm: ${episode?.toIntOrNull()}")
-                return Triple(title.trim(), season?.toIntOrNull(), episode?.toIntOrNull())
-            }
-        }
+    val matchResult1 = format1Regex.find(textWithCleanedChars)
+    if (matchResult1 != null) {
+        val (title, seasonStr, episodeStr) = matchResult1.destructured
+        return Triple(title.trim(), seasonStr.toIntOrNull(), episodeStr.toIntOrNull())
     }
 
-    // Hiçbir desen eşleşmezse, sadece başlığı döndür
+    val matchResult2 = format2Regex.find(textWithCleanedChars)
+    if (matchResult2 != null) {
+        val (title, seasonStr, episodeStr) = matchResult2.destructured
+        return Triple(title.trim(), seasonStr.toIntOrNull(), episodeStr.toIntOrNull())
+    }
+
+    val matchResult3 = format3Regex.find(textWithCleanedChars)
+    if (matchResult3 != null) {
+        val (title, seasonStr, episodeStr) = matchResult3.destructured
+        return Triple(title.trim(), seasonStr.toIntOrNull(), episodeStr.toIntOrNull())
+    }
+    val matchResult4 = format4Regex.find(textWithCleanedChars)
+    if (matchResult4 != null) {
+        val (title, episodeStr) = matchResult4.destructured
+        return Triple(title.trim(), 1, episodeStr.toIntOrNull())
+    }
+
+    val matchResult5 = format5Regex.find(textWithCleanedChars)
+    if (matchResult5 != null) {
+        val (title, episodeStr) = matchResult5.destructured
+        return Triple(title.trim(), 1, episodeStr.toIntOrNull())
+    }
+
+
+    
     return Triple(textWithCleanedChars.trim(), null, null)
 }
+
 
 data class LoadData(
     val items: List<PlaylistItem>,
