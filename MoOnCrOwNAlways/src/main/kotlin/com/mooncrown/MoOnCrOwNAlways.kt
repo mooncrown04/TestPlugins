@@ -21,7 +21,7 @@ import java.io.BufferedReader
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always deneme08 "
+    override var name = "35 mooncrown always 0455 "
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -80,36 +80,37 @@ class IptvPlaylistParser {
 
         val playlistItems: MutableList<PlaylistItem> = mutableListOf()
         var line: String? = reader.readLine()
+        var currentAttributes: Map<String, String>? = null
         var currentHeaders = mutableMapOf<String, String>()
 
         while (line != null) {
             if (line.isNotEmpty()) {
                 when {
                     line.startsWith(PlaylistItem.EXT_INF) -> {
-                        var currentItem = PlaylistItem(
-                            title = line.getTitle(),
-                            attributes = line.getAttributes(),
-                            score = line.getAttributes()["tvg-score"]?.toDoubleOrNull(),
-                            headers = currentHeaders.toMap()
-                        )
-                        currentHeaders.clear()
-                        line = reader.readLine()
-                        while (line != null && line.isNotBlank() && !line.startsWith("#")) {
-                            if (!line.startsWith("#")) {
-                                val url = line.getUrl()
-                                if (url != null) {
-                                    currentItem = currentItem.copy(url = url)
-                                    playlistItems.add(currentItem)
-                                }
-                            }
-                            line = reader.readLine()
-                        }
+                        currentAttributes = line.getAttributes()
                     }
                     line.startsWith(PlaylistItem.EXT_VLC_OPT) -> {
                         val header = line.getVlcOptHeader()
                         if (header != null) {
                             currentHeaders[header.first] = header.second
                         }
+                    }
+                    !line.startsWith("#") -> {
+                        val title = currentAttributes?.get("tvg-name")
+                        val url = line.getUrl()
+                        if (url != null) {
+                            val item = PlaylistItem(
+                                title = title,
+                                attributes = currentAttributes ?: emptyMap(),
+                                headers = currentHeaders.toMap(),
+                                url = url,
+                                score = currentAttributes?.get("tvg-score")?.toDoubleOrNull()
+                            )
+                            playlistItems.add(item)
+                        }
+                        // Reset for the next entry
+                        currentAttributes = null
+                        currentHeaders.clear()
                     }
                 }
             }
@@ -145,11 +146,11 @@ class IptvPlaylistParser {
     
     // EXT-VLC-OPT başlıklarını ayrıştırmak için yeni fonksiyon
     private fun String.getVlcOptHeader(): Pair<String, String>? {
-        val regex = Regex("""([^=]+)=?(.*)""")
+        val regex = Regex("""([^=]+)=(.*)""")
         val matchResult = regex.find(this.substringAfter("EXTVLCOPT:"))
         if (matchResult != null) {
             val (key, value) = matchResult.destructured
-            return Pair(key.trim(), value.trim())
+            return Pair(key.trim(), value.trim().removeSurrounding("\""))
         }
         return null
     }
