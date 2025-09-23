@@ -16,6 +16,7 @@ import java.util.Locale
 import com.lagradost.cloudstream3.ActorData
 import com.lagradost.cloudstream3.Score
 import java.io.BufferedReader
+import java.net.URL
 
 
 // --- Ana Eklenti Sınıfı ---
@@ -23,7 +24,7 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     // Ana M3U dosyasının URL'si
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
     // Eklenti adı
-    override var name = "35 mooncrown always deneme08 "
+    override var name = "35 mooncrown always 001 "
     // Ana sayfa destekleniyor mu?
     override val hasMainPage = true
     // Dil ayarı
@@ -400,8 +401,8 @@ override suspend fun load(url: String): LoadResponse {
     val plot = "TMDB'den özet alınamadı."
     // loadData'dan gelen puanı kullan
     val scoreToUse = loadData.score
-      val dubbedEpisodes = mutableListOf<Episode>()
-      val subbedEpisodes = mutableListOf<Episode>()
+     val dubbedEpisodes = mutableListOf<Episode>()
+     val subbedEpisodes = mutableListOf<Episode>()
     
     // Bölümleri sezon ve bölüme göre gruplandırıp, aynı bölümün tüm kaynaklarını bir arada tutar.
     val groupedEpisodes = allShows.groupBy {
@@ -449,7 +450,7 @@ override suspend fun load(url: String): LoadResponse {
             subbedEpisodes.add(episodeObj)
         }
     }
-      
+    
     dubbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
     subbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
 
@@ -480,24 +481,24 @@ override suspend fun load(url: String): LoadResponse {
     }
 
     val recommendedList = (dubbedEpisodes + subbedEpisodes)
-         .shuffled() // Önerileri karıştırarak farklı içerikler göster
-         .take(24)
-         .mapNotNull { episode ->
-             val episodeLoadData = parseJson<LoadData>(episode.data)
-             val episodeTitleWithNumber = if (episodeLoadData.episode > 0) {
-                 "${episodeLoadData.title} S${episodeLoadData.season} E${episodeLoadData.episode}"
-             } else {
-                 episodeLoadData.title
-             }
-             
-             newAnimeSearchResponse(episodeTitleWithNumber, episode.data).apply {
-                 posterUrl = episodeLoadData.poster
-                 type = TvType.Anime
-                 if (episodeLoadData.isDubbed || episodeLoadData.isSubbed) {
-                     addDubStatus(dubExist = episodeLoadData.isDubbed, subExist = episodeLoadData.isSubbed)
-                 }
-             }
-         }
+          .shuffled() // Önerileri karıştırarak farklı içerikler göster
+          .take(24)
+          .mapNotNull { episode ->
+               val episodeLoadData = parseJson<LoadData>(episode.data)
+               val episodeTitleWithNumber = if (episodeLoadData.episode > 0) {
+                   "${episodeLoadData.title} S${episodeLoadData.season} E${episodeLoadData.episode}"
+               } else {
+                   episodeLoadData.title
+               }
+               
+               newAnimeSearchResponse(episodeTitleWithNumber, episode.data).apply {
+                   posterUrl = episodeLoadData.poster
+                   type = TvType.Anime
+                   if (episodeLoadData.isDubbed || episodeLoadData.isSubbed) {
+                       addDubStatus(dubExist = episodeLoadData.isDubbed, subExist = episodeLoadData.isSubbed)
+                   }
+               }
+           }
 
     return newAnimeLoadResponse(
         loadData.title,
@@ -527,29 +528,37 @@ override suspend fun loadLinks(
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     val loadData = parseJson<LoadData>(data)
-      
+    
     // loadData'nın içindeki tüm kaynakları döngüye al
     loadData.items.forEachIndexed { index, item ->
-      
-        val linkName =loadData.title+ " Kaynak ${index + 1}"
-          
-        val linkQuality = Qualities.P1080.value  
-          
+        
         val videoUrl = item.url.toString()
-        val videoType = when {
-            videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.VIDEO
-            videoUrl.endsWith(".mp4", ignoreCase = true) -> ExtractorLinkType.VIDEO
-            else -> ExtractorLinkType.M3U8
-        }
-          
         val headersMap = mutableMapOf<String, String>()
-        headersMap["Referer"] = mainUrl
+
+        // Video URL'sinden domaini alıp Referer olarak ayarla
+        val refererUrl = try {
+            val urlObject = URL(videoUrl)
+            "${urlObject.protocol}://${urlObject.host}"
+        } catch (e: Exception) {
+            mainUrl // Hata durumunda varsayılan Referer'ı kullan
+        }
+        
+        headersMap["Referer"] = refererUrl
 
         // Eğer PlaylistItem'de User-Agent varsa, onu da ekle
         item.userAgent?.let {
             headersMap["User-Agent"] = it
         }
 
+        val linkName = loadData.title + " Kaynak ${index + 1}"
+        val linkQuality = Qualities.P1080.value  
+        
+        val videoType = when {
+            videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.VIDEO
+            videoUrl.endsWith(".mp4", ignoreCase = true) -> ExtractorLinkType.VIDEO
+            else -> ExtractorLinkType.M3U8
+        }
+        
         // ExtractorLink'i oluştur ve callback'e gönder
         callback.invoke(
             newExtractorLink(
