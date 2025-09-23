@@ -265,7 +265,7 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
             val qualityString = firstShow.attributes["tvg-quality"]
             this.quality = when (qualityString) {
                 "P360" -> SearchQuality.SD
-                "P480" -> SearchQuality.4K
+                "P480" -> SearchQuality.HD
                 "P720" -> SearchQuality.FHD
                 "P1080" -> SearchQuality.HD
                 "P2160" -> SearchQuality.UHD
@@ -365,7 +365,7 @@ override suspend fun search(query: String): List<SearchResponse> {
             val qualityString = firstShow.attributes["tvg-quality"]
             this.quality = when (qualityString) {
                 "P360" -> SearchQuality.SD
-                "P480" -> SearchQuality.4K
+                "P480" -> SearchQuality.HD
                 "P720" -> SearchQuality.FHD
                 "P1080" -> SearchQuality.HD
                 "P2160" -> SearchQuality.UHD
