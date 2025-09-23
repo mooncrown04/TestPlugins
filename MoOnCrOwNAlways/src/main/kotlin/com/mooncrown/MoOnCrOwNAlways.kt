@@ -18,13 +18,12 @@ import com.lagradost.cloudstream3.Score
 import java.io.BufferedReader
 import java.net.URL
 
-
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     // Ana M3U dosyasının URL'si
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
     // Eklenti adı
-    override var name = "35 mooncrown always 001 "
+    override var name = "35 mooncrown always 00444714568 "
     // Ana sayfa destekleniyor mu?
     override val hasMainPage = true
     // Dil ayarı
@@ -544,8 +543,11 @@ override suspend fun loadLinks(
         }
         
         headersMap["Referer"] = refererUrl
+        
+        // Ortak bir masaüstü tarayıcı User-Agent'i ekle
+        headersMap["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
 
-        // Eğer PlaylistItem'de User-Agent varsa, onu da ekle
+        // Eğer PlaylistItem'de özel bir User-Agent varsa, onu kullan
         item.userAgent?.let {
             headersMap["User-Agent"] = it
         }
@@ -581,4 +583,3 @@ private data class ParsedEpisode(
     val season: Int?,
     val episode: Int?
 )
-}
