@@ -27,7 +27,7 @@ import java.net.URLEncoder
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always s04n"
+    override var name = "35 mooncrown always s0000004n"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -201,7 +201,9 @@ data class LoadData(
     val episode: Int = 0,
     val isDubbed: Boolean,
     val isSubbed: Boolean,
-    val score: Double? = null
+    val score: Double? = null,
+	val videoFormats: Set<String> = emptySet() // Buraya yeni alan eklendi
+
 )
 
 private suspend fun getOrFetchPlaylist(): Playlist {
@@ -254,6 +256,19 @@ private suspend fun createSearchResponse(cleanTitle: String, shows: List<Playlis
     val isDubbed = isDubbed(firstShow)
     val isSubbed = isSubbed(firstShow)
 
+
+    // YENİ: Video formatlarını toplamak için set kullanın
+    val videoFormats = shows.mapNotNull { it.url?.let { url -> 
+        when {
+            url.endsWith(".mkv", ignoreCase = true) -> "MKV"
+            url.endsWith(".mp4", ignoreCase = true) -> "MP4"
+            else -> "M3U8"
+        }
+    } }.toSet() // Yinelenen formatları önlemek için Set kullanılır
+
+
+
+
     val loadData = LoadData(
         items = shows,
         title = cleanTitle,
@@ -262,7 +277,8 @@ private suspend fun createSearchResponse(cleanTitle: String, shows: List<Playlis
         nation = firstShow.attributes["tvg-country"] ?: "TR",
         isDubbed = isDubbed,
         isSubbed = isSubbed,
-        score = score
+        score = score,
+        videoFormats = videoFormats // videoFormats'ı LoadData'ya ekledik
     )
 
     return newAnimeSearchResponse(cleanTitle, loadData.toJson()).apply {
@@ -436,7 +452,9 @@ override suspend fun load(url: String): LoadResponse {
     val tags = mutableListOf<String>()
     tags.add(loadData.group)
     tags.add(loadData.nation)
-      // Doğru bir şekilde tvg-language bilgisini ekle
+    tags.addAll(loadData.videoFormats)
+
+	 // Doğru bir şekilde tvg-language bilgisini ekle
     loadData.items.firstOrNull()?.attributes?.get("tvg-language")?.let {
         tags.add(it)
     }
