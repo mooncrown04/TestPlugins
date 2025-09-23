@@ -266,7 +266,7 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
             this.quality = when (qualityString) {
                 "P360" -> SearchQuality.SD
                 "P480" -> SearchQuality.HD
-                "P720" -> SearchQuality.FHD
+                "P720" -> SearchQuality.SD
                 "P1080" -> SearchQuality.HD
                 "P2160" -> SearchQuality.UHD
                 else -> null // Kalite bilgisi yoksa veya tanımsızsa
@@ -366,7 +366,7 @@ override suspend fun search(query: String): List<SearchResponse> {
             this.quality = when (qualityString) {
                 "P360" -> SearchQuality.SD
                 "P480" -> SearchQuality.HD
-                "P720" -> SearchQuality.FHD
+                "P720" -> SearchQuality.SD
                 "P1080" -> SearchQuality.HD
                 "P2160" -> SearchQuality.UHD
                 else -> null // Kalite bilgisi yoksa veya tanımsızsa
