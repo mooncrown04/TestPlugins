@@ -27,7 +27,7 @@ import java.net.URLEncoder
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always s004n "
+    override var name = "35 mooncrown always s04n"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -462,7 +462,11 @@ override suspend fun load(url: String): LoadResponse {
             newAnimeSearchResponse(episodeTitleWithNumber, episode.data).apply {
                 posterUrl = episodeLoadData.poster
                 type = TvType.Anime
-                if (episodeLoadData.isDubbed || episodeLoadData.isSubbed) {
+                   // HER DİSİ İÇİN KENDİ SKORUNU EKLEME KISMI
+            this.score = episodeLoadData.score?.let { Score.from10(it) }
+
+				
+				if (episodeLoadData.isDubbed || episodeLoadData.isSubbed) {
                     addDubStatus(dubExist = episodeLoadData.isDubbed, subExist = episodeLoadData.isSubbed)
                 }
             }
