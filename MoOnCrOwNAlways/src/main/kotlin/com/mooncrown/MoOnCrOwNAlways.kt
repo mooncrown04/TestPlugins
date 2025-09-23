@@ -21,7 +21,7 @@ import java.io.BufferedReader
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always deneme08 "
+    override var name = "35 mooncrown always 1978 "
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -81,6 +81,7 @@ class IptvPlaylistParser {
         val playlistItems: MutableList<PlaylistItem> = mutableListOf()
         var line: String? = reader.readLine()
         var currentItem: PlaylistItem? = null
+        val currentHeaders = mutableMapOf<String, String>()
 
         while (line != null) {
             if (line.isNotEmpty()) {
@@ -89,13 +90,15 @@ class IptvPlaylistParser {
                         currentItem = PlaylistItem(
                             title = line.getTitle(),
                             attributes = line.getAttributes(),
-                            score = line.getAttributes()["tvg-score"]?.toDoubleOrNull()
+                            score = line.getAttributes()["tvg-score"]?.toDoubleOrNull(),
+                            headers = currentHeaders.toMap()
                         )
+                        currentHeaders.clear()
                     }
                     line.startsWith(PlaylistItem.EXT_VLC_OPT) -> {
-                        if (currentItem != null) {
-                            val userAgent = line.getVlcOptUserAgent()
-                            currentItem = currentItem.copy(userAgent = userAgent)
+                        val header = line.getVlcOptHeader()
+                        if (header != null) {
+                            currentHeaders[header.first] = header.second
                         }
                     }
                     !line.startsWith("#") -> {
@@ -137,8 +140,17 @@ class IptvPlaylistParser {
     }
 
     private fun String.getUrl(): String? = split("|").firstOrNull()?.trim()
-    private fun String.getVlcOptUserAgent(): String? =
-        substringAfter("http-user-agent=").trim()
+    
+    // EXT-VLC-OPT başlıklarını ayrıştırmak için yeni fonksiyon
+    private fun String.getVlcOptHeader(): Pair<String, String>? {
+        val regex = Regex("""([^=]+)="?(.*?)"?""")
+        val matchResult = regex.find(this.substringAfter("EXTVLCOPT:"))
+        if (matchResult != null) {
+            val (key, value) = matchResult.destructured
+            return Pair(key.trim(), value.trim())
+        }
+        return null
+    }
 }
 
 sealed class PlaylistParserException(message: String) : Exception(message) {
@@ -529,16 +541,21 @@ override suspend fun loadLinks(
           
         val headersMap = mutableMapOf<String, String>()
         
-        // Önce M3U dosyasında tanımlanan referer başlığını ara
-        val refererUrl = item.headers["Referer"] ?: item.headers["referer"] ?: item.attributes["tvg-logo"]?.let {
-            it.substringBeforeLast("/")
-        } ?: videoUrl.substringBeforeLast("/")
+        // M3U'dan gelen tüm başlıkları öncelikli olarak kullan
+        headersMap.putAll(item.headers)
+        
+        // Referer başlığını kontrol et, yoksa tvg-logo veya video url'den oluştur
+        if (!headersMap.containsKey("Referer") && !headersMap.containsKey("referer")) {
+            val refererUrl = item.attributes["tvg-logo"]?.let {
+                it.substringBeforeLast("/")
+            } ?: videoUrl.substringBeforeLast("/")
+            headersMap["Referer"] = refererUrl
+        }
 
-        headersMap["Referer"] = refererUrl
-
-        // User-Agent'i belirleme: M3U dosyasında varsa onu kullan, yoksa genel bir tarayıcı User-Agent'i kullan
-        val userAgent = item.userAgent ?: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-        headersMap["User-Agent"] = userAgent
+        // User-Agent başlığını kontrol et, yoksa genel bir tarayıcı User-Agent'i kullan
+        if (!headersMap.containsKey("User-Agent") && !headersMap.containsKey("user-agent")) {
+            headersMap["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
 
         // ExtractorLink'i oluştur ve callback'e gönder
         callback.invoke(
