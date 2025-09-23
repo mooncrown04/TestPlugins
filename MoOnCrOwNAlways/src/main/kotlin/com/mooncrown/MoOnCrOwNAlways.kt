@@ -462,7 +462,10 @@ override suspend fun load(url: String): LoadResponse {
     val tags = mutableListOf<String>()
     tags.add(loadData.group)
     tags.add(loadData.nation)
-    tags.add(loadData.tvg-language)
+  // Doğru bir şekilde tvg-language bilgisini ekle
+    loadData.items.firstOrNull()?.attributes?.get("tvg-language")?.let {
+        tags.add(it)
+    }
 	// Sadece gerçekten dublajlı veya altyazılı bölüm varsa etiket eklenir.
   //  if (dubbedEpisodes.isNotEmpty()) {
    //     tags.add("Türkçe Dublaj")
