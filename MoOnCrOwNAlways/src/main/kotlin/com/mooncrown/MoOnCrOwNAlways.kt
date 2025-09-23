@@ -21,7 +21,7 @@ import java.io.BufferedReader
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always deneme "
+    override var name = "35 mooncrown always deneme08 "
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -178,9 +178,13 @@ fun parseEpisodeInfo(text: String): Triple<String, Int?, Int?> {
 
     val matchResult5 = format5Regex.find(textWithCleanedChars)
     if (matchResult5 != null) {
-        val (title, seasonStr, episodeStr) = matchResult5.destructured
-        return Triple(title.trim(), seasonStr.toIntOrNull(), episodeStr.toIntOrNull())
+        val (title, episodeStr) = matchResult5.destructured
+        return Triple(title.trim(), 1, episodeStr.toIntOrNull())
     }
+
+
+
+
     
     return Triple(textWithCleanedChars.trim(), null, null)
 }
@@ -214,7 +218,7 @@ private suspend fun getOrFetchPlaylist(): Playlist {
 private fun isDubbed(item: PlaylistItem): Boolean {
     val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
     val language = item.attributes["tvg-language"]?.lowercase()
-    return dubbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish"|| language == "dublaj"|| language == "türkçe"
+    return dubbedKeywords.any { keyword -> item.title.toString().lowercase().contains(keyword) } || language == "tr" || language == "turkish"|| language == "dublaj"|| language == "TÜRKÇE"
 }
 
 private fun isSubbed(item: PlaylistItem): Boolean {
@@ -245,6 +249,9 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
 
         val isDubbed = isDubbed(firstShow)
         val isSubbed = isSubbed(firstShow)
+
+
+
 
         val loadData = LoadData(
             items = shows,
@@ -297,9 +304,9 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
     allGroupsToProcess.forEach { char ->
         val shows = alphabeticGroups[char]
         if (shows != null && shows.isNotEmpty()) {
-
+        
     // Liste elemanlarını 3 kez çoğaltarak sonsuz döngü hissi yarat
-        val infiniteList = shows  //+ shows + shows
+            val infiniteList = shows  //+ shows + shows
 
         val listTitle = when (char) {
                 "0-9" -> "🔢 0-9 ${fullAlphabet.joinToString(" ") { it.lowercase(Locale.getDefault()) }}"
@@ -315,7 +322,8 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
                     }
                 }
             }
-          finalHomePageLists.add(HomePageList(listTitle, infiniteList, isHorizontalImages = true))
+         //   finalHomePageLists.add(HomePageList(listTitle, shows, isHorizontalImages = true))
+         finalHomePageLists.add(HomePageList(listTitle, infiniteList, isHorizontalImages = true))
         }
     }
 
@@ -360,7 +368,7 @@ override suspend fun search(query: String): List<SearchResponse> {
         val searchResponse = newAnimeSearchResponse(cleanTitle, loadData.toJson())
         searchResponse.apply {
             posterUrl = loadData.poster
-            type = TvType.Anime
+            type = TvType.Anime             
             this.score = score?.let { Score.from10(it) }
             this.quality = SearchQuality.HD
             if (isDubbed || isSubbed) {
@@ -379,8 +387,8 @@ override suspend fun load(url: String): LoadResponse {
     val plot = "TMDB'den özet alınamadı."
     // loadData'dan gelen puanı kullan
     val scoreToUse = loadData.score
-    val dubbedEpisodes = mutableListOf<Episode>()
-    val subbedEpisodes = mutableListOf<Episode>()
+     val dubbedEpisodes = mutableListOf<Episode>()
+     val subbedEpisodes = mutableListOf<Episode>()
     
     // Bölümleri sezon ve bölüme göre gruplandırıp, aynı bölümün tüm kaynaklarını bir arada tutar.
     val groupedEpisodes = allShows.groupBy {
@@ -489,12 +497,12 @@ override suspend fun load(url: String): LoadResponse {
         this.tags = tags
         this.episodes = episodesMap
         this.recommendations = recommendedList
-          this.actors = listOf(
-                      ActorData(
-                          Actor(loadData.title, finalPosterUrl),
-                          roleString = "KANAL İSMİ"
-                      )
-                  ) + actorsList
+         this.actors = listOf(
+                     ActorData(
+                         Actor(loadData.title, finalPosterUrl),
+                         roleString = "KANAL İSMİ"
+                     )
+                 ) + actorsList
         
     }
 }
@@ -509,32 +517,30 @@ override suspend fun loadLinks(
     
     // loadData'nın içindeki tüm kaynakları döngüye al
     loadData.items.forEachIndexed { index, item ->
-        val linkName = loadData.title + " Kaynak ${index + 1}"
-        val linkUrl = item.url.toString()
-        val linkType = when {
-            linkUrl.endsWith(".mkv", true) || linkUrl.endsWith(".mp4", true) || linkUrl.endsWith(".mpeg", true) || linkUrl.endsWith(".mpg", true) -> {
-                ExtractorLinkType.DIRECT_LINK // Hata burada çözüldü
-            }
-            else -> {
-                ExtractorLinkType.M3U8
-            }
-        }
-
+      // val linkQuality = Qualities.Unknown.value
+        
+      // isim ve Kaynak +no
+          val linkName =loadData.title+ "Kaynak ${index + 1}"
+        
+         val linkQuality = Qualities.P1080.value 
+        
         val headersMap = mutableMapOf<String, String>()
         headersMap["Referer"] = mainUrl
 
+        // Eğer PlaylistItem'de User-Agent varsa, onu da ekle
         item.userAgent?.let {
             headersMap["User-Agent"] = it
         }
 
+        // ExtractorLink'i oluştur ve callback'e gönder
         callback.invoke(
             newExtractorLink(
                 source = this.name,
                 name = linkName,
-                url = linkUrl,
-                type = linkType
+                url = item.url.toString(),
+                type = ExtractorLinkType.M3U8
             ) {
-                quality = Qualities.Unknown.value
+                quality = linkQuality
                 headers = headersMap
             }
         )
