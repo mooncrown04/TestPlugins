@@ -537,21 +537,30 @@ override suspend fun loadLinks(
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     val loadData = parseJson<LoadData>(data)
-      
+    
     // loadData'nın içindeki tüm kaynakları döngüye al
     loadData.items.forEachIndexed { index, item ->
-      
-        val linkName =loadData.title+ "Kaynak ${index + 1}"
-          
-        val linkQuality = Qualities.P1080.value  
-          
+        
+        val linkName = loadData.title + " Kaynak ${index + 1}"
+        
+        // tvg-quality bilgisini al ve uygun kalite değerini belirle
+        val qualityString = item.attributes["tvg-quality"]
+        val linkQuality = when (qualityString) {
+            "P360" -> Qualities.P360.value
+            "P480" -> Qualities.P480.value
+            "P720" -> Qualities.P720.value
+            "P1080" -> Qualities.P1080.value
+            "P2160" -> Qualities.P2160.value
+            else -> Qualities.Unknown.value // Eğer kalite bilgisi yoksa veya tanımsızsa
+        }
+        
         val videoUrl = item.url.toString()
         val videoType = when {
             videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.VIDEO
             videoUrl.endsWith(".mp4", ignoreCase = true) -> ExtractorLinkType.VIDEO
             else -> ExtractorLinkType.M3U8
         }
-          
+        
         val headersMap = mutableMapOf<String, String>()
         headersMap["Referer"] = mainUrl
 
