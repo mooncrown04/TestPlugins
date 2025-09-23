@@ -536,3 +536,4 @@ private data class ParsedEpisode(
     val season: Int?,
     val episode: Int?
 )
+}
