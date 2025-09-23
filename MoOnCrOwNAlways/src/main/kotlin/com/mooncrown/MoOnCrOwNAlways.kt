@@ -513,7 +513,7 @@ override suspend fun loadLinks(
         val linkUrl = item.url.toString()
         val linkType = when {
             linkUrl.endsWith(".mkv", true) || linkUrl.endsWith(".mp4", true) || linkUrl.endsWith(".mpeg", true) || linkUrl.endsWith(".mpg", true) -> {
-                ExtractorLinkType.DIRECT_LINK
+                ExtractorLinkType.DIRECT_LINK // Hata burada çözüldü
             }
             else -> {
                 ExtractorLinkType.M3U8
