@@ -27,7 +27,7 @@ import java.net.URLEncoder
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always s1n"
+    override var name = "35 mooncrown always s0000004n"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -249,7 +249,7 @@ private suspend fun createSearchResponse(cleanTitle: String, shows: List<Playlis
     } }.toSet()
 
     // Tüm kaynakların kalitelerini kontrol edip en yüksek olanı bul
-    val highestQuality = shows.mapNotNull {
+    val highestQualityValue = shows.mapNotNull {
         when (it.attributes["tvg-quality"]?.uppercase(Locale.getDefault())) {
             "P360" -> Qualities.P360.value
             "P480" -> Qualities.P480.value
@@ -259,6 +259,14 @@ private suspend fun createSearchResponse(cleanTitle: String, shows: List<Playlis
             else -> null
         }
     }.maxOrNull()
+
+    // En yüksek kalite değerine (tamsayı) göre uygun SearchQuality enum'unu seç
+    val searchQuality = when (highestQualityValue) {
+        Qualities.P2160.value -> SearchQuality.UHD
+        Qualities.P1080.value, Qualities.P720.value -> SearchQuality.HD
+        Qualities.P480.value, Qualities.P360.value -> SearchQuality.SD
+        else -> null
+    }
 
     val loadData = LoadData(
         items = shows,
@@ -278,7 +286,7 @@ private suspend fun createSearchResponse(cleanTitle: String, shows: List<Playlis
         this.score = score?.let { Score.from10(it) }
 
         // En yüksek kaliteyi ata
-        this.quality = highestQuality?.let { SearchQuality.fromInt(it) }
+        this.quality = searchQuality
         
         if (isDubbed || isSubbed) {
             addDubStatus(dubExist = isDubbed, subExist = isSubbed)
