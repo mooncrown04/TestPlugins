@@ -27,7 +27,7 @@ import java.net.URLEncoder
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always S0oN"
+    override var name = "35 mooncrown always s0000004n"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -293,19 +293,22 @@ private suspend fun createSearchResponse(cleanTitle: String, shows: List<Playlis
         type = TvType.Anime
         this.score = score?.let { Score.from10(it) }
 
-   // Tüm kaynakların kalitelerini kontrol edip en yüksek olanı bul
-    val highestQualityValue = shows.mapNotNull {
-        // Önce tvg-quality etiketine bak, eğer yoksa URL'den ayıkla
-        val qualityFromAttribute = when (it.attributes["tvg-quality"]?.uppercase(Locale.getDefault())) {
-            "P360", "P480" -> SearchQuality.SD
-            "P720", "P1080" -> SearchQuality.HD
-            "P2160" -> SearchQuality.UHD
-            else -> null
-        }
-  // Etikette kalite bilgisi varsa onu kullan, yoksa URL'ye bak
-        qualityFromAttribute ?: getQualityFromUrl(it.url)?.value
-    }.maxOrNull()
+  // Önce tüm kalite değerlerini tek bir listede topluyoruz
+val qualityValues = shows.mapNotNull {
+    // İlk olarak tvg-quality etiketine bak
+    val qualityFromAttribute = when (it.attributes["tvg-quality"]?.uppercase(Locale.getDefault())) {
+        "P360", "P480" -> SearchQuality.SD.value
+        "P720", "P1080" -> SearchQuality.HD.value
+        "P2160" -> SearchQuality.UHD.value
+        else -> null
+    }
 
+    // Etikette kalite bilgisi varsa onu kullan, yoksa URL'den ayıkla ve Int değerini al
+    qualityFromAttribute ?: getQualityFromUrl(it.url)?.value
+}
+
+// Şimdi Int listesindeki en yüksek değeri bulabiliriz.
+val highestQualityValue = qualityValues.maxOrNull()
 
 
         if (isDubbed || isSubbed) {
