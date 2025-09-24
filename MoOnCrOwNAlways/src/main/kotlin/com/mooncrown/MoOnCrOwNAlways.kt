@@ -27,7 +27,7 @@ import java.net.URLEncoder
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always SON"
+    override var name = "35 mooncrown always SON007"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -203,8 +203,8 @@ data class LoadData(
     val isSubbed: Boolean,
     val score: Double? = null,
 	val videoFormats: Set<String> = emptySet() // Buraya yeni alan eklendi
-)
 
+)
 
 private suspend fun getOrFetchPlaylist(): Playlist {
     Log.d(name, "Playlist verisi ağdan indiriliyor.")
@@ -215,11 +215,14 @@ private suspend fun getOrFetchPlaylist(): Playlist {
     return newPlaylist
 }
 
+
+
 // isDubbed ve isSubbed fonksiyonları, kodun tekrarını önlemek için yardımcı fonksiyonlar olarak eklendi
 private fun isDubbed(item: PlaylistItem): Boolean {
     val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
     val language = item.attributes["tvg-language"]?.lowercase(Locale.getDefault())
     val titleLower = item.title.toString().lowercase(Locale.getDefault())
+
     // Başlıkta veya dil bilgisinde "dublaj", "türkçe" gibi kelimeler var mı kontrol eder.
     return dubbedKeywords.any { keyword -> titleLower.contains(keyword) } || language?.contains("dublaj") == true || language?.contains("tr") == true || language?.contains("turkish") == true
 }
@@ -228,30 +231,15 @@ private fun isSubbed(item: PlaylistItem): Boolean {
     val subbedKeywords = listOf("altyazılı", "altyazi")
     val language = item.attributes["tvg-language"]?.lowercase(Locale.getDefault())
     val titleLower = item.title.toString().lowercase(Locale.getDefault())
+
     // Başlıkta veya dil bilgisinde "altyazılı" veya "eng" kelimeleri var mı kontrol eder.
     return subbedKeywords.any { keyword -> titleLower.contains(keyword) } || language?.contains("en") == true || language?.contains("eng") == true || language?.contains("altyazi") == true
 }
 
 
-// Kaliteleri URL'den ayıklamak için yeni yardımcı fonksiyon
-private fun getQualityFromUrl(url: String?): Qualities? {
-    if (url.isNullOrBlank()) return null
-    return when {
-        url.contains("2160p", ignoreCase = true) -> Qualities.P2160
-        url.contains("1080p", ignoreCase = true) -> Qualities.P1080
-        url.contains("720p", ignoreCase = true) -> Qualities.P720
-        url.contains("480p", ignoreCase = true) -> Qualities.P480
-        url.contains("360p", ignoreCase = true) -> Qualities.P360
-        else -> null
-    }
-}
 
 
-enum class SearchQuality(val value: Int) {
-    SD(1),
-    HD(2),
-    UHD(3)
-}
+
 
 // Yeni eklenen yardımcı fonksiyon
 // Bu fonksiyon, hem ana sayfa hem de arama sonuçları için ortak SearchResponse objesini oluşturur.
@@ -298,23 +286,14 @@ private suspend fun createSearchResponse(cleanTitle: String, shows: List<Playlis
         type = TvType.Anime
         this.score = score?.let { Score.from10(it) }
 
-  // Önce tüm kalite değerlerini tek bir listede topluyoruz
-val qualityValues = shows.mapNotNull {
-    // İlk olarak tvg-quality etiketine bak
-    val qualityFromAttribute = when (it.attributes["tvg-quality"]?.uppercase(Locale.getDefault())) {
-        "P360", "P480" -> SearchQuality.SD.value
-        "P720", "P1080" -> SearchQuality.HD.value
-        "P2160" -> SearchQuality.UHD.value
-        else -> null
-    }
-
-    // Etikette kalite bilgisi varsa onu kullan, yoksa URL'den ayıkla ve Int değerini al
-    qualityFromAttribute ?: getQualityFromUrl(it.url)?.value
-}
-
-// Şimdi Int listesindeki en yüksek değeri bulabiliriz.
-val highestQualityValue = qualityValues.maxOrNull()
-
+        // tvg-quality'den gelen bilgiye göre SearchQuality ataması
+        val qualityString = firstShow.attributes["tvg-quality"]
+        this.quality = when (qualityString) {
+            "P360", "P480" -> SearchQuality.SD
+            "P720", "P1080" -> SearchQuality.HD
+            "P2160" -> SearchQuality.UHD
+            else -> null
+        }
 
         if (isDubbed || isSubbed) {
             addDubStatus(dubExist = isDubbed, subExist = isSubbed)
