@@ -59,6 +59,41 @@ class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
         }
     }
 
+    private suspend fun checkContentType(url: String?, headers: Map<String, String>): String? {
+        if (url.isNullOrBlank()) {
+            return null
+        }
+        return try {
+            val response = withContext(Dispatchers.IO) {
+                app.head(url, headers = headers)
+            }
+            if (response.isSuccessful) {
+                val contentType = response.headers["Content-Type"]?.lowercase(Locale.getDefault())
+                when {
+                    contentType?.contains("video/mp4") == true -> "mp4"
+                    contentType?.contains("video/mkv") == true -> "mkv"
+                    contentType?.contains("application/vnd.apple.mpegurl") == true ||
+                    contentType?.contains("application/x-mpegurl") == true -> "m3u8"
+                    else -> {
+                        if (contentType?.startsWith("text/") == true ||
+                            contentType?.contains("application/json") == true
+                        ) {
+                            "m3u8"
+                        } else {
+                            null
+                        }
+                    }
+                }
+            } else {
+                Log.e(name, "URL türü kontrol edilemedi: $url, Hata Kodu: ${response.code}")
+                null
+            }
+        } catch (e: Exception) {
+            Log.e(name, "URL türü kontrol edilirken hata: $url", e)
+            null
+        }
+    }
+
 
 // --- Yardımcı Sınıflar ---
 data class Playlist(val items: List<PlaylistItem> = emptyList())
@@ -467,7 +502,7 @@ override suspend fun load(url: String): LoadResponse {
     }
 
     val recommendedList = (dubbedEpisodes + subbedEpisodes)
-         // .shuffled()
+           // .shuffled()
         .take(24)
         .mapNotNull { episode ->
             val episodeLoadData = parseJson<LoadData>(episode.data)
@@ -480,8 +515,8 @@ override suspend fun load(url: String): LoadResponse {
             newAnimeSearchResponse(episodeTitleWithNumber, episode.data).apply {
                 posterUrl = episodeLoadData.poster
                 type = TvType.Anime
-                   // HER DİSİ İÇİN KENDİ SKORUNU EKLEME KISMI
-            this.score = episodeLoadData.score?.let { Score.from10(it) }
+                    // HER DİSİ İÇİN KENDİ SKORUNU EKLEME KISMI
+                this.score = episodeLoadData.score?.let { Score.from10(it) }
 
 				
 				if (episodeLoadData.isDubbed || episodeLoadData.isSubbed) {
@@ -533,19 +568,24 @@ override suspend fun loadLinks(
         }
         
         val videoUrl = item.url.toString()
-        val videoType = when {
-            videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.VIDEO
-            videoUrl.endsWith(".mp4", ignoreCase = true) -> ExtractorLinkType.VIDEO
-            else -> ExtractorLinkType.M3U8
-        }
-        
         val headersMap = mutableMapOf<String, String>()
         headersMap["Referer"] = mainUrl
-
         item.userAgent?.let {
             headersMap["User-Agent"] = it
         }
 
+        // Yeni fonksiyonu kullanarak video tipini belirle
+        val detectedType = checkContentType(videoUrl, headersMap)
+        val videoType = when {
+            detectedType == "mkv" -> ExtractorLinkType.VIDEO
+            detectedType == "mp4" -> ExtractorLinkType.VIDEO
+            detectedType == "m3u8" -> ExtractorLinkType.M3U8
+            // Eğer Content-Type başlığından tip belirlenemezse, uzantıya bak.
+            videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.VIDEO
+            videoUrl.endsWith(".mp4", ignoreCase = true) -> ExtractorLinkType.VIDEO
+            else -> ExtractorLinkType.M3U8 // Varsayılan olarak M3U8
+        }
+        
         callback.invoke(
             newExtractorLink(
                 source = this.name,
