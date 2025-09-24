@@ -27,7 +27,7 @@ import java.net.URLEncoder
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always s0000004n"
+    override var name = "35 mooncrown always s0n"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -228,6 +228,19 @@ private fun isSubbed(item: PlaylistItem): Boolean {
     return subbedKeywords.any { keyword -> titleLower.contains(keyword) } || language?.contains("en") == true || language?.contains("eng") == true || language?.contains("altyazi") == true
 }
 
+// Kaliteleri URL'den ayıklamak için yeni yardımcı fonksiyon
+private fun getQualityFromUrl(url: String?): Qualities? {
+    if (url.isNullOrBlank()) return null
+    return when {
+        url.contains("2160p", ignoreCase = true) -> Qualities.P2160
+        url.contains("1080p", ignoreCase = true) -> Qualities.P1080
+        url.contains("720p", ignoreCase = true) -> Qualities.P720
+        url.contains("480p", ignoreCase = true) -> Qualities.P480
+        url.contains("360p", ignoreCase = true) -> Qualities.P360
+        else -> null
+    }
+}
+
 
 private suspend fun createSearchResponse(cleanTitle: String, shows: List<PlaylistItem>): SearchResponse? {
     val firstShow = shows.firstOrNull() ?: return null
@@ -250,7 +263,8 @@ private suspend fun createSearchResponse(cleanTitle: String, shows: List<Playlis
 
     // Tüm kaynakların kalitelerini kontrol edip en yüksek olanı bul
     val highestQualityValue = shows.mapNotNull {
-        when (it.attributes["tvg-quality"]?.uppercase(Locale.getDefault())) {
+        // Önce tvg-quality etiketine bak, eğer yoksa URL'den ayıkla
+        val qualityFromAttribute = when (it.attributes["tvg-quality"]?.uppercase(Locale.getDefault())) {
             "P360" -> Qualities.P360.value
             "P480" -> Qualities.P480.value
             "P720" -> Qualities.P720.value
@@ -258,6 +272,9 @@ private suspend fun createSearchResponse(cleanTitle: String, shows: List<Playlis
             "P2160" -> Qualities.P2160.value
             else -> null
         }
+
+        // Etikette kalite bilgisi varsa onu kullan, yoksa URL'ye bak
+        qualityFromAttribute ?: getQualityFromUrl(it.url)?.value
     }.maxOrNull()
 
     // En yüksek kalite değerine (tamsayı) göre uygun SearchQuality enum'unu seç
@@ -507,13 +524,24 @@ override suspend fun loadLinks(
     loadData.items.forEachIndexed { index, item ->
         val linkName = loadData.title + " Kaynak ${index + 1}"
         
+        // Önce tvg-quality etiketini kontrol et
         val qualityString = item.attributes["tvg-quality"]
-        val linkQuality = when (qualityString) {
-            "P360" -> Qualities.P360.value
-            "P480" -> Qualities.P480.value
-            "P720" -> Qualities.P720.value
-            "P1080" -> Qualities.P1080.value
-            "P2160" -> Qualities.P2160.value
+        
+        // Etiket yoksa URL'den kaliteyi ayıkla
+        val qualityFromUrl = getQualityFromUrl(item.url)?.value
+
+        val linkQuality = when {
+            qualityString != null -> {
+                when (qualityString) {
+                    "P360" -> Qualities.P360.value
+                    "P480" -> Qualities.P480.value
+                    "P720" -> Qualities.P720.value
+                    "P1080" -> Qualities.P1080.value
+                    "P2160" -> Qualities.P2160.value
+                    else -> Qualities.Unknown.value
+                }
+            }
+            qualityFromUrl != null -> qualityFromUrl
             else -> Qualities.Unknown.value
         }
         
