@@ -27,7 +27,7 @@ import java.net.URLEncoder
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always 007"
+    override var name = "35 mooncrown always s0000004n"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -240,7 +240,7 @@ private fun getQualityFromUrl(url: String?): Qualities? {
         url.contains("1080p", ignoreCase = true) -> Qualities.P1080
         url.contains("720p", ignoreCase = true) -> Qualities.P720
         url.contains("480p", ignoreCase = true) -> Qualities.P480
-        url.contains("360p", ignoreCase = Qualities.P360
+        url.contains("360p", ignoreCase = true) -> Qualities.P360
         else -> null
     }
 }
@@ -487,8 +487,8 @@ override suspend fun load(url: String): LoadResponse {
             newAnimeSearchResponse(episodeTitleWithNumber, episode.data).apply {
                 posterUrl = episodeLoadData.poster
                 type = TvType.Anime
-                    // HER DİSİ İÇİN KENDİ SKORUNU EKLEME KISMI
-                this.score = episodeLoadData.score?.let { Score.from10(it) }
+                   // HER DİSİ İÇİN KENDİ SKORUNU EKLEME KISMI
+            this.score = episodeLoadData.score?.let { Score.from10(it) }
 
 				
 				if (episodeLoadData.isDubbed || episodeLoadData.isSubbed) {
@@ -530,9 +530,6 @@ override suspend fun loadLinks(
         val linkName = loadData.title + " Kaynak ${index + 1}"
         
         val qualityString = item.attributes["tvg-quality"]
-        if (qualityString == null) {
-            Log.e(name, "tvg-quality etiketi bulunamadı, varsayılan değer kullanılıyor: Unknown")
-        }
         val linkQuality = when (qualityString) {
             "P360" -> Qualities.P360.value
             "P480" -> Qualities.P480.value
