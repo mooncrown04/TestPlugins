@@ -205,6 +205,7 @@ data class LoadData(
 	val videoFormats: Set<String> = emptySet() // Buraya yeni alan eklendi
 )
 
+
 private suspend fun getOrFetchPlaylist(): Playlist {
     Log.d(name, "Playlist verisi ağdan indiriliyor.")
     val content = app.get(mainUrl).text
@@ -246,7 +247,11 @@ private fun getQualityFromUrl(url: String?): Qualities? {
 }
 
 
-
+enum class SearchQuality(val value: Int) {
+    SD(1),
+    HD(2),
+    UHD(3)
+}
 
 // Yeni eklenen yardımcı fonksiyon
 // Bu fonksiyon, hem ana sayfa hem de arama sonuçları için ortak SearchResponse objesini oluşturur.
