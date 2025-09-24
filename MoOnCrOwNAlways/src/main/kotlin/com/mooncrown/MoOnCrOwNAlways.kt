@@ -27,7 +27,7 @@ import java.net.URLEncoder
 // --- Ana Eklenti Sınıfı ---
 class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always s0n"
+    override var name = "35 mooncrown always 007"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -202,7 +202,7 @@ data class LoadData(
     val isDubbed: Boolean,
     val isSubbed: Boolean,
     val score: Double? = null,
-    val videoFormats: Set<String> = emptySet()
+	val videoFormats: Set<String> = emptySet() // Buraya yeni alan eklendi
 )
 
 private suspend fun getOrFetchPlaylist(): Playlist {
@@ -214,10 +214,12 @@ private suspend fun getOrFetchPlaylist(): Playlist {
     return newPlaylist
 }
 
+// isDubbed ve isSubbed fonksiyonları, kodun tekrarını önlemek için yardımcı fonksiyonlar olarak eklendi
 private fun isDubbed(item: PlaylistItem): Boolean {
     val dubbedKeywords = listOf("dublaj", "türkçe", "turkish")
     val language = item.attributes["tvg-language"]?.lowercase(Locale.getDefault())
     val titleLower = item.title.toString().lowercase(Locale.getDefault())
+    // Başlıkta veya dil bilgisinde "dublaj", "türkçe" gibi kelimeler var mı kontrol eder.
     return dubbedKeywords.any { keyword -> titleLower.contains(keyword) } || language?.contains("dublaj") == true || language?.contains("tr") == true || language?.contains("turkish") == true
 }
 
@@ -225,8 +227,10 @@ private fun isSubbed(item: PlaylistItem): Boolean {
     val subbedKeywords = listOf("altyazılı", "altyazi")
     val language = item.attributes["tvg-language"]?.lowercase(Locale.getDefault())
     val titleLower = item.title.toString().lowercase(Locale.getDefault())
+    // Başlıkta veya dil bilgisinde "altyazılı" veya "eng" kelimeleri var mı kontrol eder.
     return subbedKeywords.any { keyword -> titleLower.contains(keyword) } || language?.contains("en") == true || language?.contains("eng") == true || language?.contains("altyazi") == true
 }
+
 
 // Kaliteleri URL'den ayıklamak için yeni yardımcı fonksiyon
 private fun getQualityFromUrl(url: String?): Qualities? {
@@ -236,54 +240,41 @@ private fun getQualityFromUrl(url: String?): Qualities? {
         url.contains("1080p", ignoreCase = true) -> Qualities.P1080
         url.contains("720p", ignoreCase = true) -> Qualities.P720
         url.contains("480p", ignoreCase = true) -> Qualities.P480
-        url.contains("360p", ignoreCase = true) -> Qualities.P360
+        url.contains("360p", ignoreCase = Qualities.P360
         else -> null
     }
 }
 
 
+
+
+// Yeni eklenen yardımcı fonksiyon
+// Bu fonksiyon, hem ana sayfa hem de arama sonuçları için ortak SearchResponse objesini oluşturur.
 private suspend fun createSearchResponse(cleanTitle: String, shows: List<PlaylistItem>): SearchResponse? {
     val firstShow = shows.firstOrNull() ?: return null
 
+    // POSTER ATAMASI:
     val rawPosterUrl = firstShow.attributes["tvg-logo"]
     val verifiedPosterUrl = checkPosterUrl(rawPosterUrl)
     val finalPosterUrl = verifiedPosterUrl ?: DEFAULT_POSTER_URL
     
+    // Düzeltme: Tüm bölümlerin puanlarından en yükseğini al.
     val score = shows.mapNotNull { it.score }.maxOrNull()
     val isDubbed = isDubbed(firstShow)
     val isSubbed = isSubbed(firstShow)
 
-    val videoFormats = shows.mapNotNull { it.url?.let { url ->
+
+    // YENİ: Video formatlarını toplamak için set kullanın
+    val videoFormats = shows.mapNotNull { it.url?.let { url -> 
         when {
             url.endsWith(".mkv", ignoreCase = true) -> "MKV"
             url.endsWith(".mp4", ignoreCase = true) -> "MP4"
             else -> "M3U8"
         }
-    } }.toSet()
+    } }.toSet() // Yinelenen formatları önlemek için Set kullanılır
 
-    // Tüm kaynakların kalitelerini kontrol edip en yüksek olanı bul
-    val highestQualityValue = shows.mapNotNull {
-        // Önce tvg-quality etiketine bak, eğer yoksa URL'den ayıkla
-        val qualityFromAttribute = when (it.attributes["tvg-quality"]?.uppercase(Locale.getDefault())) {
-            "P360" -> Qualities.P360.value
-            "P480" -> Qualities.P480.value
-            "P720" -> Qualities.P720.value
-            "P1080" -> Qualities.P1080.value
-            "P2160" -> Qualities.P2160.value
-            else -> null
-        }
 
-        // Etikette kalite bilgisi varsa onu kullan, yoksa URL'ye bak
-        qualityFromAttribute ?: getQualityFromUrl(it.url)?.value
-    }.maxOrNull()
 
-    // En yüksek kalite değerine (tamsayı) göre uygun SearchQuality enum'unu seç
-    val searchQuality = when (highestQualityValue) {
-        Qualities.P2160.value -> SearchQuality.UHD
-        Qualities.P1080.value, Qualities.P720.value -> SearchQuality.HD
-        Qualities.P480.value, Qualities.P360.value -> SearchQuality.SD
-        else -> null
-    }
 
     val loadData = LoadData(
         items = shows,
@@ -294,7 +285,7 @@ private suspend fun createSearchResponse(cleanTitle: String, shows: List<Playlis
         isDubbed = isDubbed,
         isSubbed = isSubbed,
         score = score,
-        videoFormats = videoFormats
+        videoFormats = videoFormats // videoFormats'ı LoadData'ya ekledik
     )
 
     return newAnimeSearchResponse(cleanTitle, loadData.toJson()).apply {
@@ -302,9 +293,15 @@ private suspend fun createSearchResponse(cleanTitle: String, shows: List<Playlis
         type = TvType.Anime
         this.score = score?.let { Score.from10(it) }
 
-        // En yüksek kaliteyi ata
-        this.quality = searchQuality
-        
+        // tvg-quality'den gelen bilgiye göre SearchQuality ataması
+        val qualityString = firstShow.attributes["tvg-quality"]
+        this.quality = when (qualityString) {
+            "P360", "P480" -> SearchQuality.SD
+            "P720", "P1080" -> SearchQuality.HD
+            "P2160" -> SearchQuality.UHD
+            else -> null
+        }
+
         if (isDubbed || isSubbed) {
             addDubStatus(dubExist = isDubbed, subExist = isSubbed)
         }
@@ -320,6 +317,7 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
     }
 
     val alphabeticGroups = groupedByCleanTitle.toSortedMap().mapNotNull { (cleanTitle, shows) ->
+        // Ortak fonksiyonu burada çağırıyoruz
         val searchResponse = createSearchResponse(cleanTitle, shows) ?: return@mapNotNull null
 
         val firstChar = cleanTitle.firstOrNull()?.uppercaseChar() ?: '#'
@@ -378,6 +376,7 @@ override suspend fun search(query: String): List<SearchResponse> {
     return groupedByCleanTitle.filter { (cleanTitle, _) ->
         cleanTitle.lowercase(Locale.getDefault()).contains(query.lowercase(Locale.getDefault()))
     }.mapNotNull { (cleanTitle, shows) ->
+        // Ortak fonksiyonu burada çağırıyoruz
         createSearchResponse(cleanTitle, shows)
     }
 }
@@ -389,10 +388,11 @@ override suspend fun load(url: String): LoadResponse {
 
     val finalPosterUrl = loadData.poster
     val plot = "TMDB'den özet alınamadı."
+      // loadData'dan gelen puanı kullan
     val scoreToUse = loadData.score
     val dubbedEpisodes = mutableListOf<Episode>()
     val subbedEpisodes = mutableListOf<Episode>()
-    
+      // Bölümleri sezon ve bölüme göre gruplandırıp, aynı bölümün tüm kaynaklarını bir arada tutar.
     val groupedEpisodes = allShows.groupBy {
         val (_, season, episode) = parseEpisodeInfo(it.title.toString())
         Pair(season, episode)
@@ -417,8 +417,7 @@ override suspend fun load(url: String): LoadResponse {
             episode = finalEpisode,
             isDubbed = isDubbed,
             isSubbed = isSubbed,
-            score = item.score,
-            videoFormats = loadData.videoFormats
+            score = item.score
         )
 
         val episodeObj = newEpisode(episodeLoadData.toJson()) {
@@ -462,9 +461,11 @@ override suspend fun load(url: String): LoadResponse {
     tags.add(loadData.nation)
     tags.addAll(loadData.videoFormats)
 
+	 // Doğru bir şekilde tvg-language bilgisini ekle
     loadData.items.firstOrNull()?.attributes?.get("tvg-language")?.let {
         tags.add(it)
     }
+    // LoadData içindeki bilgiyi kullanarak doğrudan etiket ekle
     if (loadData.isDubbed) {
         tags.add("Türkçe Dublaj")
     }
@@ -473,6 +474,7 @@ override suspend fun load(url: String): LoadResponse {
     }
 
     val recommendedList = (dubbedEpisodes + subbedEpisodes)
+         // .shuffled()
         .take(24)
         .mapNotNull { episode ->
             val episodeLoadData = parseJson<LoadData>(episode.data)
@@ -485,9 +487,11 @@ override suspend fun load(url: String): LoadResponse {
             newAnimeSearchResponse(episodeTitleWithNumber, episode.data).apply {
                 posterUrl = episodeLoadData.poster
                 type = TvType.Anime
+                    // HER DİSİ İÇİN KENDİ SKORUNU EKLEME KISMI
                 this.score = episodeLoadData.score?.let { Score.from10(it) }
 
-                if (episodeLoadData.isDubbed || episodeLoadData.isSubbed) {
+				
+				if (episodeLoadData.isDubbed || episodeLoadData.isSubbed) {
                     addDubStatus(dubExist = episodeLoadData.isDubbed, subExist = episodeLoadData.isSubbed)
                 }
             }
@@ -520,28 +524,21 @@ override suspend fun loadLinks(
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     val loadData = parseJson<LoadData>(data)
-    
+      // loadData'nın içindeki tüm kaynakları döngüye al
     loadData.items.forEachIndexed { index, item ->
+        
         val linkName = loadData.title + " Kaynak ${index + 1}"
         
-        // Önce tvg-quality etiketini kontrol et
         val qualityString = item.attributes["tvg-quality"]
-        
-        // Etiket yoksa URL'den kaliteyi ayıkla
-        val qualityFromUrl = getQualityFromUrl(item.url)?.value
-
-        val linkQuality = when {
-            qualityString != null -> {
-                when (qualityString) {
-                    "P360" -> Qualities.P360.value
-                    "P480" -> Qualities.P480.value
-                    "P720" -> Qualities.P720.value
-                    "P1080" -> Qualities.P1080.value
-                    "P2160" -> Qualities.P2160.value
-                    else -> Qualities.Unknown.value
-                }
-            }
-            qualityFromUrl != null -> qualityFromUrl
+        if (qualityString == null) {
+            Log.e(name, "tvg-quality etiketi bulunamadı, varsayılan değer kullanılıyor: Unknown")
+        }
+        val linkQuality = when (qualityString) {
+            "P360" -> Qualities.P360.value
+            "P480" -> Qualities.P480.value
+            "P720" -> Qualities.P720.value
+            "P1080" -> Qualities.P1080.value
+            "P2160" -> Qualities.P2160.value
             else -> Qualities.Unknown.value
         }
         
