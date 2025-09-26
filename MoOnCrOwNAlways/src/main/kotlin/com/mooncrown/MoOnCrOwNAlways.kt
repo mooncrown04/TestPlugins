@@ -608,9 +608,10 @@ override suspend fun load(url: String): LoadResponse {
         var episodePlot: String? = null
         var episodeRating: Double? = null
         var episodeAirDate: String? = null
-        var tmdbEpisodeData: JSONObject? = null // Hata 626'yı çözmek için lokal olarak tanımlandı
+        var tmdbEpisodeData: JSONObject? = null 
         
         if (tmdbId != null && tmdbType == TvType.TvSeries) {
+            // Hata 626 çözüldü: tmdbEpisodeData lokal olarak tanımlandı.
             tmdbEpisodeData = fetchTMDBEpisodeData(tmdbId, finalSeason, finalEpisode)
             episodePlot = tmdbEpisodeData?.optString("overview")?.takeIf { it.isNotBlank() }
             episodeRating = tmdbEpisodeData?.optDouble("vote_average")?.takeIf { it > 0 }
@@ -652,7 +653,57 @@ override suspend fun load(url: String): LoadResponse {
             this.episode = finalEpisode
             this.posterUrl = episodePoster
             
-val recommendedList = (dubbedEpisodes + subbedEpisodes)
+            // TMDB'den çekilen bilgileri Episode objesine ekle
+            this.plot = episodePlot
+            this.rating = episodeRating?.let { Score.from10(it) }
+            this.date = episodeAirDate
+        }
+
+        if (isDubbed) {
+            dubbedEpisodes.add(episodeObj)
+        } else {
+            subbedEpisodes.add(episodeObj)
+        }
+    }
+    
+    dubbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
+    subbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
+
+    val episodesMap = mutableMapOf<DubStatus, List<Episode>>()
+
+    if (dubbedEpisodes.isNotEmpty()) {
+        episodesMap[DubStatus.Dubbed] = dubbedEpisodes
+    }
+    if (subbedEpisodes.isNotEmpty()) {
+        episodesMap[DubStatus.Subbed] = subbedEpisodes
+    }
+    
+    val actorsList = mutableListOf<ActorData>()
+    actorsList.add(
+        ActorData(
+            actor = Actor("MoOnCrOwN","https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"),
+            roleString = "yazılım amalesi"
+        )
+    )
+    
+    val tags = mutableListOf<String>()
+    tags.add(loadData.group)
+    tags.add(loadData.nation)
+    tags.addAll(loadData.videoFormats)
+
+	 // Doğru bir şekilde tvg-language bilgisini ekle
+    loadData.items.firstOrNull()?.attributes?.get("tvg-language")?.let {
+        tags.add(it)
+    }
+    // LoadData içindeki bilgiyi kullanarak doğrudan etiket ekle
+    if (loadData.isDubbed) {
+        tags.add("Türkçe Dublaj")
+    }
+    if (loadData.isSubbed) {
+        tags.add("Türkçe Altyazılı")
+    }
+
+    val recommendedList = (dubbedEpisodes + subbedEpisodes)
             // .shuffled()
         .take(24)
         .mapNotNull { episode ->
@@ -685,10 +736,8 @@ val recommendedList = (dubbedEpisodes + subbedEpisodes)
         this.plot = plot 
         // Hata 657 çözüldü: score'a Double? tipindeki değer Score? tipine dönüştürülerek atandı.
         this.score = scoreToUse?.let { Score.from10(it) } 
-        // Hata 658 çözüldü: duration ve year (658'in muhtemel hedefi) gibi alanlara string ataması kaldırıldı.
-        // Eğer 658. satırda bir atama varsa, o satırı silin veya Long? tipinde bir değer atayın. 
-        // Örn: this.year = tmdbData?.optString("first_air_date", "")?.split("-")?.firstOrNull()?.toIntOrNull()
-
+        // Hata 658 çözüldü: duration ve year gibi yanlış tip beklenen atamalar kaldırıldı.
+        
         this.tags = tags.distinct().toMutableList()
         this.episodes = episodesMap
         this.recommendations = recommendedList
