@@ -724,6 +724,9 @@ override suspend fun load(url: String): LoadResponse {
                 }
             }
         }
+    
+    // Hata 656 çözümü için plot'u kopyala
+    val plotToUse = plot 
 
     return newAnimeLoadResponse(
         loadData.title,
@@ -731,11 +734,14 @@ override suspend fun load(url: String): LoadResponse {
 		tmdbType
     ) {
         this.posterUrl = finalPosterUrl
-        // Hata 657 çözüldü
-        this.plot = plot 
-        // Hata 658 çözüldü
-        this.score = scoreToUse?.let { Score.from10(it) } 
-        // Hata 659 çözüldü (İstenmeyen atamalar kaldırıldı)
+        // Hata 656 çözüldü
+        this.plot = plotToUse 
+        
+        // Hata 657 çözüldü: Score? yerine Int? bekleyen eski SDK'ya uyum sağlamak için Double puanı Int'e çevirip rating'e atıyoruz.
+        // rating: Int? alanını kullanıyoruz.
+        this.rating = scoreToUse?.let { (it * 10).toInt() }
+        
+        // Hata 658 çözüldü: Long? beklenen alana String? atanması engellendi. (İlgili hatalı satır artık mevcut değil)
         
         this.tags = tags.distinct().toMutableList()
         this.episodes = episodesMap
