@@ -779,13 +779,14 @@ override suspend fun loadLinks(
                 source = this.name,
                 name = linkName,
                 url = videoUrl,
+                referer = mainUrl, // Doğrudan referer eklenmeli
+                quality = linkQuality, // Doğrudan kalite eklenmeli
+                headers = headersMap, // Headerlar eklenmeli
                 type = videoType
-            ) {
-                quality = linkQuality
-                headers = headersMap
-            }
+            )
         )
-    } // loadData.items.forEachIndexed döngüsünü kapatır
+    } // loadData.items.forEachIndexed döngüsünü kapatır.
+
     return true
 } // loadLinks fonksiyonunu kapatır.
 
@@ -800,7 +801,7 @@ private data class ParsedEpisode(
     val episode: Int?
 )
 
-} // <-- BU TEK PARANTEZ MoOnCrOwNAlways SINIFINI KAPATMALIDIR.
+} // <-- BU PARANTEZ MoOnCrOwNAlways SINIFINI KAPATIR.
 
 
 // --- DOSYA SEVİYESİ (SINIF DIŞI) TANIMLAR ---
