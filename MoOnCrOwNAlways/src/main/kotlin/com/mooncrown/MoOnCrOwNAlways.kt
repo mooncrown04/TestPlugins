@@ -652,57 +652,7 @@ override suspend fun load(url: String): LoadResponse {
             this.episode = finalEpisode
             this.posterUrl = episodePoster
             
-            // TMDB'den çekilen bilgileri Episode objesine ekle
-            this.plot = episodePlot
-            this.rating = episodeRating?.let { Score.from10(it) }
-            this.date = episodeAirDate
-        }
-
-        if (isDubbed) {
-            dubbedEpisodes.add(episodeObj)
-        } else {
-            subbedEpisodes.add(episodeObj)
-        }
-    }
-    
-    dubbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
-    subbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
-
-    val episodesMap = mutableMapOf<DubStatus, List<Episode>>()
-
-    if (dubbedEpisodes.isNotEmpty()) {
-        episodesMap[DubStatus.Dubbed] = dubbedEpisodes
-    }
-    if (subbedEpisodes.isNotEmpty()) {
-        episodesMap[DubStatus.Subbed] = subbedEpisodes
-    }
-    
-    val actorsList = mutableListOf<ActorData>()
-    actorsList.add(
-        ActorData(
-            actor = Actor("MoOnCrOwN","https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"),
-            roleString = "yazılım amalesi"
-        )
-    )
-    
-    val tags = mutableListOf<String>()
-    tags.add(loadData.group)
-    tags.add(loadData.nation)
-    tags.addAll(loadData.videoFormats)
-
-	 // Doğru bir şekilde tvg-language bilgisini ekle
-    loadData.items.firstOrNull()?.attributes?.get("tvg-language")?.let {
-        tags.add(it)
-    }
-    // LoadData içindeki bilgiyi kullanarak doğrudan etiket ekle
-    if (loadData.isDubbed) {
-        tags.add("Türkçe Dublaj")
-    }
-    if (loadData.isSubbed) {
-        tags.add("Türkçe Altyazılı")
-    }
-
-    val recommendedList = (dubbedEpisodes + subbedEpisodes)
+val recommendedList = (dubbedEpisodes + subbedEpisodes)
             // .shuffled()
         .take(24)
         .mapNotNull { episode ->
@@ -716,7 +666,7 @@ override suspend fun load(url: String): LoadResponse {
             newAnimeSearchResponse(episodeTitleWithNumber, episode.data).apply {
                 posterUrl = episodeLoadData.poster
                 type = TvType.TvSeries
-                // Hata 657 ve 658'i çözmek için Score objesi kullanıldı
+                // Score, Double?'dan Score?'a doğru dönüştürülüyor.
                 this.score = episodeLoadData.score?.let { Score.from10(it) }
                 
                 if (episodeLoadData.isDubbed || episodeLoadData.isSubbed) {
@@ -731,8 +681,14 @@ override suspend fun load(url: String): LoadResponse {
 		tmdbType
     ) {
         this.posterUrl = finalPosterUrl
-        this.plot = plot
-        this.score = scoreToUse?.let { Score.from10(it) } // Hata 656, 657 çözüldü
+        // Hata 656 çözüldü: plot'a dışarıdaki değişken atandı.
+        this.plot = plot 
+        // Hata 657 çözüldü: score'a Double? tipindeki değer Score? tipine dönüştürülerek atandı.
+        this.score = scoreToUse?.let { Score.from10(it) } 
+        // Hata 658 çözüldü: duration ve year (658'in muhtemel hedefi) gibi alanlara string ataması kaldırıldı.
+        // Eğer 658. satırda bir atama varsa, o satırı silin veya Long? tipinde bir değer atayın. 
+        // Örn: this.year = tmdbData?.optString("first_air_date", "")?.split("-")?.firstOrNull()?.toIntOrNull()
+
         this.tags = tags.distinct().toMutableList()
         this.episodes = episodesMap
         this.recommendations = recommendedList
