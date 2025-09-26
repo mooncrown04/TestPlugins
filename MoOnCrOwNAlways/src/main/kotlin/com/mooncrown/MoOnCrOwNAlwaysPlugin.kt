@@ -7,7 +7,7 @@ import android.content.Context
 @CloudstreamPlugin
 class MoOnCrOwNAlwaysPlugin: Plugin() {
     override fun load(context: Context) {
-    registerMainAPI(AnimeDizi(context.getSharedPreferences("AnimeDizi", 0)))
+    registerMainAPI(MoOnCrOwNAlways(context.getSharedPreferences("MoOnCrOwNAlways", 0)))
  
     }
 }
