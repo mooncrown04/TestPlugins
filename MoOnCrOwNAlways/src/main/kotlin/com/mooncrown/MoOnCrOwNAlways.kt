@@ -611,7 +611,6 @@ override suspend fun load(url: String): LoadResponse {
         var tmdbEpisodeData: JSONObject? = null 
         
         if (tmdbId != null && tmdbType == TvType.TvSeries) {
-            // Hata 626 çözüldü: tmdbEpisodeData lokal olarak tanımlandı.
             tmdbEpisodeData = fetchTMDBEpisodeData(tmdbId, finalSeason, finalEpisode)
             episodePlot = tmdbEpisodeData?.optString("overview")?.takeIf { it.isNotBlank() }
             episodeRating = tmdbEpisodeData?.optDouble("vote_average")?.takeIf { it > 0 }
@@ -732,11 +731,11 @@ override suspend fun load(url: String): LoadResponse {
 		tmdbType
     ) {
         this.posterUrl = finalPosterUrl
-        // Hata 656 çözüldü: plot'a dışarıdaki değişken atandı.
+        // Hata 657 çözüldü
         this.plot = plot 
-        // Hata 657 çözüldü: score'a Double? tipindeki değer Score? tipine dönüştürülerek atandı.
+        // Hata 658 çözüldü
         this.score = scoreToUse?.let { Score.from10(it) } 
-        // Hata 658 çözüldü: duration ve year gibi yanlış tip beklenen atamalar kaldırıldı.
+        // Hata 659 çözüldü (İstenmeyen atamalar kaldırıldı)
         
         this.tags = tags.distinct().toMutableList()
         this.episodes = episodesMap
@@ -791,7 +790,7 @@ override suspend fun loadLinks(
             else -> ExtractorLinkType.M3U8 // Varsayılan olarak M3U8
         }
         
-        // Düzeltilmiş newExtractorLink kullanımı (Hata 796, 797, 798 çözüldü)
+        // Düzeltilmiş newExtractorLink kullanımı
         callback.invoke(
             newExtractorLink(
                 source = this.name,
