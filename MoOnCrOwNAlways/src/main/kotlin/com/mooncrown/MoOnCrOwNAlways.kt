@@ -794,8 +794,75 @@ private data class ParsedEpisode(
     val season: Int?,
     val episode: Int?
 )
+       callback.invoke(
+          newExtractorLink(
+                source = this.name,
+                name = linkName,
+                url = videoUrl,
+                type = videoType
+            ) {
+                quality = linkQuality
+                headers = headersMap
+            }
+        )
+    }
+    return true
+}
+
+private data class ParsedEpisode(
+    val item: PlaylistItem,
+    val itemCleanTitle: String,
+    val season: Int?,
+    val episode: Int?
+)
+}
 
 
+val languageMap = mapOf(
+    "en" to "İngilizce",
+    "tr" to "Türkçe",
+    "ja" to "Japonca",
+    "de" to "Almanca",
+    "fr" to "Fransızca",
+    "es" to "İspanyolca",
+    "it" to "İtalyanca",
+    "ru" to "Rusça",
+    "pt" to "Portekizce",
+    "ko" to "Korece",
+    "zh" to "Çince",
+    "hi" to "Hintçe",
+    "ar" to "Arapça",
+    "nl" to "Felemenkçe",
+    "sv" to "İsveççe",
+    "no" to "Norveççe",
+    "da" to "Danca",
+    "fi" to "Fince",
+    "pl" to "Lehçe",
+    "cs" to "Çekçe",
+    "hu" to "Macarca",
+    "ro" to "Rumence",
+    "el" to "Yunanca",
+    "uk" to "Ukraynaca",
+    "bg" to "Bulgarca",
+    "sr" to "Sırpça",
+    "hr" to "Hırvatça",
+    "sk" to "Slovakça",
+    "sl" to "Slovence",
+    "th" to "Tayca",
+    "vi" to "Vietnamca",
+    "id" to "Endonezce",
+    "ms" to "Malayca",
+    "tl" to "Tagalogca",
+    "fa" to "Farsça",
+    "he" to "İbranice",
+    "la" to "Latince",
+    "xx" to "Belirsiz",
+    "mul" to "Çok Dilli"
+)
+
+fun getTurkishLanguageName(code: String?): String? {
+    return languageMap[code?.lowercase()]
+}
 
 val languageMap = mapOf(
     "en" to "İngilizce",
