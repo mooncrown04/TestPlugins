@@ -33,7 +33,7 @@ import kotlin.math.min
 
 
 // --- Ana Eklenti Sınıfı ---
-class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
+class MoOnCrOwNAlways(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
     override var name = "35 mooncrown always TMBD"
     override val hasMainPage = true
