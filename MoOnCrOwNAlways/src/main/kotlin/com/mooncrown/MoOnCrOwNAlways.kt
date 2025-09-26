@@ -302,8 +302,6 @@ private suspend fun MoOnCrOwNAlways.createSearchResponse(cleanTitle: String, sho
     } }.toSet() // Yinelenen formatları önlemek için Set kullanılır
 
 
-
-
     val loadData = LoadData(
         items = shows,
         title = cleanTitle,
@@ -489,7 +487,7 @@ override suspend fun load(url: String): LoadResponse {
     val loadData = parseJson<LoadData>(url)
     val (tmdbData, tmdbType) = fetchTMDBData(loadData.title)
     
-    val tmdbId = tmdbData?.optInt("id") // TMDB ID'yi alıyoruz.
+    val tmdbId = tmdbData?.optInt("id")
     val tmdbSeasonsArray = tmdbData?.optJSONArray("seasons")
 
     val plot = buildString {
@@ -610,8 +608,10 @@ override suspend fun load(url: String): LoadResponse {
         var episodePlot: String? = null
         var episodeRating: Double? = null
         var episodeAirDate: String? = null
+        var tmdbEpisodeData: JSONObject? = null // Hata 626'yı çözmek için lokal olarak tanımlandı
+        
         if (tmdbId != null && tmdbType == TvType.TvSeries) {
-            val tmdbEpisodeData = fetchTMDBEpisodeData(tmdbId, finalSeason, finalEpisode)
+            tmdbEpisodeData = fetchTMDBEpisodeData(tmdbId, finalSeason, finalEpisode)
             episodePlot = tmdbEpisodeData?.optString("overview")?.takeIf { it.isNotBlank() }
             episodeRating = tmdbEpisodeData?.optDouble("vote_average")?.takeIf { it > 0 }
             episodeAirDate = tmdbEpisodeData?.optString("air_date")?.takeIf { it.isNotBlank() }
@@ -715,12 +715,11 @@ override suspend fun load(url: String): LoadResponse {
             
             newAnimeSearchResponse(episodeTitleWithNumber, episode.data).apply {
                 posterUrl = episodeLoadData.poster
-                type = TvType.TvSeries // Dizi olarak ayarlandı
-                // HER DİSİ İÇİN KENDİ SKORUNU EKLEME KISMI
+                type = TvType.TvSeries
+                // Hata 657 ve 658'i çözmek için Score objesi kullanıldı
                 this.score = episodeLoadData.score?.let { Score.from10(it) }
-
-				
-				if (episodeLoadData.isDubbed || episodeLoadData.isSubbed) {
+                
+                if (episodeLoadData.isDubbed || episodeLoadData.isSubbed) {
                     addDubStatus(dubExist = episodeLoadData.isDubbed, subExist = episodeLoadData.isSubbed)
                 }
             }
@@ -733,8 +732,8 @@ override suspend fun load(url: String): LoadResponse {
     ) {
         this.posterUrl = finalPosterUrl
         this.plot = plot
-        this.score = scoreToUse?.let { Score.from10(it) }
-        this.tags = tags.distinct().toMutableList() // Yinelenen etiketleri kaldır
+        this.score = scoreToUse?.let { Score.from10(it) } // Hata 656, 657 çözüldü
+        this.tags = tags.distinct().toMutableList()
         this.episodes = episodesMap
         this.recommendations = recommendedList
         this.actors = listOf(
@@ -787,17 +786,19 @@ override suspend fun loadLinks(
             else -> ExtractorLinkType.M3U8 // Varsayılan olarak M3U8
         }
         
-        // Düzeltilmiş newExtractorLink kullanımı
+        // Düzeltilmiş newExtractorLink kullanımı (Hata 796, 797, 798 çözüldü)
         callback.invoke(
             newExtractorLink(
                 source = this.name,
                 name = linkName,
                 url = videoUrl,
-                referer = mainUrl,
-                quality = linkQuality,
-                headers = headersMap,
                 type = videoType
-            )
+            ) {
+                // Ekstra parametreler lambda bloğu içinde set edilmeli
+                quality = linkQuality
+                headers = headersMap
+                referer = mainUrl
+            }
         )
     }
     return true
