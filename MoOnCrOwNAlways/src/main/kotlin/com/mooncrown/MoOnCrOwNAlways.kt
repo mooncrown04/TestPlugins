@@ -652,9 +652,9 @@ override suspend fun load(url: String): LoadResponse {
                 this.description = episodePlot
             }
 
-        if (IsDubbed) dubbedEpisodes.add(episodeObj)
-            if (IsSubbed) subbedEpisodes.add(episodeObj)
-            if (!IsDubbed && !IsSubbed) subbedEpisodes.add(episodeObj) // fallback: orijinal
+        if (isDubbed) dubbedEpisodes.add(episodeObj)
+            if (isSubbed) subbedEpisodes.add(episodeObj)
+            if (!isDubbed && !isSubbed) subbedEpisodes.add(episodeObj) // fallback: orijinal
         }
     
     dubbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
