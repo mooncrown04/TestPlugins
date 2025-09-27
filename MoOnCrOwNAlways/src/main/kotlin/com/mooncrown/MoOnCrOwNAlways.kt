@@ -22,6 +22,19 @@ import java.text.NumberFormat
 import java.util.Locale
 import kotlin.math.min
 
+
+
+import com.lagradost.cloudstream3.MainAPI
+import com.lagradost.cloudstream3.TvType
+import com.lagradost.cloudstream3.HomePageResponse
+import com.lagradost.cloudstream3.animeLoadResponse
+import com.lagradost.cloudstream3.newAnimeLoadResponse
+import com.lagradost.cloudstream3.newEpisode
+import com.lagradost.cloudstream3.utils.AppUtils
+
+
+
+
 // ----------------------
 // Yardımcı Veri Sınıfları
 // ----------------------
@@ -128,7 +141,7 @@ class MoOnCrOwNAlways(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var lang = "tr"
     override val hasQuickSearch = true
     override val hasDownloadSupport = true
-    override val supportedTypes = setOf(TvType.TvSeries)
+   override val supportedTypes = setOf(TvType.Anime, TvType.Movie, TvType.TvSeries)
 
     private val DEFAULT_POSTER_URL =
         "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
