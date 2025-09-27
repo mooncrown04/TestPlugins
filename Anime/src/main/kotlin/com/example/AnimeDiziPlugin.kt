@@ -5,9 +5,8 @@ import com.lagradost.cloudstream3.plugins.Plugin
 import android.content.Context
 
 @CloudstreamPlugin
-class AnimeDiziPlugin: Plugin() {
+class NeonSporPlugin: Plugin() {
     override fun load(context: Context) {
-    registerMainAPI(AnimeDizi(context.getSharedPreferences("AnimeDizi", 0)))
- 
+        registerMainAPI(NeonSpor())
     }
 }
