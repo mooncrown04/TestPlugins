@@ -718,11 +718,13 @@ override suspend fun loadLinks(
         
         val videoUrl = item.url.toString()
         val headersMap = mutableMapOf<String, String>()
-         
-            val host = URL(videoUrl).protocol + "://" + URL(videoUrl).host
-            headersMap["Referer"] = host
-       
-
+           try {
+            val host = URL(videoUrl).protocol + "://" + URL(videoUrl).host
+            headersMap["Referer"] = host
+        } catch (e: Exception) {
+            // URL ayrıştırma hatasına karşı try-catch eklemek iyi bir uygulamadır.
+            Log.w(name, "Referer başlığı oluşturulurken URL hatası: ${e.message}")
+        }
         // Yeni fonksiyonu kullanarak video tipini belirle
         val detectedType = checkContentType(videoUrl, headersMap)
         val videoType = when {
