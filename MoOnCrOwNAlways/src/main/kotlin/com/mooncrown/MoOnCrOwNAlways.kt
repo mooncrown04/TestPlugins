@@ -35,7 +35,7 @@ import kotlin.math.min
 // --- Ana Eklenti Sınıfı ---
 class MoOnCrOwNAlways(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always FULL"
+    override var name = "35 mooncrown always FULL yeni"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -425,8 +425,8 @@ override suspend fun quickSearch(query: String): List<SearchResponse> = search(q
     private suspend fun fetchTMDBData(title: String): Pair<JSONObject?, TvType> {
         return withContext(Dispatchers.IO) {
             try {
-                val apiKey = "4032c1fd53e1b6fef5af1b406fccaa72"
-
+             //   val apiKey = "4032c1fd53e1b6fef5af1b406fccaa72"
+val apiKey = "e547e17d4e91f3e62a571655cd1ccaff"
                 if (apiKey.isEmpty()) {
                     Log.e("TMDB", "API anahtarı boş.")
                     return@withContext Pair(null, TvType.TvSeries)
