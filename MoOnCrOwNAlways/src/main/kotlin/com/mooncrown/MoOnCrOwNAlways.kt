@@ -448,7 +448,7 @@ override suspend fun quickSearch(query: String): List<SearchResponse> = search(q
 
                 if (apiKey.isEmpty()) {
                     Log.e("TMDB", "API anahtarı boş.")
-                    return@withContext Pair(null, TvType.TvSeries)
+                     return@withContext Triple(null, TvType.TvSeries, null)
                 }
 
                val encodedTitle = URLEncoder.encode(title.replace(Regex("\\([^)]*\\)"), "").trim(), "UTF-8")
@@ -591,7 +591,7 @@ override suspend fun load(url: String): LoadResponse {
 	val allShows = loadData.items
     
 
-    val finalPosterUrl = loadData.poster
+  
 
       // loadData'dan gelen puanı kullan
     val scoreToUse = loadData.score
@@ -652,9 +652,9 @@ override suspend fun load(url: String): LoadResponse {
                 this.description = episodePlot
             }
 
-        if (itemIsDubbed) dubbedEpisodes.add(episodeObj)
-            if (itemIsSubbed) subbedEpisodes.add(episodeObj)
-            if (!itemIsDubbed && !itemIsSubbed) subbedEpisodes.add(episodeObj) // fallback: orijinal
+        if (IsDubbed) dubbedEpisodes.add(episodeObj)
+            if (IsSubbed) subbedEpisodes.add(episodeObj)
+            if (!IsDubbed && !IsSubbed) subbedEpisodes.add(episodeObj) // fallback: orijinal
         }
     
     dubbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
