@@ -35,7 +35,7 @@ import kotlin.math.min
 // --- Ana Eklenti Sınıfı ---
 class MoOnCrOwNAlways(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always FULL04"
+    override var name = "35 mooncrown always FULL"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -718,10 +718,16 @@ override suspend fun loadLinks(
         
         val videoUrl = item.url.toString()
         val headersMap = mutableMapOf<String, String>()
-        headersMap["Referer"] = mainUrl
-        item.userAgent?.let {
-            headersMap["User-Agent"] = it
-        }
+         try {
+            val host = URL(videoUrl).protocol + "://" + URL(videoUrl).host
+            headersMap["Referer"] = host
+        } catch (e: Exception) {
+            Log.e(name, "Referer oluşturulamadı: ${e.message}")
+        }
+        
+        item.userAgent?.let {
+            headersMap["User-Agent"] = it
+        }
 
         // Yeni fonksiyonu kullanarak video tipini belirle
         val detectedType = checkContentType(videoUrl, headersMap)
