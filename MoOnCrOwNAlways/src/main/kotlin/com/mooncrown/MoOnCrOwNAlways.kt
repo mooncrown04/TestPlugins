@@ -488,6 +488,14 @@ private suspend fun fetchEpisodeData(tvId: Int, seasonNum: Int, episodeNum: Int)
 override suspend fun load(url: String): LoadResponse {
     val loadData = parseJson<LoadData>(url)
     val (tmdbData, tmdbType, tmdbId) = fetchTMDBData(loadData.title)
+	 // YENİ POSTER ATAMASI: TMDB posterini önceliklendir
+    val tmdbPosterPath = tmdbData?.optString("poster_path")
+    val tmdbPosterUrl = if (tmdbPosterPath.isNullOrEmpty()) null else "https://image.tmdb.org/t/p/w780/$tmdbPosterPath"
+    
+	 // TMDB posteri varsa onu kullan, yoksa loadData'dan geleni (M3U'dan geleni) kullan.
+    val finalPosterUrl = tmdbPosterUrl ?: loadData.poster 
+
+	
 	val plot = buildString {
             if (tmdbData != null) {
                 val overview = tmdbData.optString("overview", "")
@@ -575,7 +583,7 @@ override suspend fun load(url: String): LoadResponse {
 	val allShows = loadData.items
     
 
-    val finalPosterUrl = loadData.poster
+//    val finalPosterUrl = loadData.poster
 
       // loadData'dan gelen puanı kullan
     val scoreToUse = loadData.score
@@ -594,20 +602,21 @@ override suspend fun load(url: String): LoadResponse {
         val finalEpisode = episode ?: 1
         val isDubbed = isDubbed(item)
         val isSubbed = isSubbed(item)
-        val episodePoster = item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: finalPosterUrl
-
-
- // TMDB BÖLÜM POSTER VE DETAY ÇEKİMİ
-     val episodeTmdbData = if (tmdbId != null && finalEpisode > 0) {
+// TMDB BÖLÜM POSTER VE DETAY ÇEKİMİ
+    val episodeTmdbData = if (tmdbId != null && finalEpisode > 0) {
         fetchEpisodeData(tmdbId, finalSeason, finalEpisode)
-        } else {
-            null
-        }
-        val tmdbEpisodePosterPath = episodeTmdbData?.optString("still_path")
-        val tmdbEpisodePosterUrl = if (tmdbEpisodePosterPath.isNullOrEmpty()) null else "https://image.tmdb.org/t/p/w780/$tmdbEpisodePosterPath"
-        val episodePlot = episodeTmdbData?.optString("overview") ?: ""
-        val episodeName = episodeTmdbData?.optString("name") ?: itemCleanTitle
-        
+    } else {
+        null
+    }
+    val tmdbEpisodePosterPath = episodeTmdbData?.optString("still_path")
+    val tmdbEpisodePosterUrl = if (tmdbEpisodePosterPath.isNullOrEmpty()) null else "https://image.tmdb.org/t/p/w780/$tmdbEpisodePosterPath"
+    val episodePlot = episodeTmdbData?.optString("overview") ?: ""
+    val episodeName = episodeTmdbData?.optString("name") ?: itemCleanTitle
+
+    // DÜZELTME 1: Poster URL'sini belirlerken TMDB'yi önceliklendir
+    val finalEpisodePoster = tmdbEpisodePosterUrl 
+        ?: item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } 
+        ?: finalPosterUrl
 
         val episodeLoadData = LoadData(
             items = episodeItems,
@@ -622,16 +631,20 @@ override suspend fun load(url: String): LoadResponse {
             score = item.score
         )
 
-        val episodeObj = newEpisode(episodeLoadData.toJson()) {
-            this.name = if (season != null && episode != null) {
-                "${itemCleanTitle} S$finalSeason E$finalEpisode"
-            } else {
-                itemCleanTitle
-            }
+        val episodeObj = newEpisode(episodeLoadData.toJson()) {
+            this.name = if (episodeTmdbData != null) {
+                // TMDB adı + Sezon/Bölüm Numarası
+                "${episodeName} - S$finalSeason E$finalEpisode" 
+            } else {
+                // TMDB verisi yoksa, kendi ayrıştırdığınız başlığı kullanın
+                "${itemCleanTitle} S$finalSeason E$finalEpisode"
+            }
+           
             this.season = finalSeason
             this.episode = finalEpisode
             this.posterUrl = episodePoster
-        }
+         this.description = episodePlot // <-- DÜZELTME 2: Bölüm özetini ekle
+		}
 
         if (isDubbed) {
             dubbedEpisodes.add(episodeObj)
