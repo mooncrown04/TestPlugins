@@ -35,7 +35,7 @@ import kotlin.math.min
 // --- Ana Eklenti Sınıfı ---
 class MoOnCrOwNAlways(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always FULL777"
+    override var name = "35 mooncrown always FULL007"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -80,7 +80,7 @@ class MoOnCrOwNAlways(private val sharedPref: SharedPreferences?) : MainAPI() {
                 when {
                     contentType?.contains("video/mp4") == true -> "mp4"
                     contentType?.contains("video/mkv") == true -> "mkv"
-                      contentType?.contains("video/x-matroska") == true -> "mkv"
+					contentType?.contains("video/x-matroska") == true -> "mkv"
                     contentType?.contains("application/vnd.apple.mpegurl") == true ||
                     contentType?.contains("application/x-mpegurl") == true -> "m3u8"
                     else -> {
