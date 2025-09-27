@@ -421,75 +421,73 @@ override suspend fun search(query: String): List<SearchResponse> {
 }
 
 override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
-    private suspend fun fetchTMDBData(title: String): Pair<JSONObject?, TvType> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val apiKey = "4032c1fd53e1b6fef5af1b406fccaa72"
-
-                if (apiKey.isEmpty()) {
-                    Log.e("TMDB", "API anahtarı boş.")
-                    return@withContext Pair(null, TvType.TvSeries)
-                }
-
-                val encodedTitle = URLEncoder.encode(title.replace(Regex("\\([^)]*\\)"), "").trim(), "UTF-8")
-
-                // Önce TV şovu olarak arama yap
-                val searchTvUrl = "https://api.themoviedb.org/3/search/tv?api_key=$apiKey&query=$encodedTitle&language=tr-TR"
-                val tvResponse = JSONObject(URL(searchTvUrl).readText())
-                val tvResults = tvResponse.optJSONArray("results")
-
-                // Filmler için arama yap
-                val searchMovieUrl = "https://api.themoviedb.org/3/search/movie?api_key=$apiKey&query=$encodedTitle&language=tr-TR"
-                val movieResponse = JSONObject(URL(searchMovieUrl).readText())
-                val movieResults = movieResponse.optJSONArray("results")
-
-                if (tvResults != null && tvResults.length() > 0) {
-                    val tvId = tvResults.optJSONObject(0)?.optInt("id")
-                    if (tvId != null) {
-                        val detailsUrl = "https://api.themoviedb.org/3/tv/$tvId?api_key=$apiKey&append_to_response=credits&language=tr-TR"
-                        val detailsResponse = URL(detailsUrl).readText()
-                        return@withContext Pair(JSONObject(detailsResponse), TvType.TvSeries)
-                    }
-                }
-
-                if (movieResults != null && movieResults.length() > 0) {
-                    val movieId = movieResults.optJSONObject(0)?.optInt("id")
-                    if (movieId != null) {
-                        val detailsUrl = "https://api.themoviedb.org/3/movie/$movieId?api_key=$apiKey&append_to_response=credits&language=tr-TR"
-                        val detailsResponse = URL(detailsUrl).readText()
-                        return@withContext Pair(JSONObject(detailsResponse), TvType.Movie)
-                    }
-                }
-
-                Pair(null, TvType.TvSeries)
-
-            } catch (e: Exception) {
-                Log.e("TMDB", "TMDB verisi çekilirken hata oluştu: ${e.message}", e)
-                Pair(null, TvType.TvSeries)
+   private suspend fun fetchTMDBData(title: String): Triple<JSONObject?, TvType, Int?> {
+    return withContext(Dispatchers.IO) {
+        try {
+            val apiKey = "4032c1fd53e1b6fef5af1b406fccaa72"
+            if (apiKey.isEmpty()) {
+                Log.e("TMDB", "API anahtarı boş.")
+                return@withContext Triple(null, TvType.TvSeries, null)
             }
+
+            val encodedTitle = URLEncoder.encode(title.replace(Regex("\\([^)]*\\)"), "").trim(), "UTF-8")
+            val searchTvUrl = "https://api.themoviedb.org/3/search/tv?api_key=$apiKey&query=$encodedTitle&language=tr-TR"
+            val tvResponse = JSONObject(URL(searchTvUrl).readText())
+            val tvResults = tvResponse.optJSONArray("results")
+
+            val searchMovieUrl = "https://api.themoviedb.org/3/search/movie?api_key=$apiKey&query=$encodedTitle&language=tr-TR"
+            val movieResponse = JSONObject(URL(searchMovieUrl).readText())
+            val movieResults = movieResponse.optJSONArray("results")
+
+            if (tvResults != null && tvResults.length() > 0) {
+                val tvId = tvResults.optJSONObject(0)?.optInt("id")
+                if (tvId != null) {
+                    val detailsUrl = "https://api.themoviedb.org/3/tv/$tvId?api_key=$apiKey&append_to_response=credits&language=tr-TR"
+                    val detailsResponse = URL(detailsUrl).readText()
+                    return@withContext Triple(JSONObject(detailsResponse), TvType.TvSeries, tvId)
+                }
+            }
+
+            if (movieResults != null && movieResults.length() > 0) {
+                val movieId = movieResults.optJSONObject(0)?.optInt("id")
+                if (movieId != null) {
+                    val detailsUrl = "https://api.themoviedb.org/3/movie/$movieId?api_key=$apiKey&append_to_response=credits&language=tr-TR"
+                    val detailsResponse = URL(detailsUrl).readText()
+                    return@withContext Triple(JSONObject(detailsResponse), TvType.Movie, movieId)
+                }
+            }
+
+            Triple(null, TvType.TvSeries, null)
+
+        } catch (e: Exception) {
+            Log.e("TMDB", "TMDB verisi çekilirken hata oluştu: ${e.message}", e)
+            Triple(null, TvType.TvSeries, null)
         }
     }
+}
+
 
 // YENİ FONKSİYON: Bölüm detaylarını TMDB'den çeker
 private suspend fun fetchEpisodeData(tvId: Int, seasonNum: Int, episodeNum: Int): JSONObject? {
-    return withContext(Dispatchers.IO) {
-        try {
-            val apiKey = "4032c1fd53e1b6fef5af1b406fccaa72"
-            if (apiKey.isEmpty()) return@withContext null
+    return withContext(Dispatchers.IO) {
+        try {
+            val apiKey = "4032c1fd53e1b6fef5af1b406fccaa72"
+            if (apiKey.isEmpty()) return@withContext null
 
-            val episodeUrl = "https://api.themoviedb.org/3/tv/$tvId/season/$seasonNum/episode/$episodeNum?api_key=$apiKey&language=tr-TR"
-            val response = URL(episodeUrl).readText()
-            return@withContext JSONObject(response)
-        } catch (e: Exception) {
-            Log.e("TMDB_Episode", "TMDB bölüm verisi çekilirken hata oluştu: ${e.message}", e)
-            return@withContext null
-        }
-    }
+            val episodeUrl = "https://api.themoviedb.org/3/tv/$tvId/season/$seasonNum/episode/$episodeNum?api_key=$apiKey&language=tr-TR"
+            val response = URL(episodeUrl).readText()
+            JSONObject(response)
+        } catch (e: Exception) {
+            Log.e("TMDB_Episode", "TMDB bölüm verisi çekilirken hata oluştu: ${e.message}", e)
+            null
+        }
+    }
 }
+
 
 override suspend fun load(url: String): LoadResponse {
     val loadData = parseJson<LoadData>(url)
-    val (tmdbData, tmdbType) = fetchTMDBData(loadData.title)
+    val (tmdbData, tmdbType, tmdbId) = fetchTMDBData(loadData.title)
 	val plot = buildString {
             if (tmdbData != null) {
                 val overview = tmdbData.optString("overview", "")
@@ -600,8 +598,8 @@ override suspend fun load(url: String): LoadResponse {
 
 
  // TMDB BÖLÜM POSTER VE DETAY ÇEKİMİ
-        val episodeTmdbData = if (tvId != null && finalEpisode > 0) {
-            fetchEpisodeData(tvId, finalSeason, finalEpisode)
+     val episodeTmdbData = if (tmdbId != null && finalEpisode > 0) {
+        fetchEpisodeData(tmdbId, finalSeason, finalEpisode)
         } else {
             null
         }
@@ -610,15 +608,6 @@ override suspend fun load(url: String): LoadResponse {
         val episodePlot = episodeTmdbData?.optString("overview") ?: ""
         val episodeName = episodeTmdbData?.optString("name") ?: itemCleanTitle
         
-
-
-
-
-
-
-
-
-
 
         val episodeLoadData = LoadData(
             items = episodeItems,
