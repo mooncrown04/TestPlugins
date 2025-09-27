@@ -470,7 +470,22 @@ override suspend fun quickSearch(query: String): List<SearchResponse> = search(q
         }
     }
 
+// YENİ FONKSİYON: Bölüm detaylarını TMDB'den çeker
+private suspend fun fetchEpisodeData(tvId: Int, seasonNum: Int, episodeNum: Int): JSONObject? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val apiKey = "4032c1fd53e1b6fef5af1b406fccaa72"
+            if (apiKey.isEmpty()) return@withContext null
 
+            val episodeUrl = "https://api.themoviedb.org/3/tv/$tvId/season/$seasonNum/episode/$episodeNum?api_key=$apiKey&language=tr-TR"
+            val response = URL(episodeUrl).readText()
+            return@withContext JSONObject(response)
+        } catch (e: Exception) {
+            Log.e("TMDB_Episode", "TMDB bölüm verisi çekilirken hata oluştu: ${e.message}", e)
+            return@withContext null
+        }
+    }
+}
 
 override suspend fun load(url: String): LoadResponse {
     val loadData = parseJson<LoadData>(url)
@@ -582,6 +597,28 @@ override suspend fun load(url: String): LoadResponse {
         val isDubbed = isDubbed(item)
         val isSubbed = isSubbed(item)
         val episodePoster = item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: finalPosterUrl
+
+
+ // TMDB BÖLÜM POSTER VE DETAY ÇEKİMİ
+        val episodeTmdbData = if (tvId != null && finalEpisode > 0) {
+            fetchEpisodeData(tvId, finalSeason, finalEpisode)
+        } else {
+            null
+        }
+        val tmdbEpisodePosterPath = episodeTmdbData?.optString("still_path")
+        val tmdbEpisodePosterUrl = if (tmdbEpisodePosterPath.isNullOrEmpty()) null else "https://image.tmdb.org/t/p/w780/$tmdbEpisodePosterPath"
+        val episodePlot = episodeTmdbData?.optString("overview") ?: ""
+        val episodeName = episodeTmdbData?.optString("name") ?: itemCleanTitle
+        
+
+
+
+
+
+
+
+
+
 
         val episodeLoadData = LoadData(
             items = episodeItems,
