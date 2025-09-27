@@ -27,7 +27,6 @@ import kotlin.math.min
 import com.lagradost.cloudstream3.MainAPI
 import com.lagradost.cloudstream3.TvType
 import com.lagradost.cloudstream3.HomePageResponse
-import com.lagradost.cloudstream3.animeLoadResponse
 import com.lagradost.cloudstream3.newAnimeLoadResponse
 import com.lagradost.cloudstream3.newEpisode
 import com.lagradost.cloudstream3.utils.AppUtils
@@ -131,10 +130,10 @@ class IptvPlaylistParser {
     private fun String.getVlcOptUserAgent(): String? = substringAfter("http-user-agent=").trim().takeIf { it.isNotEmpty() }
 }
 
-// ----------------------
+// class MoOnCrOwNAlways(private val sharedPref: SharedPreferences?) : MainAPI() {
 // Ana Eklenti Sınıfı
 // ----------------------
-class MoOnCrOwNAlways(private val sharedPref: SharedPreferences?) : MainAPI() {
+class MoOnCrOwNAlways : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
     override var name = "35 mooncrown always FULL"
     override val hasMainPage = true
