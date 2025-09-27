@@ -80,7 +80,7 @@ class MoOnCrOwNAlways(private val sharedPref: SharedPreferences?) : MainAPI() {
                 when {
                     contentType?.contains("video/mp4") == true -> "mp4"
                     contentType?.contains("video/mkv") == true -> "mkv"
-					  contentType?.contains("video/x-matroska") == true -> "mkv"
+					contentType?.contains("video/x-matroska") == true -> "mkv"
                     contentType?.contains("application/vnd.apple.mpegurl") == true ||
                     contentType?.contains("application/x-mpegurl") == true -> "m3u8"
                     else -> {
@@ -718,15 +718,11 @@ override suspend fun loadLinks(
         
         val videoUrl = item.url.toString()
         val headersMap = mutableMapOf<String, String>()
-         try {
+           try {
             val host = URL(videoUrl).protocol + "://" + URL(videoUrl).host
             headersMap["Referer"] = host
         } catch (e: Exception) {
             Log.e(name, "Referer oluşturulamadı: ${e.message}")
-        }
-        
-        item.userAgent?.let {
-            headersMap["User-Agent"] = it
         }
 
         // Yeni fonksiyonu kullanarak video tipini belirle
