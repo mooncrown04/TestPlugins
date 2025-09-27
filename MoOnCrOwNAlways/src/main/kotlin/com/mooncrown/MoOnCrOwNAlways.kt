@@ -733,112 +733,113 @@ override suspend fun load(url: String): LoadResponse {
 }
 
 override suspend fun loadLinks(
-    data: String,
-    isCasting: Boolean,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
 ): Boolean {
-    val loadData = parseJson<LoadData>(data)
-      // loadData'nın içindeki tüm kaynakları döngüye al
-    loadData.items.forEachIndexed { index, item ->
-        
-        val linkName = loadData.title + " Kaynak ${index + 1}"
-        
-        val qualityString = item.attributes["tvg-quality"]
-        val linkQuality = when (qualityString) {
-            "P360" -> Qualities.P360.value
-            "P480" -> Qualities.P480.value
-            "P720" -> Qualities.P720.value
-            "P1080" -> Qualities.P1080.value
-            "P2160" -> Qualities.P2160.value
-            else -> Qualities.Unknown.value
-        }
-        
-        val videoUrl = item.url.toString()
-        val headersMap = mutableMapOf<String, String>()
-        headersMap["Referer"] = mainUrl
-        item.userAgent?.let {
-            headersMap["User-Agent"] = it
-        }
+    val loadData = parseJson<LoadData>(data)
+      // loadData'nın içindeki tüm kaynakları döngüye al
+    loadData.items.forEachIndexed { index, item ->
+        
+        val linkName = loadData.title + " Kaynak ${index + 1}"
+        
+        val qualityString = item.attributes["tvg-quality"]
+        val linkQuality = when (qualityString) {
+            "P360" -> Qualities.P360.value
+            "P480" -> Qualities.P480.value
+            "P720" -> Qualities.P720.value
+            "P1080" -> Qualities.P1080.value
+            "P2160" -> Qualities.P2160.value
+            else -> Qualities.Unknown.value
+        }
+        
+        val videoUrl = item.url.toString()
+        val headersMap = mutableMapOf<String, String>()
+        headersMap["Referer"] = mainUrl
+        item.userAgent?.let {
+            headersMap["User-Agent"] = it
+        }
 
-        // Yeni fonksiyonu kullanarak video tipini belirle
-        val detectedType = checkContentType(videoUrl, headersMap)
-        val videoType = when {
-            detectedType == "mkv" -> ExtractorLinkType.VIDEO
-            detectedType == "mp4" -> ExtractorLinkType.VIDEO
-            detectedType == "m3u8" -> ExtractorLinkType.M3U8
-            // Eğer Content-Type başlığından tip belirlenemezse, uzantıya bak.
-            videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.VIDEO
-            videoUrl.endsWith(".mp4", ignoreCase = true) -> ExtractorLinkType.VIDEO
-            else -> ExtractorLinkType.M3U8 // Varsayılan olarak M3U8
-        }
-        
-        callback.invoke(
-            newExtractorLink(
-                source = this.name,
-                name = linkName,
-                url = videoUrl,
-                type = videoType
-            ) {
-                quality = linkQuality
-                headers = headersMap
-            }
-        )
-    }
-    return true
-}
+        // Yeni fonksiyonu kullanarak video tipini belirle
+        val detectedType = checkContentType(videoUrl, headersMap)
+        val videoType = when {
+            detectedType == "mkv" -> ExtractorLinkType.VIDEO
+            detectedType == "mp4" -> ExtractorLinkType.VIDEO
+            detectedType == "m3u8" -> ExtractorLinkType.M3U8
+            // Eğer Content-Type başlığından tip belirlenemezse, uzantıya bak.
+            videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.VIDEO
+            videoUrl.endsWith(".mp4", ignoreCase = true) -> ExtractorLinkType.VIDEO
+            else -> ExtractorLinkType.M3U8 // Varsayılan olarak M3U8
+        }
+        
+        callback.invoke(
+            newExtractorLink(
+                source = this.name,
+                name = linkName,
+                url = videoUrl,
+                type = videoType
+            ) {
+                quality = linkQuality
+                headers = headersMap
+            }
+        )
+    } // forEachIndexed döngüsünü kapatır.
+    return true
+} // loadLinks fonksiyonunu kapatır.
 
 private data class ParsedEpisode(
-    val item: PlaylistItem,
-    val itemCleanTitle: String,
-    val season: Int?,
-    val episode: Int?
+    val item: PlaylistItem,
+    val itemCleanTitle: String,
+    val season: Int?,
+    val episode: Int?
 )
-}
+
+} // <--- DÜZELTME: MoOnCrOwNAlways SINIFI BURADA KAPANMALIDIR.
 
 
 val languageMap = mapOf(
-    "en" to "İngilizce",
-    "tr" to "Türkçe",
-    "ja" to "Japonca",
-    "de" to "Almanca",
-    "fr" to "Fransızca",
-    "es" to "İspanyolca",
-    "it" to "İtalyanca",
-    "ru" to "Rusça",
-    "pt" to "Portekizce",
-    "ko" to "Korece",
-    "zh" to "Çince",
-    "hi" to "Hintçe",
-    "ar" to "Arapça",
-    "nl" to "Felemenkçe",
-    "sv" to "İsveççe",
-    "no" to "Norveççe",
-    "da" to "Danca",
-    "fi" to "Fince",
-    "pl" to "Lehçe",
-    "cs" to "Çekçe",
-    "hu" to "Macarca",
-    "ro" to "Rumence",
-    "el" to "Yunanca",
-    "uk" to "Ukraynaca",
-    "bg" to "Bulgarca",
-    "sr" to "Sırpça",
-    "hr" to "Hırvatça",
-    "sk" to "Slovakça",
-    "sl" to "Slovence",
-    "th" to "Tayca",
-    "vi" to "Vietnamca",
-    "id" to "Endonezce",
-    "ms" to "Malayca",
-    "tl" to "Tagalogca",
-    "fa" to "Farsça",
-    "he" to "İbranice",
-    "la" to "Latince",
-    "xx" to "Belirsiz",
-    "mul" to "Çok Dilli"
+    "en" to "İngilizce",
+    "tr" to "Türkçe",
+    "ja" to "Japonca",
+    "de" to "Almanca",
+    "fr" to "Fransızca",
+    "es" to "İspanyolca",
+    "it" to "İtalyanca",
+    "ru" to "Rusça",
+    "pt" to "Portekizce",
+    "ko" to "Korece",
+    "zh" to "Çince",
+    "hi" to "Hintçe",
+    "ar" to "Arapça",
+    "nl" to "Felemenkçe",
+    "sv" to "İsveççe",
+    "no" to "Norveççe",
+    "da" to "Danca",
+    "fi" to "Fince",
+    "pl" to "Lehçe",
+    "cs" to "Çekçe",
+    "hu" to "Macarca",
+    "ro" to "Rumence",
+    "el" to "Yunanca",
+    "uk" to "Ukraynaca",
+    "bg" to "Bulgarca",
+    "sr" to "Sırpça",
+    "hr" to "Hırvatça",
+    "sk" to "Slovakça",
+    "sl" to "Slovence",
+    "th" to "Tayca",
+    "vi" to "Vietnamca",
+    "id" to "Endonezce",
+    "ms" to "Malayca",
+    "tl" to "Tagalogca",
+    "fa" to "Farsça",
+    "he" to "İbranice",
+    "la" to "Latince",
+    "xx" to "Belirsiz",
+    "mul" to "Çok Dilli"
 )
 
 fun getTurkishLanguageName(code: String?): String? {
-    return languageMap[code?.lowercase()]
+    return languageMap[code?.lowercase()]
 }
