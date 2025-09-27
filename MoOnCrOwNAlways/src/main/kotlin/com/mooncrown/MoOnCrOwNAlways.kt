@@ -638,7 +638,7 @@ override suspend fun load(url: String): LoadResponse {
             } else {
                 // TMDB verisi yoksa, kendi ayrıştırdığınız başlığı kullanın
                 "${itemCleanTitle} S$finalSeason E$finalEpisode"
-            }
+  //          }
            
             this.season = finalSeason
             this.episode = finalEpisode
