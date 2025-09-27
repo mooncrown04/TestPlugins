@@ -798,7 +798,7 @@ private data class ParsedEpisode(
     val season: Int?,
     val episode: Int?
 )
-}
+
 
 
 val languageMap = mapOf(
@@ -845,4 +845,5 @@ val languageMap = mapOf(
 
 fun getTurkishLanguageName(code: String?): String? {
     return languageMap[code?.lowercase()]
+}
 }
