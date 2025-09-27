@@ -33,14 +33,14 @@ import kotlin.math.min
 
 
 // --- Ana Eklenti Sınıfı ---
-class MoOnCrOwNAlways(private val sharedPref: SharedPreferences?) : MainAPI() {
+class AnimeDizi(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always FULL007"
+    override var name = "35 mooncrown always FULL"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
     override val hasDownloadSupport = true
-  override val supportedTypes = setOf(TvType.Anime, TvType.Movie, TvType.TvSeries)
+    override val supportedTypes = setOf(TvType.TvSeries)
 
     private val DEFAULT_POSTER_URL =
         "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
@@ -80,7 +80,7 @@ class MoOnCrOwNAlways(private val sharedPref: SharedPreferences?) : MainAPI() {
                 when {
                     contentType?.contains("video/mp4") == true -> "mp4"
                     contentType?.contains("video/mkv") == true -> "mkv"
-					contentType?.contains("video/x-matroska") == true -> "mkv"
+					  contentType?.contains("video/x-matroska") == true -> "mkv"
                     contentType?.contains("application/vnd.apple.mpegurl") == true ||
                     contentType?.contains("application/x-mpegurl") == true -> "m3u8"
                     else -> {
@@ -126,8 +126,7 @@ class IptvPlaylistParser {
 
     fun parseM3U(input: InputStream): Playlist {
         val reader = input.bufferedReader()
-        val firstLine = reader.readLine()
-        if (firstLine == null || !firstLine.isExtendedM3u()) throw PlaylistParserException.InvalidHeader()
+        if (!reader.readLine().isExtendedM3u()) throw PlaylistParserException.InvalidHeader()
 
         val playlistItems: MutableList<PlaylistItem> = mutableListOf()
         var line: String? = reader.readLine()
@@ -168,8 +167,7 @@ class IptvPlaylistParser {
     private fun String.getTitle(): String? = split(",").lastOrNull()?.trim()
 
     private fun String.getAttributes(): Map<String, String> {
-      //  val attributesString = substringAfter("#EXTINF:-1 ")  
-		 val attributesString = substringAfter(PlaylistItem.EXT_INF).substringAfter(":").trim()
+        val attributesString = substringAfter("#EXTINF:-1 ")
         val attributes = mutableMapOf<String, String>()
         val quotedRegex = Regex("""([a-zA-Z0-9-]+)="(.*?)"""")
         val unquotedRegex = Regex("""([a-zA-Z0-9-]+)=([^"\s]+)""")
@@ -252,32 +250,14 @@ data class LoadData(
 
 )
 
-  private suspend fun getOrFetchPlaylist(): Playlist {
-        // Önce cache'e bak
-        cachedPlaylist?.let { return it }
-        sharedPref?.getString(CACHE_KEY, null)?.let { json ->
-            try {
-                val cached = parseJson<Playlist>(json)
-                if (cached != null) {
-                    cachedPlaylist = cached
-                    return cached
-                }
-            } catch (e: Exception) {
-                Log.w(name, "Cache parse edilirken hata: ${'$'}{e.message}")
-            }
-        }
-
-        Log.d(name, "Playlist verisi ağdan indiriliyor.")
-        val content = app.get(mainUrl).text
-        val newPlaylist = IptvPlaylistParser().parseM3U(content)
-        cachedPlaylist = newPlaylist
-        try {
-            sharedPref?.edit()?.putString(CACHE_KEY, newPlaylist.toJson())?.apply()
-        } catch (e: Exception) {
-            Log.w(name, "Cache yazılırken hata: ${'$'}{e.message}")
-        }
-        return newPlaylist
-    }
+private suspend fun getOrFetchPlaylist(): Playlist {
+    Log.d(name, "Playlist verisi ağdan indiriliyor.")
+    val content = app.get(mainUrl).text
+    val newPlaylist = IptvPlaylistParser().parseM3U(content)
+    cachedPlaylist = newPlaylist
+    sharedPref?.edit()?.putString(CACHE_KEY, newPlaylist.toJson())?.apply()
+    return newPlaylist
+}
 
 
 
@@ -442,80 +422,60 @@ override suspend fun search(query: String): List<SearchResponse> {
 }
 
 override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
-   private suspend fun fetchTMDBData(title: String): Triple<JSONObject?, TvType, Int?> {
+    private suspend fun fetchTMDBData(title: String): Pair<JSONObject?, TvType> {
         return withContext(Dispatchers.IO) {
             try {
                 val apiKey = "4032c1fd53e1b6fef5af1b406fccaa72"
 
                 if (apiKey.isEmpty()) {
                     Log.e("TMDB", "API anahtarı boş.")
-                     return@withContext Triple(null, TvType.TvSeries, null)
+                    return@withContext Pair(null, TvType.TvSeries)
                 }
 
-               val encodedTitle = URLEncoder.encode(title.replace(Regex("\\([^)]*\\)"), "").trim(), "UTF-8")
-                val searchTvUrl = "https://api.themoviedb.org/3/search/tv?api_key=${'$'}apiKey&query=${'$'}encodedTitle&language=tr-TR"
+                val encodedTitle = URLEncoder.encode(title.replace(Regex("\\([^)]*\\)"), "").trim(), "UTF-8")
+
+                // Önce TV şovu olarak arama yap
+                val searchTvUrl = "https://api.themoviedb.org/3/search/tv?api_key=$apiKey&query=$encodedTitle&language=tr-TR"
                 val tvResponse = JSONObject(URL(searchTvUrl).readText())
                 val tvResults = tvResponse.optJSONArray("results")
 
-                val searchMovieUrl = "https://api.themoviedb.org/3/search/movie?api_key=${'$'}apiKey&query=${'$'}encodedTitle&language=tr-TR"
+                // Filmler için arama yap
+                val searchMovieUrl = "https://api.themoviedb.org/3/search/movie?api_key=$apiKey&query=$encodedTitle&language=tr-TR"
                 val movieResponse = JSONObject(URL(searchMovieUrl).readText())
                 val movieResults = movieResponse.optJSONArray("results")
 
                 if (tvResults != null && tvResults.length() > 0) {
                     val tvId = tvResults.optJSONObject(0)?.optInt("id")
                     if (tvId != null) {
-                        val detailsUrl = "https://api.themoviedb.org/3/tv/${'$'}tvId?api_key=${'$'}apiKey&append_to_response=credits&language=tr-TR"
+                        val detailsUrl = "https://api.themoviedb.org/3/tv/$tvId?api_key=$apiKey&append_to_response=credits&language=tr-TR"
                         val detailsResponse = URL(detailsUrl).readText()
-                        return@withContext Triple(JSONObject(detailsResponse), TvType.TvSeries, tvId)
+                        return@withContext Pair(JSONObject(detailsResponse), TvType.TvSeries)
                     }
                 }
 
                 if (movieResults != null && movieResults.length() > 0) {
                     val movieId = movieResults.optJSONObject(0)?.optInt("id")
                     if (movieId != null) {
-                        val detailsUrl = "https://api.themoviedb.org/3/movie/${'$'}movieId?api_key=${'$'}apiKey&append_to_response=credits&language=tr-TR"
+                        val detailsUrl = "https://api.themoviedb.org/3/movie/$movieId?api_key=$apiKey&append_to_response=credits&language=tr-TR"
                         val detailsResponse = URL(detailsUrl).readText()
-                        return@withContext Triple(JSONObject(detailsResponse), TvType.Movie, movieId)
+                        return@withContext Pair(JSONObject(detailsResponse), TvType.Movie)
                     }
                 }
 
-                Triple(null, TvType.TvSeries, null)
+                Pair(null, TvType.TvSeries)
 
             } catch (e: Exception) {
-                Log.e("TMDB", "TMDB verisi çekilirken hata oluştu: ${'$'}{e.message}", e)
-                Triple(null, TvType.TvSeries, null)
+                Log.e("TMDB", "TMDB verisi çekilirken hata oluştu: ${e.message}", e)
+                Pair(null, TvType.TvSeries)
             }
         }
     }
 
 
-
-
-    private suspend fun fetchEpisodeData(tvId: Int, seasonNum: Int, episodeNum: Int): JSONObject? {
-        return withContext(Dispatchers.IO) {
-            try {
-                val apiKey = "4032c1fd53e1b6fef5af1b406fccaa72"
-                if (apiKey.isEmpty()) return@withContext null
-
-                val episodeUrl = "https://api.themoviedb.org/3/tv/${'$'}tvId/season/${'$'}seasonNum/episode/${'$'}episodeNum?api_key=${'$'}apiKey&language=tr-TR"
-                val response = URL(episodeUrl).readText()
-                JSONObject(response)
-            } catch (e: Exception) {
-                Log.e("TMDB_Episode", "TMDB bölüm verisi çekilirken hata oluştu: ${'$'}{e.message}", e)
-                null
-            }
-        }
-    }
 
 override suspend fun load(url: String): LoadResponse {
     val loadData = parseJson<LoadData>(url)
-    val (tmdbData, tmdbType, tmdbId) = fetchTMDBData(loadData.title)
-	 // TMDB posterini önceliklendir
-        val tmdbPosterPath = tmdbData?.optString("poster_path")
-        val tmdbPosterUrl = if (tmdbPosterPath.isNullOrEmpty()) null else "https://image.tmdb.org/t/p/w780/${'$'}tmdbPosterPath"
-        val finalPosterUrl = tmdbPosterUrl ?: loadData.poster
-
-	
+    val (tmdbData, tmdbType) = fetchTMDBData(loadData.title)
 	val plot = buildString {
             if (tmdbData != null) {
                 val overview = tmdbData.optString("overview", "")
@@ -527,6 +487,10 @@ override suspend fun load(url: String): LoadResponse {
                 val ratingValue = tmdbData.optDouble("vote_average", -1.0)
                 val rating = if (ratingValue >= 0) String.format("%.1f", ratingValue) else null
                 val tagline = tmdbData.optString("tagline", "")
+                val budget = tmdbData.optLong("budget", 0L)
+                val revenue = tmdbData.optLong("revenue", 0L)
+                val originalName = tmdbData.optString("original_name", "")
+                val originalLanguage = tmdbData.optString("original_language", "")
 
                 val genresArray = tmdbData.optJSONArray("genres")
                 val genreList = mutableListOf<String>()
@@ -575,24 +539,31 @@ override suspend fun load(url: String): LoadResponse {
                     }
                 }
 
-           if (tagline.isNotEmpty()) append("💭 <b>Slogan:</b><br>${'$'}tagline<br><br>")
-                if (overview.isNotEmpty()) append("📝 <b>Konu:</b><br>${'$'}overview<br><br>")
-                if (releaseDate.isNotEmpty()) append("📅 <b>Yapım Yılı:</b> ${'$'}releaseDate<br>")
-                if (rating != null) append("⭐ <b>TMDB Puanı:</b> ${'$'}rating / 10<br>")
-                if (director.isNotEmpty()) append("🎬 <b>Yönetmen:</b> ${'$'}director<br>")
-                if (genreList.isNotEmpty()) append("🎭 <b>Film Türü:</b> ${'$'}{genreList.filter { it.isNotEmpty() }.joinToString(", ")}<br>")
-                if (castList.isNotEmpty()) append("👥 <b>Oyuncular:</b> ${'$'}{castList.filter { it.isNotEmpty() }.joinToString(", ")}<br>")
-                if (companyList.isNotEmpty()) append("🏢 <b>Yapım Şirketleri:</b> ${'$'}{companyList.filter { it.isNotEmpty() }.joinToString(", ")}<br>")
+                if (tagline.isNotEmpty()) append("💭 <b>Slogan:</b><br>${tagline}<br><br>")
+                if (overview.isNotEmpty()) append("📝 <b>Konu:</b><br>${overview}<br><br>")
+                if (releaseDate.isNotEmpty()) append("📅 <b>Yapım Yılı:</b> $releaseDate<br>")
+                if (originalName.isNotEmpty()) append("📜 <b>Orijinal Ad:</b> $originalName<br>")
+                if (originalLanguage.isNotEmpty()) {
+                    val langCode = originalLanguage.lowercase()
+                    val turkishName = languageMap[langCode] ?: originalLanguage
+                    append("🌐 <b>Orijinal Dil:</b> $turkishName<br>")
+                }
+                if (rating != null) append("⭐ <b>TMDB Puanı:</b> $rating / 10<br>")
+                if (director.isNotEmpty()) append("🎬 <b>Yönetmen:</b> $director<br>")
+                if (genreList.isNotEmpty()) append("🎭 <b>Film Türü:</b> ${genreList.filter { it.isNotEmpty() }.joinToString(", ")}<br>")
+                if (castList.isNotEmpty()) append("👥 <b>Oyuncular:</b> ${castList.filter { it.isNotEmpty() }.joinToString(", ")}<br>")
+                if (companyList.isNotEmpty()) append("🏢 <b>Yapım Şirketleri:</b> ${companyList.filter { it.isNotEmpty() }.joinToString(", ")}<br>")
+                if (budget > 0) append("💰 <b>Bütçe:</b> $${formatNumber(budget)}<br>")
+                if (revenue > 0) append("💵 <b>Hasılat:</b> $${formatNumber(revenue)}<br>")
                 append("<br>")
             } else {
                 append("<i>Film/Dizi detayları alınamadı.</i><br><br>")
             }
         }
-
 	val allShows = loadData.items
     
 
-  
+    val finalPosterUrl = loadData.poster
 
       // loadData'dan gelen puanı kullan
     val scoreToUse = loadData.score
@@ -611,22 +582,7 @@ override suspend fun load(url: String): LoadResponse {
         val finalEpisode = episode ?: 1
         val isDubbed = isDubbed(item)
         val isSubbed = isSubbed(item)
-        // TMDB bölümü varsa çek
-            val episodeTmdbData = if (tmdbId != null && finalEpisode > 0) {
-                fetchEpisodeData(tmdbId, finalSeason, finalEpisode)
-            } else {
-                null
-            }
-			
-			      val tmdbEpisodePosterPath = episodeTmdbData?.optString("still_path")
-            val tmdbEpisodePosterUrl = if (tmdbEpisodePosterPath.isNullOrEmpty()) null else "https://image.tmdb.org/t/p/w780/${'$'}tmdbEpisodePosterPath"
-            val episodePlot = episodeTmdbData?.optString("overview") ?: ""
-            val episodeName = episodeTmdbData?.optString("name") ?: itemCleanTitle
-
-            // Poster: bölüm için TMDB varsa onu kullan, yoksa item'in logo'su veya genel poster
-            val finalEpisodePoster = tmdbEpisodePosterUrl
-                ?: item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() }
-                ?: finalPosterUrl
+        val episodePoster = item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: finalPosterUrl
 
         val episodeLoadData = LoadData(
             items = episodeItems,
@@ -641,22 +597,23 @@ override suspend fun load(url: String): LoadResponse {
             score = item.score
         )
 
-              val episodeObj = newEpisode(episodeLoadData.toJson()) {
-                this.name = if (episodeTmdbData != null) {
-                    "${'$'}episodeName - S${'$'}finalSeason E${'$'}finalEpisode"
-                } else {
-                    "${'$'}itemCleanTitle S${'$'}finalSeason E${'$'}finalEpisode"
-                }
-                this.season = finalSeason
-                this.episode = finalEpisode
-                this.posterUrl = episodeLoadData.poster
-                this.description = episodePlot
+        val episodeObj = newEpisode(episodeLoadData.toJson()) {
+            this.name = if (season != null && episode != null) {
+                "${itemCleanTitle} S$finalSeason E$finalEpisode"
+            } else {
+                itemCleanTitle
             }
-
-        if (isDubbed) dubbedEpisodes.add(episodeObj)
-            if (isSubbed) subbedEpisodes.add(episodeObj)
-            if (!isDubbed && !isSubbed) subbedEpisodes.add(episodeObj) // fallback: orijinal
+            this.season = finalSeason
+            this.episode = finalEpisode
+            this.posterUrl = episodePoster
         }
+
+        if (isDubbed) {
+            dubbedEpisodes.add(episodeObj)
+        } else {
+            subbedEpisodes.add(episodeObj)
+        }
+    }
     
     dubbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
     subbedEpisodes.sortWith(compareBy({ it.season }, { it.episode }))
