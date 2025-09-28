@@ -246,8 +246,8 @@ data class LoadData(
     val isDubbed: Boolean,
     val isSubbed: Boolean,
     val score: Double? = null,
-	val videoFormats: Set<String> = emptySet() 
-
+	val videoFormats: Set<String> = emptySet(), 
+val plot: String? = null 
 )
 
 private suspend fun getOrFetchPlaylist(): Playlist {
