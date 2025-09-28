@@ -75,25 +75,38 @@ class MoOnCrOwNAlways(private val sharedPref: SharedPreferences?) : MainAPI() {
             val response = withContext(Dispatchers.IO) {
                 app.head(url, headers = headers)
             }
-            if (response.isSuccessful) {
-                val contentType = response.headers["Content-Type"]?.lowercase(Locale.getDefault())
-                when {
-                    contentType?.contains("video/mp4") == true -> "mp4"
-                    contentType?.contains("video/mkv") == true -> "mkv"
-                    contentType?.contains("video/x-matroska") == true -> "mkv"
-                    contentType?.contains("application/vnd.apple.mpegurl") == true ||
-                    contentType?.contains("application/x-mpegurl") == true -> "m3u8"
-                    else -> {
-                        if (contentType?.startsWith("text/") == true ||
-                            contentType?.contains("application/json") == true
-                        ) {
-                            "m3u8"
-                        } else {
-                            null
-                        }
-                    }
-                }
+           if (response.isSuccessful) {
+    val contentType = response.headers["Content-Type"]?.lowercase(Locale.getDefault())
+    when {
+        // Mevcut Video Formatları
+        contentType?.contains("video/mp4") == true -> "mp4"
+        contentType?.contains("video/mkv") == true -> "mkv"
+        contentType?.contains("video/x-matroska") == true -> "mkv"
+        
+        // ✨ YENİ: WebM
+        contentType?.contains("video/webm") == true -> "webm" 
+
+        // Mevcut M3U8 Formatları
+        contentType?.contains("application/vnd.apple.mpegurl") == true ||
+        contentType?.contains("application/x-mpegurl") == true -> "m3u8"
+        
+        // ✨ YENİ: DASH (MPEG-DASH)
+        contentType?.contains("application/dash+xml") == true -> "dash"
+
+        // Diğer Akış/Dosya Tipleri
+        else -> {
+            if (contentType?.startsWith("text/") == true ||
+                contentType?.contains("application/json") == true
+            ) {
+                // Metin veya JSON yanıtları genellikle M3U8 veya DASH manifestleri olabilir.
+                // Bu durumda M3U8 olarak varsaymak mantıklıdır.
+                "m3u8"
             } else {
+                null
+            }
+        }
+    }
+} else {
                 Log.e(name, "URL türü kontrol edilemedi: $url, Hata Kodu: ${response.code}")
                 null
             }
@@ -246,7 +259,8 @@ data class LoadData(
     val isDubbed: Boolean,
     val isSubbed: Boolean,
     val score: Double? = null,
-	val videoFormats: Set<String> = emptySet()
+	val videoFormats: Set<String> = emptySet() 
+
 )
 
 private suspend fun getOrFetchPlaylist(): Playlist {
@@ -300,15 +314,21 @@ private suspend fun createSearchResponse(cleanTitle: String, shows: List<Playlis
 
 
     // YENİ: Video formatlarını toplamak için set kullanın
-    val videoFormats = shows.mapNotNull { it.url?.let { url -> 
-        when {
-            url.endsWith(".mkv", ignoreCase = true) -> "MKV"
-            url.endsWith(".mp4", ignoreCase = true) -> "MP4"
-            else -> "M3U8"
-        }
-    } }.toSet() // Yinelenen formatları önlemek için Set kullanılır
-
-
+val videoFormats = shows.mapNotNull { it.url?.let { url -> 
+    when {
+        url.endsWith(".mkv", ignoreCase = true) -> "MKV"
+        url.endsWith(".mp4", ignoreCase = true) -> "MP4"
+        
+        // ✨ YENİ: WebM (WebM uzantısını kontrol et)
+        url.endsWith(".webm", ignoreCase = true) -> "WEBM" 
+        
+        // ✨ YENİ: DASH (MPD uzantısını kontrol et)
+        url.endsWith(".mpd", ignoreCase = true) -> "DASH"
+        
+        // M3U8 veya bilinmeyen diğer formatlar için
+        else -> "M3U8" 
+    }
+} }.toSet() // Yinelenen formatları önlemek için Set kullanılır
 
 
     val loadData = LoadData(
@@ -754,15 +774,27 @@ override suspend fun loadLinks(
 
         // Yeni fonksiyonu kullanarak video tipini belirle
         val detectedType = checkContentType(videoUrl, headersMap)
-        val videoType = when {
-            detectedType == "mkv" -> ExtractorLinkType.VIDEO
-            detectedType == "mp4" -> ExtractorLinkType.VIDEO
-            detectedType == "m3u8" -> ExtractorLinkType.M3U8
-            // Eğer Content-Type başlığından tip belirlenemezse, uzantıya bak.
-            videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.VIDEO
-            videoUrl.endsWith(".mp4", ignoreCase = true) -> ExtractorLinkType.VIDEO
-            else -> ExtractorLinkType.M3U8 // Varsayılan olarak M3U8
-        }
+  val videoType = when {
+    // Content-Type ile algılanan tipler
+    detectedType == "mkv" -> ExtractorLinkType.VIDEO
+    detectedType == "mp4" -> ExtractorLinkType.VIDEO
+    
+    // ✨ YENİ EKLEMELER
+    detectedType == "webm" -> ExtractorLinkType.VIDEO // WebM, standart bir video dosyasıdır
+    detectedType == "dash" -> ExtractorLinkType.DASH  // DASH için özel tip kullanılır
+    
+    detectedType == "m3u8" -> ExtractorLinkType.M3U8
+    
+    // Eğer Content-Type başlığından tip belirlenemezse, uzantıya bak.
+    videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.VIDEO
+    videoUrl.endsWith(".mp4", ignoreCase = true) -> ExtractorLinkType.VIDEO
+    videoUrl.endsWith(".webm", ignoreCase = true) -> ExtractorLinkType.VIDEO
+    videoUrl.endsWith(".mpd", ignoreCase = true) -> ExtractorLinkType.DASH // DASH manifest uzantısı
+    videoUrl.endsWith(".m3u8", ignoreCase = true) -> ExtractorLinkType.M3U8
+    
+    // Diğer tüm durumlar (varsayılan)
+    else -> ExtractorLinkType.M3U8 // Varsayılan olarak M3U8 (en yaygın akış formatı)
+}
         
         callback.invoke(
             newExtractorLink(
