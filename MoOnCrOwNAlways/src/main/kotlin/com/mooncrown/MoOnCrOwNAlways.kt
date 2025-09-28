@@ -246,8 +246,7 @@ data class LoadData(
     val isDubbed: Boolean,
     val isSubbed: Boolean,
     val score: Double? = null,
-	val videoFormats: Set<String> = emptySet(), 
-val plot: String? = null 
+	val videoFormats: Set<String> = emptySet()
 )
 
 private suspend fun getOrFetchPlaylist(): Playlist {
@@ -635,7 +634,7 @@ override suspend fun load(url: String): LoadResponse {
             this.episode = finalEpisode
             this.posterUrl = episodePoster
             // ✨ YENİ: Bölüm özetini ata
-            this.plot = episodePlot
+            this.description = episodePlot
         }
 
         if (isDubbed) {
