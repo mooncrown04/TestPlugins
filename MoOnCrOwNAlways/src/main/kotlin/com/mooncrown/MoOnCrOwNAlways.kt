@@ -669,8 +669,7 @@ override suspend fun load(url: String): LoadResponse {
         val episodeLoadData = LoadData(
             items = episodeItems,
             title = itemCleanTitle,
-            poster = tmdbEpisodePosterUrl 
-                           ?: item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } 
+            poster = item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } 
                            ?: finalPosterUrl, // En son genel dizi posterine düşer,
             group = item.attributes["group-title"] ?: "Bilinmeyen Grup",
             nation = item.attributes["tvg-country"] ?: "TR",
