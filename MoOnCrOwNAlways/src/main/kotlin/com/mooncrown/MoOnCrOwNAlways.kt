@@ -35,7 +35,7 @@ import kotlin.math.min
 // --- Ana Eklenti Sınıfı ---
 class MoOnCrOwNAlways(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mooncrown always FULL yeni"
+    override var name = "35 mOoncr0wn always FULL"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -711,7 +711,7 @@ override suspend fun load(url: String): LoadResponse {
         }
         
         newAnimeSearchResponse(episodeTitleWithNumber, episode.data).apply {
-            posterUrl = episodeLoadData.poster
+            this.posterUrl = episodeLoadData.poster
             type = TvType.Anime
             // HER DİSİ İÇİN KENDİ SKORUNU EKLEME KISMI
             this.score = episodeLoadData.score?.let { Score.from10(it) }
