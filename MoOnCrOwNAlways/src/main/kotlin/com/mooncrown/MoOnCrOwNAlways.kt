@@ -35,7 +35,7 @@ import kotlin.math.min
 // --- Ana Eklenti Sınıfı ---
 class MoOnCrOwNAlways(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mOoncr0wn always FULL"
+    override var name = "35 mOoncr0wn always FULL 007"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -735,8 +735,11 @@ override suspend fun load(url: String): LoadResponse {
         tags.add("Türkçe Altyazılı")
     }
 
-    val recommendedList = (dubbedEpisodes + subbedEpisodes)
-    // .shuffled()
+  val selectedSeason = loadData.season
+
+val recommendedList = (dubbedEpisodes + subbedEpisodes)
+    .filter { parseJson<LoadData>(it.data).season == selectedSeason }
+    .sortedBy { parseJson<LoadData>(it.data).episode }
     .take(24)
     .mapNotNull { episode ->
         val episodeLoadData = parseJson<LoadData>(episode.data)
@@ -745,21 +748,16 @@ override suspend fun load(url: String): LoadResponse {
         } else {
             episodeLoadData.title
         }
-        
         newAnimeSearchResponse(episodeTitleWithNumber, episode.data).apply {
-       //    this.posterUrl = episodeLoadData.poster
-           this.posterUrl = episodeLoadData.poster?.let { it }
-
-		   type = TvType.Anime
-            // HER DİSİ İÇİN KENDİ SKORUNU EKLEME KISMI
-            this.score = episodeLoadData.score?.let { Score.from10(it) }
-
-            
+            posterUrl = episodeLoadData.poster
+            type = TvType.Anime
+            score = episodeLoadData.score?.let { Score.from10(it) }
             if (episodeLoadData.isDubbed || episodeLoadData.isSubbed) {
                 addDubStatus(dubExist = episodeLoadData.isDubbed, subExist = episodeLoadData.isSubbed)
             }
         }
     }
+
 
     return newAnimeLoadResponse(
         loadData.title,
