@@ -738,9 +738,10 @@ override suspend fun load(url: String): LoadResponse {
 
   
 
+
 val recommendedList = (dubbedEpisodes + subbedEpisodes)
-    .filter { parseJson<LoadData>(it.data).season == selectedSeason }
-    .sortedBy { parseJson<LoadData>(it.data).episode }
+    .filter { it.season == selectedSeason } // 👈 sadece seçilen sezon
+    .sortedBy { it.episode } // 👈 bölüm numarasına göre sırala
     .take(24)
     .mapNotNull { episode ->
         val episodeLoadData = parseJson<LoadData>(episode.data)
