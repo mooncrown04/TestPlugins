@@ -35,7 +35,7 @@ import kotlin.math.min
 // --- Ana Eklenti Sınıfı ---
 class MoOnCrOwNAlways(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mOoncr0wn always FULL 007"
+    override var name = "35 mOoncr0wn always FULL"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -507,7 +507,8 @@ private suspend fun fetchEpisodeTMDBData(tvId: Int, season: Int, episode: Int): 
 
 override suspend fun load(url: String): LoadResponse {
     val loadData = parseJson<LoadData>(url)
-    val (tmdbData, tmdbType) = fetchTMDBData(loadData.title)
+    val selectedSeason = loadData.season
+	val (tmdbData, tmdbType) = fetchTMDBData(loadData.title)
     
     // ✨ YENİ: TMDB ID'yi al
     val tmdbId = tmdbData?.optInt("id") 
@@ -735,7 +736,7 @@ override suspend fun load(url: String): LoadResponse {
         tags.add("Türkçe Altyazılı")
     }
 
-  val selectedSeason = loadData.season
+  
 
 val recommendedList = (dubbedEpisodes + subbedEpisodes)
     .filter { parseJson<LoadData>(it.data).season == selectedSeason }
