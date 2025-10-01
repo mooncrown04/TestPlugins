@@ -35,7 +35,7 @@ import kotlin.math.min
 // --- Ana Eklenti Sınıfı ---
 class MoOnCrOwNAlways(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mOoncr0wn always FULL"
+    override var name = "35 mOoncr0wn always FULL 007"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -738,11 +738,10 @@ override suspend fun load(url: String): LoadResponse {
 
   
 
-
 val recommendedList = (dubbedEpisodes + subbedEpisodes)
     .mapNotNull { episode ->
         val episodeLoadData = parseJson<LoadData>(episode.data)
-        if (episodeLoadData.season != parseJson<LoadData>(url).season) return@mapNotNull null
+        if (episodeLoadData.season != selectedSeason) return@mapNotNull null // 👈 sadece o sezon
         val episodeTitleWithNumber = if (episodeLoadData.episode > 0) {
             "${episodeLoadData.title} S${episodeLoadData.season} E${episodeLoadData.episode}"
         } else {
@@ -760,7 +759,7 @@ val recommendedList = (dubbedEpisodes + subbedEpisodes)
             episodeLoadData.episode
         )
     }
-    .sortedBy { it.second }
+    .sortedBy { it.second } // bölüm numarasına göre sırala
     .take(24)
     .map { it.first }
 
