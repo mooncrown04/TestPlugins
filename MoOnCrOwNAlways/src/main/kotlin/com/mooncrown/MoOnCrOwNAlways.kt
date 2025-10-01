@@ -739,29 +739,30 @@ override suspend fun load(url: String): LoadResponse {
   
 
 
-
 val recommendedList = (dubbedEpisodes + subbedEpisodes)
     .mapNotNull { episode ->
         val episodeLoadData = parseJson<LoadData>(episode.data)
-        if (episodeLoadData.season != selectedSeason) return@mapNotNull null
+        if (episodeLoadData.season != parseJson<LoadData>(url).season) return@mapNotNull null
         val episodeTitleWithNumber = if (episodeLoadData.episode > 0) {
             "${episodeLoadData.title} S${episodeLoadData.season} E${episodeLoadData.episode}"
         } else {
             episodeLoadData.title
         }
-        val response = newAnimeSearchResponse(episodeTitleWithNumber, episode.data).apply {
-            posterUrl = episodeLoadData.poster
-            type = TvType.Anime
-            score = episodeLoadData.score?.let { Score.from10(it) }
-            if (episodeLoadData.isDubbed || episodeLoadData.isSubbed) {
-                addDubStatus(dubExist = episodeLoadData.isDubbed, subExist = episodeLoadData.isSubbed)
-            }
-        }
-        Pair(response, episodeLoadData.episode) // 👈 episode numarasını saklıyoruz
+        Pair(
+            newAnimeSearchResponse(episodeTitleWithNumber, episode.data).apply {
+                posterUrl = episodeLoadData.poster
+                type = TvType.Anime
+                score = episodeLoadData.score?.let { Score.from10(it) }
+                if (episodeLoadData.isDubbed || episodeLoadData.isSubbed) {
+                    addDubStatus(dubExist = episodeLoadData.isDubbed, subExist = episodeLoadData.isSubbed)
+                }
+            },
+            episodeLoadData.episode
+        )
     }
-    .sortedBy { it.second } // 👈 episode numarasına göre sırala
+    .sortedBy { it.second }
     .take(24)
-    .map { it.first } // 👈 sadece SearchResponse'ları al
+    .map { it.first }
 
 
 
