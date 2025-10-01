@@ -625,7 +625,13 @@ override suspend fun load(url: String): LoadResponse {
     val scoreToUse = loadData.score
     val dubbedEpisodes = mutableListOf<Episode>()
     val subbedEpisodes = mutableListOf<Episode>()
-    // Bölümleri sezon ve bölüme göre gruplandırıp, aynı bölümün tüm kaynaklarını bir arada tutar.
+    
+	  // Bölüm özetini tutacak değişken
+        var episodePlot: String? = null
+        var tmdbEpisodePosterUrl: String? = null // Yeni değişken
+		
+	
+	// Bölümleri sezon ve bölüme göre gruplandırıp, aynı bölümün tüm kaynaklarını bir arada tutar.
     val groupedEpisodes = allShows.groupBy {
         val (_, season, episode) = parseEpisodeInfo(it.title.toString())
         Pair(season, episode)
@@ -642,10 +648,7 @@ override suspend fun load(url: String): LoadResponse {
                            ?: item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } 
                            ?: finalPosterUrl // En son genel dizi posterine düşer
     
-        // Bölüm özetini tutacak değişken
-        var episodePlot: String? = null
-        var tmdbEpisodePosterUrl: String? = null // Yeni değişken
-		
+      
         // ✨ YENİ: TMDB ID varsa ve bu bir TV şovuysa bölüm özetini çek
         if (tmdbId != null && tmdbType == TvType.TvSeries) {
             val tmdbEpisodeData = fetchEpisodeTMDBData(tmdbId, finalSeason, finalEpisode)
