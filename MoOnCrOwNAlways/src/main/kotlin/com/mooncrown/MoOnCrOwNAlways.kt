@@ -742,14 +742,14 @@ override suspend fun load(url: String): LoadResponse {
 
 val recommendedList = (dubbedEpisodes + subbedEpisodes)
     .mapNotNull { episode ->
-        val episodeLoadData = parseJson<LoadData>(episode.url)
+        val episodeLoadData = parseJson<LoadData>(episode.data)
         if (episodeLoadData.season != loadData.season) return@mapNotNull null
         val episodeTitleWithNumber = if (episodeLoadData.episode > 0) {
             "${episodeLoadData.title} S${episodeLoadData.season} E${episodeLoadData.episode}"
         } else {
             episodeLoadData.title
         }
-        newAnimeSearchResponse(episodeTitleWithNumber, episode.url).apply {
+        newAnimeSearchResponse(episodeTitleWithNumber, episode.data).apply {
             posterUrl = episodeLoadData.poster
             type = TvType.Anime
             score = episodeLoadData.score?.let { Score.from10(it) }
@@ -758,7 +758,7 @@ val recommendedList = (dubbedEpisodes + subbedEpisodes)
             }
         }
     }
-    .sortedBy { parseJson<LoadData>(it.url).episode } // 👈 burası düzeldi
+    .sortedBy { parseJson<LoadData>(it.data).episode }
     .take(24)
 
 
