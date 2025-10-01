@@ -746,8 +746,9 @@ override suspend fun load(url: String): LoadResponse {
         }
         
         newAnimeSearchResponse(episodeTitleWithNumber, episode.data).apply {
-            this.posterUrl = episodeLoadData.poster
-            type = TvType.Anime
+         //   this.posterUrl = episodeLoadData.poster
+             this.posterUrl = episodePoster
+		   type = TvType.Anime
             // HER DİSİ İÇİN KENDİ SKORUNU EKLEME KISMI
             this.score = episodeLoadData.score?.let { Score.from10(it) }
 
