@@ -747,7 +747,9 @@ override suspend fun load(url: String): LoadResponse {
         
         newAnimeSearchResponse(episodeTitleWithNumber, episode.data).apply {
          //   this.posterUrl = episodeLoadData.poster
-             this.posterUrl = episodePoster
+             this.posterUrl = tmdbEpisodePosterUrl 
+                           ?: item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } 
+                           ?: finalPosterUrl // En son genel dizi posterine düşer
 		   type = TvType.Anime
             // HER DİSİ İÇİN KENDİ SKORUNU EKLEME KISMI
             this.score = episodeLoadData.score?.let { Score.from10(it) }
