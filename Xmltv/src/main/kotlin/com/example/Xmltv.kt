@@ -4,11 +4,8 @@ import android.util.Log
 // CLOUDSTREAM SINIFLARI İÇİN TEMEL İMPORTLAR
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.* import com.lagradost.cloudstream3.utils.Qualities
-// ⭐ DÜZELTME: Bu satır kaldırıldı! Çünkü ExtractorLinkType'ın yolu doğru değil veya 
-// com.lagradost.cloudstream3.utils.* içinde zaten tanımlı olmalı.
-// import com.lagradost.cloudstream3.extractors.ExtractorLinkType 
-
-// KOTLIN TEXT İMPORTLARI: RegEx sorunlarını (DOT_ALL, findAll, trim) çözmek için kritik
+import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import kotlin.text.* import kotlin.collections.* /**
  * CloudStream için XMLTV tabanlı IPTV eklentisi
  */
@@ -205,3 +202,4 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
+
