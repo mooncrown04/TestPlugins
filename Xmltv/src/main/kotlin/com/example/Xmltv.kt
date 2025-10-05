@@ -33,7 +33,7 @@ class Xmltv : MainAPI() {
             val isXml = mainUrl.endsWith(".xml", ignoreCase = true)
 
             val parsedItems = if (isXml) {
-                // XML dosyası ise, yeni parser'ı kullan
+                // XML dosyası ise, yeni RegEx tabanlı parser'ı kullan
                 try {
                     XmlPlaylistParser().parseXML(content).items
                 } catch (e: Exception) {
@@ -403,93 +403,65 @@ class IptvPlaylistParser {
 }
 
 // -------------------------------------------------------------
-// --- YENİ XML Ayrıştırıcı ve Veri Sınıfları ---
+// --- YENİ XML Ayrıştırıcı Sınıfı (RegEx Tabanlı) ---
 // -------------------------------------------------------------
-
-/**
- * Bu veri sınıfları, girdiğiniz XML yapısını temsil eder.
- * @Serializable anotasyonu, Cloudstream'in AppUtils.parseXml'i için gerekli olabilir.
- */
-
-// Basitlik için sadece veri yapısını tanımlıyoruz. 
-// Cloudstream'in internal JSON/XML serileştirme kütüphanesine (genellikle Kotlinx Serialization) bağlıdır.
-// Bu kütüphanenin path'i elimizde olmadığı için 'JsonProperty' gibi varsayımlar kullanıldı.
-
-data class CDataWrapper(val content: String?) // CDATA içeriğini tutmak için
-
-data class XmlChannel(
-    // title içindeki CDATA'yı ayrıştırmak için
-    // title: CDataWrapper? = null,
-    // XML'de title: <title><![CDATA[ ... ]]></title> olduğu için bu şekilde ayrışmalı
-    val title: String? = null,
-    
-    // logo_30x30 içindeki CDATA'yı ayrıştırmak için
-    //@JsonProperty("logo_30x30")
-    val logo_30x30: String? = null,
-    
-    // stream_url içindeki CDATA'yı ayrıştırmak için
-    //@JsonProperty("stream_url")
-    val stream_url: String? = null,
-
-    val description: String? = null // Kullanılmasa da yapıda dursun
-)
-
-data class XmlItems(
-    //@JsonProperty("playlist_name")
-    val playlist_name: String? = null,
-    val channel: List<XmlChannel>? = null 
-)
 
 class XmlPlaylistParser {
     /**
-     * XML içeriğini okur ve PlaylistItem listesine dönüştürür.
-     * Bu fonksiyonun doğru çalışması, Cloudstream'in AppUtils.parseXml<T>(content) 
-     * fonksiyonunun ve serileştirme kütüphanesinin (örneğin Kotlinx Serialization) 
-     * doğru yapılandırılmasına bağlıdır.
+     * RegEx kullanarak XML içeriğini okur ve PlaylistItem listesine dönüştürür.
+     * Bu yöntem, CDATA bloklarını ve basit XML yapısını güvenilir bir şekilde ayrıştırır.
      */
     fun parseXML(content: String): Playlist {
-        // Varsayımsal XML ayrıştırma (parseXml Cloudstream/Coroutines'e ait)
-        // val xmlItems = AppUtils.parseXml<XmlItems>(content) 
-        
-        // **Geçici Çözüm ve Hata Yönetimi İçin Boş Liste Dönme**
-        // AppUtils.parseXml kullanılmadan, XML'i doğru ayrıştırmak imkansızdır.
-        // Bu yüzden, şimdilik bu bloğu bir uyarı vererek boş döndürüyoruz.
-        Log.w("MoOnCrOwNTV", "XML ayrıştırma için Cloudstream'in AppUtils.parseXml fonksiyonuna ihtiyaç var. Mevcut ortamda çalışmayabilir.")
-        
-        // Eğer parseXml çalışmıyorsa, manuel ayrıştırma denemek GEREKİR.
-        // Ancak bu çok karmaşık ve hataya açık bir iştir.
+        val playlistItems: MutableList<PlaylistItem> = mutableListOf()
 
-        // Gerçek bir Cloudstream projesinde:
-        val xmlItems: XmlItems? = try {
-             // AppUtils.parseXml<XmlItems>(content) // BU SATIR KULLANILMALI
-             // Şimdilik null varsayıyoruz veya manuel bir ayrıştırma deniyoruz (aşağıdaki gibi)
-             null
-        } catch (e: Exception) {
-            Log.e("MoOnCrOwNTV", "AppUtils.parseXml başarısız oldu", e)
-            null
-        }
-        
-        val playlistItems = xmlItems?.channel.orEmpty().mapNotNull { xmlChannel ->
-            // CDATA'dan temizleme işlemi gerekiyorsa burada yapılmalı.
-            // xmlChannel.title?.content -> xmlChannel.title (Eğer serileştirme doğru yapıldıysa)
-            
-            val title = xmlChannel.title?.trim()?.takeIf { it.isNotEmpty() }
-            val url = xmlChannel.stream_url?.trim()?.takeIf { it.isNotEmpty() }
-            val logo = xmlChannel.logo_30x30?.trim()
+        // Her bir <channel> bloğunu yakalamak için genel regex.
+        val channelRegex = Regex(
+            "<channel>(.*?)</channel>", 
+            RegexOption.DOT_ALL // Noktanın yeni satırları da kapsamasını sağlar
+        )
 
-            if (title != null && url != null) {
-                PlaylistItem(
-                    title = title,
-                    url = url,
-                    attributes = mapOf(
-                        "tvg-logo" to (logo ?: ""),
-                        "group-title" to "XML Kanalları" // Varsayılan grup
+        // Belirli alanları (CDATA dahil) yakalamak için yardımcı regex'ler.
+        // \\s*? aradaki boşlukları (whitespace) da dikkate alır.
+        val titleRegex = Regex("<title><!\\[CDATA\\[\\s*(.*?)\\s*\\]\\]></title>", RegexOption.DOT_ALL)
+        val logoRegex = Regex("<logo_30x30><!\\[CDATA\\[\\s*(.*?)\\s*\\]\\]></logo_30x30>", RegexOption.DOT_ALL)
+        val urlRegex = Regex("<stream_url><!\\[CDATA\\[\\s*(.*?)\\s*\\]\\]></stream_url>", RegexOption.DOT_ALL)
+        
+        // Tüm <channel> bloklarını bul ve döngüye al
+        channelRegex.findAll(content).forEach { channelMatch ->
+            // groupValues[1] yakalama grubundaki içeriği verir (yani <channel> ve </channel> arasındaki her şey)
+            val channelBlock = channelMatch.groupValues[1]
+
+            // 1. Yakalama grubundaki (.*?) değeri, CDATA içindeki içeriği döndürür.
+            val title = titleRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
+            val logo = logoRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
+            val url = urlRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
+
+            // Başlık veya URL boşsa veya sadece boşluk içeriyorsa bu kanalı atla
+            if (!title.isNullOrBlank() && !url.isNullOrBlank()) {
+                
+                val attributesMap = mutableMapOf<String, String>()
+                attributesMap["tvg-logo"] = logo ?: ""
+                // XML'de grup bilgisi yoksa varsayılan bir grup ekle
+                attributesMap["group-title"] = "XML Kanalları" 
+                
+                playlistItems.add(
+                    PlaylistItem(
+                        title = title,
+                        url = url,
+                        attributes = attributesMap.toMap(),
+                        headers = emptyMap(), 
+                        userAgent = null
                     )
                 )
-            } else {
-                null
             }
         }
+        
+        if (playlistItems.isEmpty()) {
+             Log.e("MoOnCrOwNTV", "XML ayrıştırma (RegEx) başarılı, ancak hiç geçerli kanal bulunamadı.")
+        } else {
+             Log.d("MoOnCrOwNTV", "XML ayrıştırma başarılı: ${playlistItems.size} kanal bulundu.")
+        }
+        
         return Playlist(playlistItems)
     }
 }
