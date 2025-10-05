@@ -60,7 +60,7 @@ override suspend fun loadLinks(
     )
     return true
 }
-
+}
 // -------------------------------------------------------------
 // --- XML Ayrıştırıcı Sınıfı (RegEx Tabanlı, HATASIZ) ---
 // -------------------------------------------------------------
@@ -131,5 +131,6 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
+
 
 
