@@ -8,8 +8,10 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import java.io.InputStream
 import kotlinx.coroutines.coroutineScope
 
-// Yalnızca RegEx sınıfını içeri aktarın. DOT_ALL tam yolda kullanılacak.
-import kotlin.text.Regex
+// **BÜTÜN KOTLIN TEXT KÜTÜPHANESİNİ GENEL ALANA EKLEYİN**
+import kotlin.text.* // DOT_ALL, findAll, groupValues, trim, Regex, vb.
+
+// --- Ana Eklenti Sınıfı ---
 class Xmltv : MainAPI() {
     // mainUrl artık .m3u veya .xml ile bitebilir
     override var mainUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b.xml"
@@ -372,6 +374,7 @@ class IptvPlaylistParser {
     }
 
     private fun String.getUrlParameter(key: String): String? {
+        // DOT_ALL'ı burada kullanmıyoruz
         val urlRegex = Regex("^(.*)\\|", RegexOption.IGNORE_CASE)
         val keyRegex = Regex("$key=(\\w[^&]*)", RegexOption.IGNORE_CASE)
         val paramsString = replace(urlRegex, "").replaceQuotesAndTrim()
@@ -413,17 +416,20 @@ class XmlPlaylistParser {
      */
     fun parseXML(content: String): Playlist {
         val playlistItems: MutableList<PlaylistItem> = mutableListOf()
-      val channelRegex = Regex(
+
+        // Her bir <channel> bloğunu yakalamak için genel regex.
+        val channelRegex = Regex(
             "<channel>(.*?)</channel>", 
-            kotlin.text.RegexOption.DOT_ALL // TAM YOL KULLANILDI
+            DOT_ALL // import kotlin.text.* sayesinde artık tam yol gerekmiyor
         )
 
-          // Belirli alanları (CDATA dahil) yakalamak için yardımcı regex'ler.
-        val titleRegex = Regex("<title><!\\[CDATA\\[\\s*(.*?)\\s*\\]\\]></title>", kotlin.text.RegexOption.DOT_ALL) // TAM YOL KULLANILDI
-        val logoRegex = Regex("<logo_30x30><!\\[CDATA\\[\\s*(.*?)\\s*\\]\\]></logo_30x30>", kotlin.text.RegexOption.DOT_ALL) // TAM YOL KULLANILDI
-        val urlRegex = Regex("<stream_url><!\\[CDATA\\[\\s*(.*?)\\s*\\]\\]></stream_url>", kotlin.text.RegexOption.DOT_ALL) // TAM YOL KULLANILDI        
+        // Belirli alanları (CDATA dahil) yakalamak için yardımcı regex'ler.
+        val titleRegex = Regex("<title><!\\[CDATA\\[\\s*(.*?)\\s*\\]\\]></title>", DOT_ALL)
+        val logoRegex = Regex("<logo_30x30><!\\[CDATA\\[\\s*(.*?)\\s*\\]\\]></logo_30x30>", DOT_ALL)
+        val urlRegex = Regex("<stream_url><!\\[CDATA\\[\\s*(.*?)\\s*\\]\\]></stream_url>", DOT_ALL)
+        
         // Tüm <channel> bloklarını bul ve döngüye al
-        channelRegex.findAll(content).forEach { channelMatch -> // findAll ve groupValues, Regex ile birlikte gelecektir
+        channelRegex.findAll(content).forEach { channelMatch -> 
             // groupValues[1] yakalama grubundaki içeriği verir
             val channelBlock = channelMatch.groupValues[1]
 
@@ -461,6 +467,3 @@ class XmlPlaylistParser {
         return Playlist(playlistItems)
     }
 }
-
-
-
