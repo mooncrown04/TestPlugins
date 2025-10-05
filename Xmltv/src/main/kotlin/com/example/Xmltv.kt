@@ -88,10 +88,24 @@ class XmlPlaylistParser {
         )
 
         // Belirli alanları (CDATA dahil) yakalamak için regex'ler
-        val titleRegex = Regex("<title><!\\[CDATA\\[(.*?)\\]\\]></title>", RegexOption.DOT_MATCHES_ALL)
-        val logoRegex = Regex("<logo_30x30><!\\[CDATA\\[(.*?)\\]\\]></logo_30x30>", RegexOption.DOT_MATCHES_ALL)
-        val urlRegex = Regex("<stream_url><!\\[CDATA\\[(.*?)\\]\\]></stream_url>", RegexOption.DOT_MATCHES_ALL)
-
+       // ⭐ 1. TITLE REGEX GÜNCELLENDİ
+        val titleRegex = Regex(
+            // Etiketler ve CDATA arasındaki boşlukları (\s*) tolere et
+            "<title>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</title>", 
+            RegexOption.DOT_MATCHES_ALL
+        )
+        // ⭐ 2. LOGO REGEX GÜNCELLENDİ
+        val logoRegex = Regex(
+            // Etiketler ve CDATA arasındaki boşlukları (\s*) tolere et
+            "<logo_30x30>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</logo_30x30>", 
+            RegexOption.DOT_MATCHES_ALL
+        )
+        // ⭐ 3. STREAM_URL REGEX GÜNCELLENDİ
+        val urlRegex = Regex(
+            // stream_url etiketleri arasındaki boşlukları (\s*) tolere et
+            "<stream_url>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</stream_url>", 
+            RegexOption.DOT_MATCHES_ALL
+        )
         for (channelMatch in channelRegex.findAll(content)) {
             val channelBlock = channelMatch.groupValues.getOrNull(1) ?: continue
 
@@ -141,5 +155,6 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
+
 
 
