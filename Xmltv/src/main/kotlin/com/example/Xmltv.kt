@@ -10,11 +10,11 @@ import kotlin.text.* // ⭐ 2. RegEx bileşenlerini çözmek için kotlin.text.*
 
 class Xmltv : MainAPI() {
     override var mainUrl = "https://example.com"
-    override var name = "Xmltv"
+    override var name = "35 Xmltv"
     override var lang = "tr"
     override val hasMainPage = true
 
-    private val xmlUrl = "https://raw.githubusercontent.com/mooncrown04/m3u/main/Xmltv.xml"
+    private val xmlUrl = "https://dl.dropbox.com/scl/fi/emegyd857cyocpk94w5lr/xmltv.xml?rlkey=kuyabjk4a8t65xvcob3cpidab"
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val response = app.get(xmlUrl).text
@@ -131,6 +131,7 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
+
 
 
 
