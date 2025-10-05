@@ -35,36 +35,30 @@ class Xmltv : MainAPI() {
         )
     }
 
-    override suspend fun load(url: String): LoadResponse {
-        return newMovieLoadResponse(
-            name = "Canlı Yayın",
-            url = url,
-            dataUrl = url,
-            type = TvType.Live
+// Xmltv.kt içinde, loadLinks fonksiyonunun doğru hali
+override suspend fun loadLinks(
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    callback.invoke(
+        // 'newExtractorLink' artık sadece 4 temel parametre alır
+        newExtractorLink(
+            source = "XMLTV", // Kaynak (source) adı
+            name = this.name, // Link adı
+            url = data,       // URL
+            type = ExtractorLinkType.M3U8 // Veya ExtractorLinkType.LINK
         ) {
-            this.posterUrl = null
-            this.plot = "Canlı yayın akışı"
+            // ⭐ REFERER, QUALITY, ve IS_M3U8 buradaki lambda içinde ayarlanır.
+            this.referer = "" // referer artık direkt this.referer olarak ayarlanır
+            this.quality = Qualities.Unknown.value
+            // isM3u8 parametresi artık yok, çünkü ExtractorLinkType zaten M3U8 olduğunu belirtiyor.
+            // Sadece HTTP başlıklarını eklemek isterseniz:
+            // this.headers = emptyMap() 
         }
-    }
-
-    override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        callback.invoke(
-            newExtractorLink(
-                name = this.name,
-                source = "XMLTV",
-                url = data,
-                referer = "",
-                quality = Qualities.Unknown.value,
-                isM3u8 = data.endsWith(".m3u8")
-            )
-        )
-        return true
-    }
+    )
+    return true
 }
 
 // -------------------------------------------------------------
@@ -137,4 +131,5 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
+
 
