@@ -3,9 +3,10 @@ package com.example
 import android.util.Log
 // CLOUDSTREAM SINIFLARI İÇİN TEMEL İMPORTLAR
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.utils.* import com.lagradost.cloudstream3.utils.Qualities
-// ⭐ DÜZELTME: ExtractorLinkType'ı "utils" paketi altından çağırmayı deniyoruz.
-import com.lagradost.cloudstream3.utils.ExtractorLinkType 
+// ⭐ DÜZELTME: utils.* ve Qualities aynı satırda toplandı
+import com.lagradost.cloudstream3.utils.* import com.lagradost.cloudstream3.utils.Qualities 
+// ⭐ KALDIRILDI: Artık ExtractorLinkType için açık bir import satırı bırakmıyoruz.
+// Çünkü hangi yolun doğru olduğunu bulmak yerine, gerektiği yerde tam yolu kullanacağız.
 
 // KOTLIN TEXT İMPORTLARI: RegEx sorunlarını (DOT_ALL, findAll, trim) çözmek için kritik
 import kotlin.text.* import kotlin.collections.* /**
@@ -15,7 +16,7 @@ class Xmltv : MainAPI() {
     // Birincil XML URL'si
     override var mainUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b.xml"
     
-    // İkinci XML kaynağı için URL. ⭐ BURAYI KENDİ İKİNCİ URL'NİZLE DEĞİŞTİRİN
+    // İkinci XML kaynağı için URL.
     private val secondaryXmlUrl = "https://dl.dropbox.com/scl/fi/emegyd857cyocpk94w5lr/xmltv.xml?rlkey=kuyabjk4a8t65xvcob3cpidab"
     
     // Grup adları
@@ -101,7 +102,7 @@ class Xmltv : MainAPI() {
         }
     }
 
-    // LOADLINKS FONKSİYONU: Dinamik link türü belirleme
+    // ⭐ LOADLINKS FONKSİYONU: ExtractorLinkType'ı tam yoluyla çağırır.
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -110,10 +111,11 @@ class Xmltv : MainAPI() {
     ): Boolean {
         // Linkin sonunu kontrol ederek tipi dinamik olarak belirle
         val linkType = if (data.endsWith(".m3u8", ignoreCase = true)) {
-            ExtractorLinkType.M3U8
+            // Tam yolu kullan
+            com.lagradost.cloudstream3.utils.ExtractorLinkType.M3U8
         } else {
-            // TS, MP4 gibi diğer direkt akışları desteklemek için
-            ExtractorLinkType.LINK 
+            // Tam yolu kullan
+            com.lagradost.cloudstream3.utils.ExtractorLinkType.LINK 
         }
         
         callback.invoke(
