@@ -4,7 +4,8 @@ import android.util.Log
 // CLOUDSTREAM SINIFLARI İÇİN TEMEL İMPORTLAR
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.* import com.lagradost.cloudstream3.utils.Qualities
-import com.lagradost.cloudstream3.extractors.ExtractorLinkType 
+import com.lagradost.cloudstream3.extractors.ExtractorLinkType // ExtractorLinkType import'u eklendi
+
 // KOTLIN TEXT İMPORTLARI: RegEx sorunlarını (DOT_ALL, findAll, trim) çözmek için kritik
 import kotlin.text.* import kotlin.collections.* /**
  * CloudStream için XMLTV tabanlı IPTV eklentisi
@@ -13,10 +14,10 @@ class Xmltv : MainAPI() {
     // Birincil XML URL'si
     override var mainUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b.xml"
     
-    // ⭐ YENİ: İkinci XML kaynağı için URL tanımlandı
-    private val secondaryXmlUrl = "https://dl.dropbox.com/scl/fi/emegyd857cyocpk94w5lr/xmltv.xml?rlkey=kuyabjk4a8t65xvcob3cpidab"// <<< BURAYI İKİNCİ URL İLE DEĞİŞTİRİN
+    // İkinci XML kaynağı için URL
+    private val secondaryXmlUrl = "https://dl.dropbox.com/scl/fi/emegyd857cyocpk94w5lr/xmltv.xml?rlkey=kuyabjk4a8t65xvcob3cpidab"
     
-    // ⭐ YENİ: Grup adları tanımlandı
+    // Grup adları
     private val primaryGroupName = "Favori Listem"
     private val secondaryGroupName = "Diğer Kanallar"
 
@@ -26,23 +27,33 @@ class Xmltv : MainAPI() {
     override val supportedTypes = setOf(TvType.Live)
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        // Tüm listeleri tutacak liste
         val homepageLists = mutableListOf<HomePageList>()
 
-        // 1. Birincil XML'i Çek ve İşle
-        try {
-            val primaryResponse = app.get(mainUrl).text
-            val primaryPlaylist = XmlPlaylistParser().parseXML(primaryResponse)
+        // Helper fonksiyon: Kanal listesini oluşturur ve URL'yi logo ile birleştirir.
+        fun createChannelItems(playlist: Playlist): List<SearchResponse> {
+            return playlist.items.map {
+                val logoUrl = it.attributes["tvg-logo"] ?: ""
+                
+                // ⭐ POSTER AKTARIMI KRİTİK: Akış URL'si ve logo URL'sini '|' ile birleştir
+                // Bu, load fonksiyonunda posteri geri almamızı sağlar.
+                val combinedUrl = if (logoUrl.isBlank()) it.url else "${it.url}|logo=$logoUrl"
 
-            val primaryItems = primaryPlaylist.items.map {
                 newMovieSearchResponse(
                     name = it.title,
-                    url = it.url,
+                    url = combinedUrl, // Birleştirilmiş URL'yi gönder
                 ) {
                     this.posterUrl = it.attributes["tvg-logo"]
                     this.type = TvType.Live
                 }
             }
+        }
+
+        // 1. Birincil XML'i Çek ve İşle
+        try {
+            val primaryResponse = app.get(mainUrl).text
+            val primaryPlaylist = XmlPlaylistParser().parseXML(primaryResponse)
+            val primaryItems = createChannelItems(primaryPlaylist)
+            
             if (primaryItems.isNotEmpty()) {
                 homepageLists.add(HomePageList(primaryGroupName, primaryItems))
             }
@@ -54,16 +65,8 @@ class Xmltv : MainAPI() {
         try {
             val secondaryResponse = app.get(secondaryXmlUrl).text
             val secondaryPlaylist = XmlPlaylistParser().parseXML(secondaryResponse)
+            val secondaryItems = createChannelItems(secondaryPlaylist)
 
-            val secondaryItems = secondaryPlaylist.items.map {
-                newMovieSearchResponse(
-                    name = it.title,
-                    url = it.url,
-                ) {
-                    this.posterUrl = it.attributes["tvg-logo"]
-                    this.type = TvType.Live
-                }
-            }
             if (secondaryItems.isNotEmpty()) {
                 homepageLists.add(HomePageList(secondaryGroupName, secondaryItems))
             }
@@ -71,17 +74,29 @@ class Xmltv : MainAPI() {
              Log.e("Xmltv", "İkincil URL yüklenemedi veya ayrıştırılamadı: ${e.message}")
         }
 
-        return newHomePageResponse(homepageLists)
+        // En üstteki afiş/poster bölümünü boş geçerek temiz bir görünüm sağlar.
+        return newHomePageResponse(
+            list = homepageLists,
+            featuredList = null 
+        )
     }
 
-    // ⭐ LOAD FONKSİYONU
+    // ⭐ GÜNCELLENEN LOAD FONKSİYONU: Poster URL'sini geri alır.
     override suspend fun load(url: String): LoadResponse {
+        // URL'yi parçala: [0] -> Akış URL'si, [1] -> Logo bilgisi (varsa)
+        val parts = url.split('|') 
+        val streamUrl = parts.firstOrNull() ?: url // Temiz akış URL'si
+
+        // Logo URL'sini çek: "logo=http://..." kısmını bulup "logo=" kısmını siler
+        val logoParam = parts.find { it.startsWith("logo=") }
+        val logoUrl = logoParam?.substringAfter("logo=") 
+        
         return newLiveStreamLoadResponse(
             name = "Canlı Yayın",
-            url = url,       
-            dataUrl = url,   
+            url = streamUrl,       
+            dataUrl = streamUrl,   // loadLinks'e sadece temiz akış URL'si gitsin
         ) {
-            this.posterUrl = null
+            this.posterUrl = logoUrl // ⭐ Burası KRİTİK: Logo URL'si atanır.
             this.plot = "Canlı yayın akışı"
             this.type = TvType.Live
         }
@@ -94,21 +109,19 @@ class Xmltv : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-      // ⭐ YENİ EKLEME: Linkin sonunu kontrol et
-    val linkType = if (data.endsWith(".m3u8", ignoreCase = true)) {
-        ExtractorLinkType.M3U8
-    } else {
-        // Eğer m3u8 değilse, genel bir direkt link olduğunu varsay
-        ExtractorLinkType.LINK
-    }
+        // Linkin sonunu kontrol ederek tipi dinamik olarak belirle
+        val linkType = if (data.endsWith(".m3u8", ignoreCase = true)) {
+            ExtractorLinkType.M3U8
+        } else {
+            ExtractorLinkType.LINK
+        }
         
         callback.invoke(
             newExtractorLink(
                 source = "XMLTV",
                 name = this.name,
                 url = data,
-               // ⭐ Tipi dinamik olarak kullan
-            type = linkType 
+                type = linkType 
             ) {
                 this.referer = ""
                 this.quality = Qualities.Unknown.value
@@ -130,7 +143,7 @@ class XmlPlaylistParser {
             RegexOption.DOT_MATCHES_ALL
         )
 
-        // Etiketler ve CDATA arasındaki yeni satırları ve boşlukları (\s*) tolere edecek RegEx'ler
+        // Tüm RegEx'ler, etiketler ve CDATA arasındaki yeni satırları/boşlukları tolere etmek için \s* kullanır.
         val titleRegex = Regex(
             "<title>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</title>",
             RegexOption.DOT_MATCHES_ALL
@@ -139,7 +152,6 @@ class XmlPlaylistParser {
             "<logo_30x30>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</logo_30x30>",
             RegexOption.DOT_MATCHES_ALL
         )
-        // Eğer XML'de stream_url veya playlist_url varsa, aşağıdaki URL yakalama mantığını kullanın:
         val streamUrlRegex = Regex(
             "<stream_url>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</stream_url>",
             RegexOption.DOT_MATCHES_ALL
@@ -154,11 +166,8 @@ class XmlPlaylistParser {
 
             if (!title.isNullOrBlank() && !url.isNullOrBlank()) {
                 val attributesMap = mutableMapOf<String, String>()
-                attributesMap["tvg-logo"] = logo ?: ""
-                
-                // Gruplama getMainPage'de yapıldığı için, buradaki atamayı kaldırmadım
-                // ancak CloudStream'e veri sağlamak için tutabiliriz.
-                attributesMap["group-title"] = "XML Kanalları" 
+                attributesMap["tvg-logo"] = logo ?: "" // Poster URL'si buraya atanır.
+                attributesMap["group-title"] = "XML Kanalları" // Gruplama için tutulan varsayılan değer.
 
                 playlistItems.add(
                     PlaylistItem(
@@ -195,5 +204,3 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
-
-
