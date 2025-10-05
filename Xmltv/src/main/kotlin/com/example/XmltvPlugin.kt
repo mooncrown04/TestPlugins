@@ -7,7 +7,8 @@ import android.content.Context
 @CloudstreamPlugin
 class XmltvPlugin: Plugin() {
     override fun load(context: Context) {
-    registerMainAPI(Xmltv(context.getSharedPreferences("Xmltv", 0)))
+    registerMainAPI(Xmltv()) 
  
     }
 }
+
