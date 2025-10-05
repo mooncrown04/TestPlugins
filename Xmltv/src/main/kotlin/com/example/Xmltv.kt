@@ -8,6 +8,10 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import java.io.InputStream
 import kotlinx.coroutines.coroutineScope
 
+// YALNIZCA BU İKİ SATIRI EKLEYİN/GÜNCELLEYİN:
+import kotlin.text.Regex
+import kotlin.text.RegexOption.DOT_ALL // DOT_ALL'ı tek başına değil, Option sınıfı içinden import edin.
+
 // TÜM KOTLIN TEXT KÜTÜPHANESİNİ İÇE AKTAR (Gerekli tüm RegEx fonksiyonlarını kapsar)
 import kotlin.text.* // Diğer gerekli import'lar genellikle örtülü olarak gelir, ancak buraya açıkça ekleyebiliriz:
 import kotlin.collections.* // --- Ana Eklenti Sınıfı ---
@@ -414,18 +418,16 @@ class XmlPlaylistParser {
      */
     fun parseXML(content: String): Playlist {
         val playlistItems: MutableList<PlaylistItem> = mutableListOf()
-
-        // Her bir <channel> bloğunu yakalamak için genel regex.
-        val channelRegex = Regex(
+    val channelRegex = Regex(
             "<channel>(.*?)</channel>", 
-            RegexOption.DOT_ALL 
+            DOT_ALL // SADECE DOT_ALL kullanın, çünkü yukarıda import ettik
         )
 
         // Belirli alanları (CDATA dahil) yakalamak için yardımcı regex'ler.
-        val titleRegex = Regex("<title><!\\[CDATA\\[\\s*(.*?)\\s*\\]\\]></title>", RegexOption.DOT_ALL)
-        val logoRegex = Regex("<logo_30x30><!\\[CDATA\\[\\s*(.*?)\\s*\\]\\]></logo_30x30>", RegexOption.DOT_ALL)
-        val urlRegex = Regex("<stream_url><!\\[CDATA\\[\\s*(.*?)\\s*\\]\\]></stream_url>", RegexOption.DOT_ALL)
-        
+         val titleRegex = Regex("<title><!\\[CDATA\\[\\s*(.*?)\\s*\\]\\]></title>", DOT_ALL)
+        val logoRegex = Regex("<logo_30x30><!\\[CDATA\\[\\s*(.*?)\\s*\\]\\]></logo_30x30>", DOT_ALL)
+        val urlRegex = Regex("<stream_url><!\\[CDATA\\[\\s*(.*?)\\s*\\]\\]></stream_url>", DOT_ALL)
+       
         // Tüm <channel> bloklarını bul ve döngüye al
         channelRegex.findAll(content).forEach { channelMatch ->
             // groupValues[1] yakalama grubundaki içeriği verir
@@ -465,3 +467,4 @@ class XmlPlaylistParser {
         return Playlist(playlistItems)
     }
 }
+
