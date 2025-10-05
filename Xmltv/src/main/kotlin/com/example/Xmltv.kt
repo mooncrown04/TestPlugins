@@ -4,8 +4,6 @@ import android.util.Log
 // CLOUDSTREAM SINIFLARI İÇİN TEMEL İMPORTLAR
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.* import com.lagradost.cloudstream3.utils.Qualities
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import kotlin.text.* import kotlin.collections.* /**
  * CloudStream için XMLTV tabanlı IPTV eklentisi
  */
@@ -107,12 +105,13 @@ class Xmltv : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         // Linkin sonunu kontrol ederek tipi dinamik olarak belirle
-        val linkType = if (data.endsWith(".m3u8", ignoreCase = true)) {
-            ExtractorLinkType.M3U8
-        } else {
-            // TS, MP4 gibi diğer direkt akışları desteklemek için
-            ExtractorLinkType.LINK 
-        }
+    val linkType = if (data.endsWith(".m3u8", ignoreCase = true)) {
+        // ⭐ DÜZELTME: Tipi açıkça nitele
+        com.lagradost.cloudstream3.extractors.ExtractorLinkType.M3U8
+    } else {
+        // ⭐ DÜZELTME: Tipi açıkça nitele
+        com.lagradost.cloudstream3.extractors.ExtractorLinkType.LINK 
+    }
         
         callback.invoke(
             newExtractorLink(
@@ -202,4 +201,5 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
+
 
