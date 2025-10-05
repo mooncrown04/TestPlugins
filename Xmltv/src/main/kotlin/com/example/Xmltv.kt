@@ -1,7 +1,4 @@
 package com.example
-
-package com.MoOnCrOwNTV
-
 import android.util.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
@@ -494,4 +491,5 @@ class XmlPlaylistParser {
         }
         return Playlist(playlistItems)
     }
+
 }
