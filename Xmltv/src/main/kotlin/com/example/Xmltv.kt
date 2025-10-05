@@ -14,27 +14,6 @@ import kotlin.text.* import kotlin.collections.* /**
  */
 
 
-import com.lagradost.cloudstream3.utils.AppUtils.parseJson
-import com.lagradost.cloudstream3.utils.AppUtils.toJson
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.ExtractorLinkType
-import com.lagradost.cloudstream3.utils.newExtractorLink
-import java.io.InputStream
-import java.util.Locale
-import java.io.BufferedReader
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import org.json.JSONObject
-import java.net.URL
-import java.net.URLEncoder
-
-
-
-
-
-
-
-
 
 
 
@@ -128,28 +107,19 @@ class Xmltv : MainAPI() {
         }
     }
 
-    // ⭐ LOADLINKS FONKSİYONU: ExtractorLinkType'ı tam yoluyla çağırır.
+      // ⭐ LOADLINKS FONKSİYONU
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        // Linkin sonunu kontrol ederek tipi dinamik olarak belirle
-        val linkType = if (data.endsWith(".m3u8", ignoreCase = true)) {
-            // Tam yolu kullan
-            com.lagradost.cloudstream3.utils.ExtractorLinkType.M3U8
-        } else {
-            // Tam yolu kullan
-            com.lagradost.cloudstream3.utils.ExtractorLinkType.LINK 
-        }
-        
         callback.invoke(
             newExtractorLink(
                 source = "XMLTV",
                 name = this.name,
                 url = data,
-                type = linkType 
+                type = ExtractorLinkType.M3U8
             ) {
                 this.referer = ""
                 this.quality = Qualities.Unknown.value
@@ -232,4 +202,5 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
+
 
