@@ -8,11 +8,8 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import java.io.InputStream
 import kotlinx.coroutines.coroutineScope
 
-// Yalnızca birer kez içe aktarılmalı
-import kotlin.text.Regex 
-import kotlin.text.RegexOption 
-
-
+// **BÜTÜN KOTLIN TEXT KÜTÜPHANESİNİ İÇE AKTAR** (Kesin çözüm)
+import kotlin.text.* // --- Ana Eklenti Sınıfı ---
 // --- Ana Eklenti Sınıfı ---
 class Xmltv : MainAPI() {
     // mainUrl artık .m3u veya .xml ile bitebilir
@@ -472,3 +469,4 @@ class XmlPlaylistParser {
         return Playlist(playlistItems)
     }
 }
+
