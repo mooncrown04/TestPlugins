@@ -26,9 +26,10 @@ class Xmltv : MainAPI() {
             newMovieSearchResponse(
                 name = it.title,
                 url = it.url, // Kanalın akış URL'si (Load'a gönderilecek)
-                type = TvType.Live
+               
             ) {
                 this.posterUrl = it.attributes["tvg-logo"]
+                this.type = TvType.Live                
             }
         }
 
@@ -140,3 +141,4 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
+
