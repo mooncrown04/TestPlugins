@@ -12,6 +12,32 @@ import com.lagradost.cloudstream3.utils.* import com.lagradost.cloudstream3.util
 import kotlin.text.* import kotlin.collections.* /**
  * CloudStream için XMLTV tabanlı IPTV eklentisi
  */
+
+
+import com.lagradost.cloudstream3.utils.AppUtils.parseJson
+import com.lagradost.cloudstream3.utils.AppUtils.toJson
+import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.ExtractorLinkType
+import com.lagradost.cloudstream3.utils.newExtractorLink
+import java.io.InputStream
+import java.util.Locale
+import java.io.BufferedReader
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.URL
+import java.net.URLEncoder
+
+
+
+
+
+
+
+
+
+
+
 class Xmltv : MainAPI() {
     // Birincil XML URL'si
     override var mainUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b.xml"
@@ -206,3 +232,4 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
+
