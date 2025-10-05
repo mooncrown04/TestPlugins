@@ -8,8 +8,6 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import java.io.InputStream
 import kotlinx.coroutines.coroutineScope
 
-// **DİKKAT: TÜM İHTİYAÇ DUYULAN KOTLIN KÜTÜPHANELERİ BURADA GENEL OLARAK İÇERİ AKTARILIYOR.**
-import kotlin.text.* import kotlin.collections.* // --- Ana Eklenti Sınıfı ---
 class Xmltv : MainAPI() {
     // mainUrl artık .m3u veya .xml ile bitebilir
     override var mainUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b.xml"
@@ -416,10 +414,9 @@ class XmlPlaylistParser {
     fun parseXML(content: String): Playlist {
         val playlistItems: MutableList<PlaylistItem> = mutableListOf()
 
-        // Her bir <channel> bloğunu yakalamak için genel regex.
-        val channelRegex = Regex(
+          val channelRegex = Regex(
             "<channel>(.*?)</channel>", 
-            RegexOption.DOT_ALL // import kotlin.text.* sayesinde sadece sabit adı kullanılıyor
+            kotlin.text.RegexOption.DOT_ALL // TAM YOL KULLANILDI
         )
 
         // Belirli alanları (CDATA dahil) yakalamak için yardımcı regex'ler.
@@ -427,16 +424,14 @@ class XmlPlaylistParser {
         val logoRegex = Regex("<logo_30x30><!\\[CDATA\\[\\s*(.*?)\\s*\\]\\]></logo_30x30>", RegexOption.DOT_ALL)
         val urlRegex = Regex("<stream_url><!\\[CDATA\\[\\s*(.*?)\\s*\\]\\]></stream_url>", RegexOption.DOT_ALL)
         
-        // Tüm <channel> bloklarını bul ve döngüye al
-        channelRegex.findAll(content).forEach { channelMatch -> 
-            // findAll ve groupValues artık çözülmeli
+         // findAll ve groupValues'u da tam yolla çağırmayı deneyin:
+        kotlin.text.Regex(channelRegex.pattern, channelRegex.options).findAll(content).forEach { channelMatch -> 
             val channelBlock = channelMatch.groupValues[1]
 
-            // 1. Yakalama grubundaki (.*?) değeri, CDATA içindeki içeriği döndürür.
-            val title = titleRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
+             val title = titleRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
             val logo = logoRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
             val url = urlRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
-
+            
             // Başlık veya URL boşsa veya sadece boşluk içeriyorsa bu kanalı atla
             if (!title.isNullOrBlank() && !url.isNullOrBlank()) {
                 
@@ -466,3 +461,4 @@ class XmlPlaylistParser {
         return Playlist(playlistItems)
     }
 }
+
