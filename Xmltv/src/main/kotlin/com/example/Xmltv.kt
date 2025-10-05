@@ -94,12 +94,21 @@ class Xmltv : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+      // ⭐ YENİ EKLEME: Linkin sonunu kontrol et
+    val linkType = if (data.endsWith(".m3u8", ignoreCase = true)) {
+        ExtractorLinkType.M3U8
+    } else {
+        // Eğer m3u8 değilse, genel bir direkt link olduğunu varsay
+        ExtractorLinkType.LINK
+    }
+        
         callback.invoke(
             newExtractorLink(
                 source = "XMLTV",
                 name = this.name,
                 url = data,
-                type = ExtractorLinkType.M3U8
+               // ⭐ Tipi dinamik olarak kullan
+            type = linkType 
             ) {
                 this.referer = ""
                 this.quality = Qualities.Unknown.value
@@ -186,3 +195,4 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
+
