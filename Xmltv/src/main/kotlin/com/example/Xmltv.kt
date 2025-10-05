@@ -422,14 +422,16 @@ class XmlPlaylistParser {
         // Her bir <channel> bloğunu yakalamak için genel regex.
         val channelRegex = Regex(
             "<channel>(.*?)</channel>", 
-            RegexOption.DOT_ALL // Noktanın yeni satırları da kapsamasını sağlar
+            // DOT_ALL tam yoluyla belirtildi
+            kotlin.text.RegexOption.DOT_ALL 
         )
 
         // Belirli alanları (CDATA dahil) yakalamak için yardımcı regex'ler.
         // \\s*? aradaki boşlukları (whitespace) da dikkate alır.
-        val titleRegex = Regex("<title><!\\[CDATA\\[\\s*(.*?)\\s*\\]\\]></title>", RegexOption.DOT_ALL)
-        val logoRegex = Regex("<logo_30x30><!\\[CDATA\\[\\s*(.*?)\\s*\\]\\]></logo_30x30>", RegexOption.DOT_ALL)
-        val urlRegex = Regex("<stream_url><!\\[CDATA\\[\\s*(.*?)\\s*\\]\\]></stream_url>", RegexOption.DOT_ALL)
+        // DOT_ALL tam yoluyla belirtildi
+        val titleRegex = Regex("<title><!\\[CDATA\\[\\s*(.*?)\\s*\\]\\]></title>", kotlin.text.RegexOption.DOT_ALL)
+        val logoRegex = Regex("<logo_30x30><!\\[CDATA\\[\\s*(.*?)\\s*\\]\\]></logo_30x30>", kotlin.text.RegexOption.DOT_ALL)
+        val urlRegex = Regex("<stream_url><!\\[CDATA\\[\\s*(.*?)\\s*\\]\\]></stream_url>", kotlin.text.RegexOption.DOT_ALL)
         
         // Tüm <channel> bloklarını bul ve döngüye al
         channelRegex.findAll(content).forEach { channelMatch ->
@@ -470,7 +472,3 @@ class XmlPlaylistParser {
         return Playlist(playlistItems)
     }
 }
-
-
-
-
