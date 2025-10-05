@@ -11,7 +11,8 @@ import kotlin.text.* import kotlin.collections.* /**
  */
 class Xmltv : MainAPI() {
     // DropBox URL'si, ana URL olarak kullanılıyor
-    override var mainUrl = "https://dl.dropbox.com/scl/fi/emegyd857cyocpk94w5lr/xmltv.xml?rlkey=kuyabjk4a8t65xvcob3cpidab"
+  //  override var mainUrl = "https://dl.dropbox.com/scl/fi/emegyd857cyocpk94w5lr/xmltv.xml?rlkey=kuyabjk4a8t65xvcob3cpidab"
+ override var mainUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b.xml"
     override var name = "35 Xmltv"
     override var lang = "tr"
     override val hasMainPage = true
@@ -155,6 +156,7 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
+
 
 
 
