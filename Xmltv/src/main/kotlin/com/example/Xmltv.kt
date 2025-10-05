@@ -4,17 +4,14 @@ import android.util.Log
 // CLOUDSTREAM SINIFLARI İÇİN TEMEL İMPORTLAR
 import com.lagradost.cloudstream3.*
 // ⭐ DÜZELTME: utils.* ve Qualities aynı satırda toplandı
-import com.lagradost.cloudstream3.utils.* import com.lagradost.cloudstream3.utils.Qualities 
-// ⭐ KALDIRILDI: Artık ExtractorLinkType için açık bir import satırı bırakmıyoruz.
-// Çünkü hangi yolun doğru olduğunu bulmak yerine, gerektiği yerde tam yolu kullanacağız.
+import com.lagradost.cloudstream3.utils.* import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.ExtractorLinkType // ✨ EKLENDİ: MP4 ve DOWNLOADABLE hatalarını çözer
 
 // KOTLIN TEXT İMPORTLARI: RegEx sorunlarını (DOT_ALL, findAll, trim) çözmek için kritik
-import kotlin.text.* import kotlin.collections.* /**
+import kotlin.text.* import kotlin.collections.*
+/**
  * CloudStream için XMLTV tabanlı IPTV eklentisi
  */
-import com.lagradost.cloudstream3.utils.ExtractorLinkType
-
-
 
 
 class Xmltv : MainAPI() {
@@ -98,7 +95,7 @@ class Xmltv : MainAPI() {
         
         return newLiveStreamLoadResponse(
             name = "Canlı Yayın",
-            url = streamUrl,       
+            url = streamUrl,        
             dataUrl = streamUrl,   // loadLinks'e temiz akış URL'si gitsin
         ) {
             this.posterUrl = logoUrl // Logo URL'si menüye atanır.
@@ -107,7 +104,7 @@ class Xmltv : MainAPI() {
         }
     }
 
-// ⭐ LOADLINKS FONKSİYONU
+// ⭐ LOADLINKS FONKSİYONU (Düzeltilmiş Hali)
 override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
@@ -116,11 +113,14 @@ override suspend fun loadLinks(
 ): Boolean {
     // 1. URL'nin uzantısına göre uygun ExtractorLinkType'ı belirle
     val linkType = when {
+        // VIDEO dosya türleri için MP4 ve DOWNLOADABLE kullanılıyor
         data.endsWith(".mp4", ignoreCase = true) -> ExtractorLinkType.MP4
         data.endsWith(".ts", ignoreCase = true) -> ExtractorLinkType.DOWNLOADABLE
         data.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.DOWNLOADABLE
+        
+        // M3U8 ve diğer varsayılanlar
         data.endsWith(".m3u8", ignoreCase = true) -> ExtractorLinkType.M3U8
-        // Varsayılan olarak M3U8 veya akış olduğunu varsayabiliriz.
+        // Varsayılan olarak M3U8 (Canlı yayınlarda en yaygın ve uyumlu türdür)
         else -> ExtractorLinkType.M3U8 
     }
 
@@ -130,7 +130,7 @@ override suspend fun loadLinks(
             source = "XMLTV",
             name = this.name,
             url = data,
-            // Düzeltilen Kısım: Dinamik olarak belirlenen linkType kullanılıyor
+            // Dinamik olarak belirlenen linkType kullanılıyor
             type = linkType 
         ) {
             this.referer = ""
@@ -214,7 +214,3 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
-
-
-
-
