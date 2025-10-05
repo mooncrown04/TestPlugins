@@ -1,13 +1,12 @@
 package com.example
-
 import android.util.Log
+// ⭐ 1. CloudStream Utils paketini ekledik (ExtractorLink, SubtitleFile, newExtractorLink burada)
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.* import com.lagradost.cloudstream3.utils.Qualities // Qualities zaten vardı, yine de ekleyelim
 
-/**
- * CloudStream için XMLTV tabanlı IPTV eklentisi
- * Güncel CloudStream API'lerine tam uyumludur.
- */
+import kotlin.text.* // ⭐ 2. RegEx bileşenlerini çözmek için kotlin.text.* ekledik
+
+
 
 class Xmltv : MainAPI() {
     override var mainUrl = "https://example.com"
@@ -138,3 +137,4 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
+
