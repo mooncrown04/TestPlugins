@@ -10,42 +10,76 @@ import kotlin.text.* import kotlin.collections.* /**
  * CloudStream için XMLTV tabanlı IPTV eklentisi
  */
 class Xmltv : MainAPI() {
-    // DropBox URL'si, ana URL olarak kullanılıyor
-  //  override var mainUrl = "https://dl.dropbox.com/scl/fi/emegyd857cyocpk94w5lr/xmltv.xml?rlkey=kuyabjk4a8t65xvcob3cpidab"
- override var mainUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b.xml"
+    // Birincil XML URL'si
+    override var mainUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b.xml"
+    
+    // ⭐ YENİ: İkinci XML kaynağı için URL tanımlandı
+    private val secondaryXmlUrl = "https://dl.dropbox.com/scl/fi/emegyd857cyocpk94w5lr/xmltv.xml?rlkey=kuyabjk4a8t65xvcob3cpidab"// <<< BURAYI İKİNCİ URL İLE DEĞİŞTİRİN
+    
+    // ⭐ YENİ: Grup adları tanımlandı
+    private val primaryGroupName = "Favori Listem"
+    private val secondaryGroupName = "Diğer Kanallar"
+
     override var name = "35 Xmltv"
     override var lang = "tr"
     override val hasMainPage = true
-    override val supportedTypes = setOf(TvType.Live) // TV tipi Live olarak belirtildi
+    override val supportedTypes = setOf(TvType.Live)
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        // Doğrudan mainUrl'den veriyi çekiyoruz
-        val response = app.get(mainUrl).text
-        val playlist = XmlPlaylistParser().parseXML(response)
+        // Tüm listeleri tutacak liste
+        val homepageLists = mutableListOf<HomePageList>()
 
-        val homeItems = playlist.items.map {
-            newMovieSearchResponse(
-                name = it.title,
-                url = it.url, // Kanalın akış URL'si (Load'a gönderilecek)
-               
-            ) {
-                this.posterUrl = it.attributes["tvg-logo"]
-                this.type = TvType.Live                
+        // 1. Birincil XML'i Çek ve İşle
+        try {
+            val primaryResponse = app.get(mainUrl).text
+            val primaryPlaylist = XmlPlaylistParser().parseXML(primaryResponse)
+
+            val primaryItems = primaryPlaylist.items.map {
+                newMovieSearchResponse(
+                    name = it.title,
+                    url = it.url,
+                ) {
+                    this.posterUrl = it.attributes["tvg-logo"]
+                    this.type = TvType.Live
+                }
             }
+            if (primaryItems.isNotEmpty()) {
+                homepageLists.add(HomePageList(primaryGroupName, primaryItems))
+            }
+        } catch (e: Exception) {
+            Log.e("Xmltv", "Birincil URL yüklenemedi veya ayrıştırılamadı: ${e.message}")
+        }
+        
+        // 2. İkincil XML'i Çek ve İşle
+        try {
+            val secondaryResponse = app.get(secondaryXmlUrl).text
+            val secondaryPlaylist = XmlPlaylistParser().parseXML(secondaryResponse)
+
+            val secondaryItems = secondaryPlaylist.items.map {
+                newMovieSearchResponse(
+                    name = it.title,
+                    url = it.url,
+                ) {
+                    this.posterUrl = it.attributes["tvg-logo"]
+                    this.type = TvType.Live
+                }
+            }
+            if (secondaryItems.isNotEmpty()) {
+                homepageLists.add(HomePageList(secondaryGroupName, secondaryItems))
+            }
+        } catch (e: Exception) {
+             Log.e("Xmltv", "İkincil URL yüklenemedi veya ayrıştırılamadı: ${e.message}")
         }
 
-        return newHomePageResponse(
-            listOf(HomePageList("XML Kanalları", homeItems))
-        )
+        return newHomePageResponse(homepageLists)
     }
 
-    // ⭐ LOAD FONKSİYONU EKLENDİ - Açıklama menüsüne gitmek için kritik
+    // ⭐ LOAD FONKSİYONU
     override suspend fun load(url: String): LoadResponse {
-        // Gelen 'url' (kanalın akış URL'si), dataUrl olarak loadLinks'e gönderilecek
         return newLiveStreamLoadResponse(
             name = "Canlı Yayın",
             url = url,       
-            dataUrl = url,   // loadLinks'e aktarılacak olan URL
+            dataUrl = url,   
         ) {
             this.posterUrl = null
             this.plot = "Canlı yayın akışı"
@@ -53,22 +87,21 @@ class Xmltv : MainAPI() {
         }
     }
 
-    // ⭐ LOADLINKS FONKSİYONU - Oynatıcıya linki göndermek için kritik
+    // ⭐ LOADLINKS FONKSİYONU
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        // 'data' parametresi, Load fonksiyonundan gelen kanalın akış URL'sidir.
         callback.invoke(
             newExtractorLink(
                 source = "XMLTV",
                 name = this.name,
-                url = data,        // data'yı (akış URL'si) kullan
+                url = data,
                 type = ExtractorLinkType.M3U8
             ) {
-                this.referer = "" 
+                this.referer = ""
                 this.quality = Qualities.Unknown.value
             }
         )
@@ -88,37 +121,34 @@ class XmlPlaylistParser {
             RegexOption.DOT_MATCHES_ALL
         )
 
-        // Belirli alanları (CDATA dahil) yakalamak için regex'ler
-       // ⭐ 1. TITLE REGEX GÜNCELLENDİ
+        // Etiketler ve CDATA arasındaki yeni satırları ve boşlukları (\s*) tolere edecek RegEx'ler
         val titleRegex = Regex(
-            // Etiketler ve CDATA arasındaki boşlukları (\s*) tolere et
-            "<title>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</title>", 
+            "<title>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</title>",
             RegexOption.DOT_MATCHES_ALL
         )
-        // ⭐ 2. LOGO REGEX GÜNCELLENDİ
         val logoRegex = Regex(
-            // Etiketler ve CDATA arasındaki boşlukları (\s*) tolere et
-            "<logo_30x30>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</logo_30x30>", 
+            "<logo_30x30>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</logo_30x30>",
             RegexOption.DOT_MATCHES_ALL
         )
-        // ⭐ 3. STREAM_URL REGEX GÜNCELLENDİ
-        val urlRegex = Regex(
-            // stream_url etiketleri arasındaki boşlukları (\s*) tolere et
-            "<stream_url>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</stream_url>", 
+        // Eğer XML'de stream_url veya playlist_url varsa, aşağıdaki URL yakalama mantığını kullanın:
+        val streamUrlRegex = Regex(
+            "<stream_url>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</stream_url>",
             RegexOption.DOT_MATCHES_ALL
         )
+        
         for (channelMatch in channelRegex.findAll(content)) {
             val channelBlock = channelMatch.groupValues.getOrNull(1) ?: continue
 
             val title = titleRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
             val logo = logoRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
-            val url = urlRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
+            val url = streamUrlRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
 
             if (!title.isNullOrBlank() && !url.isNullOrBlank()) {
                 val attributesMap = mutableMapOf<String, String>()
-                // XML'den yakalanan logoyu CloudStream'in tvg-logo alanına atar
-                attributesMap["tvg-logo"] = logo ?: "" 
-                // Tüm kanallara zorunlu bir grup başlığı atar
+                attributesMap["tvg-logo"] = logo ?: ""
+                
+                // Gruplama getMainPage'de yapıldığı için, buradaki atamayı kaldırmadım
+                // ancak CloudStream'e veri sağlamak için tutabiliriz.
                 attributesMap["group-title"] = "XML Kanalları" 
 
                 playlistItems.add(
@@ -156,7 +186,3 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
-
-
-
-
