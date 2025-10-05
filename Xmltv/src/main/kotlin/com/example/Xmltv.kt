@@ -2,14 +2,11 @@ package com.example
 
 import android.util.Log
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.utils.AppUtils.parseJson
-import com.lagradost.cloudstream3.utils.AppUtils.toJson
-import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 
 /**
  * CloudStream için XMLTV tabanlı IPTV eklentisi
- * Bu eklenti XML biçiminde gelen yayın listesini ayrıştırır.
+ * Güncel CloudStream API'lerine tam uyumludur.
  */
 
 class Xmltv : MainAPI() {
@@ -23,20 +20,29 @@ class Xmltv : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val response = app.get(xmlUrl).text
         val playlist = XmlPlaylistParser().parseXML(response)
+
         val homeItems = playlist.items.map {
-            newMovieSearchResponse(it.title, LoadData(it.url), TvType.Live) {
+            newMovieSearchResponse(
+                name = it.title,
+                url = it.url,
+                type = TvType.Live
+            ) {
                 this.posterUrl = it.attributes["tvg-logo"]
             }
         }
+
         return newHomePageResponse(
-            listOf(
-                HomePageList("XML Kanalları", homeItems)
-            )
+            listOf(HomePageList("XML Kanalları", homeItems))
         )
     }
 
     override suspend fun load(url: String): LoadResponse {
-        return newMovieLoadResponse(name = "Canlı Yayın", url = url, type = TvType.Live) {
+        return newMovieLoadResponse(
+            name = "Canlı Yayın",
+            url = url,
+            dataUrl = url, // 🧩 eklendi
+            type = TvType.Live
+        ) {
             this.posterUrl = null
             this.plot = "Canlı yayın akışı"
         }
@@ -49,7 +55,7 @@ class Xmltv : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         callback.invoke(
-            ExtractorLink(
+            newExtractorLink(
                 name = this.name,
                 source = "XMLTV",
                 url = data,
@@ -92,7 +98,6 @@ class XmlPlaylistParser {
             val logo = logoRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
             val url = urlRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
 
-            // Başlık veya URL boşsa bu kanalı atla
             if (!title.isNullOrBlank() && !url.isNullOrBlank()) {
                 val attributesMap = mutableMapOf<String, String>()
                 attributesMap["tvg-logo"] = logo ?: ""
