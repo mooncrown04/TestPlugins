@@ -1,28 +1,31 @@
 package com.example
+
 import android.util.Log
-// ⭐ 1. CloudStream Utils paketini ekledik (ExtractorLink, SubtitleFile, newExtractorLink burada)
+// CLOUDSTREAM SINIFLARI İÇİN TEMEL İMPORTLAR
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.utils.* import com.lagradost.cloudstream3.utils.Qualities // Qualities zaten vardı, yine de ekleyelim
+import com.lagradost.cloudstream3.utils.* import com.lagradost.cloudstream3.utils.Qualities
 
-import kotlin.text.* // ⭐ 2. RegEx bileşenlerini çözmek için kotlin.text.* ekledik
-
-
-
+// KOTLIN TEXT İMPORTLARI: RegEx sorunlarını (DOT_ALL, findAll, trim) çözmek için kritik
+import kotlin.text.* import kotlin.collections.* /**
+ * CloudStream için XMLTV tabanlı IPTV eklentisi
+ */
 class Xmltv : MainAPI() {
+    // DropBox URL'si, ana URL olarak kullanılıyor
     override var mainUrl = "https://dl.dropbox.com/scl/fi/emegyd857cyocpk94w5lr/xmltv.xml?rlkey=kuyabjk4a8t65xvcob3cpidab"
     override var name = "35 Xmltv"
     override var lang = "tr"
     override val hasMainPage = true
-
+    override val supportedTypes = setOf(TvType.Live) // TV tipi Live olarak belirtildi
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        // Doğrudan mainUrl'den veriyi çekiyoruz
         val response = app.get(mainUrl).text
         val playlist = XmlPlaylistParser().parseXML(response)
 
         val homeItems = playlist.items.map {
             newMovieSearchResponse(
                 name = it.title,
-                url = it.url,
+                url = it.url, // Kanalın akış URL'si (Load'a gönderilecek)
                 type = TvType.Live
             ) {
                 this.posterUrl = it.attributes["tvg-logo"]
@@ -34,44 +37,50 @@ class Xmltv : MainAPI() {
         )
     }
 
-// Xmltv.kt içinde, loadLinks fonksiyonunun doğru hali
-override suspend fun loadLinks(
-    data: String,
-    isCasting: Boolean,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
-): Boolean {
-    callback.invoke(
-        // 'newExtractorLink' artık sadece 4 temel parametre alır
-        newExtractorLink(
-            source = "XMLTV", // Kaynak (source) adı
-            name = this.name, // Link adı
-            url = data,       // URL
-            type = ExtractorLinkType.M3U8 // Veya ExtractorLinkType.LINK
+    // ⭐ LOAD FONKSİYONU EKLENDİ - Açıklama menüsüne gitmek için kritik
+    override suspend fun load(url: String): LoadResponse {
+        // Gelen 'url' (kanalın akış URL'si), dataUrl olarak loadLinks'e gönderilecek
+        return newLiveStreamLoadResponse(
+            name = "Canlı Yayın",
+            url = url,       
+            dataUrl = url,   // loadLinks'e aktarılacak olan URL
+            type = TvType.Live
         ) {
-            // ⭐ REFERER, QUALITY, ve IS_M3U8 buradaki lambda içinde ayarlanır.
-            this.referer = "" // referer artık direkt this.referer olarak ayarlanır
-            this.quality = Qualities.Unknown.value
-            // isM3u8 parametresi artık yok, çünkü ExtractorLinkType zaten M3U8 olduğunu belirtiyor.
-            // Sadece HTTP başlıklarını eklemek isterseniz:
-            // this.headers = emptyMap() 
+            this.posterUrl = null
+            this.plot = "Canlı yayın akışı"
         }
-    )
-    return true
-}
+    }
+
+    // ⭐ LOADLINKS FONKSİYONU - Oynatıcıya linki göndermek için kritik
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        // 'data' parametresi, Load fonksiyonundan gelen kanalın akış URL'sidir.
+        callback.invoke(
+            newExtractorLink(
+                source = "XMLTV",
+                name = this.name,
+                url = data,        // data'yı (akış URL'si) kullan
+                type = ExtractorLinkType.M3U8
+            ) {
+                this.referer = "" 
+                this.quality = Qualities.Unknown.value
+            }
+        )
+        return true
+    }
 }
 // -------------------------------------------------------------
-// --- XML Ayrıştırıcı Sınıfı (RegEx Tabanlı, HATASIZ) ---
+// --- XML Ayrıştırıcı Sınıfı (RegEx Tabanlı) ---
 // -------------------------------------------------------------
 
 class XmlPlaylistParser {
-    /**
-     * XML içeriğini ayrıştırır ve Playlist nesnesine dönüştürür.
-     */
     fun parseXML(content: String): Playlist {
         val playlistItems: MutableList<PlaylistItem> = mutableListOf()
 
-        // Tüm <channel> bloklarını yakala (CDATA destekli)
         val channelRegex = Regex(
             "<channel>(.*?)</channel>",
             RegexOption.DOT_MATCHES_ALL
@@ -82,7 +91,6 @@ class XmlPlaylistParser {
         val logoRegex = Regex("<logo_30x30><!\\[CDATA\\[(.*?)\\]\\]></logo_30x30>", RegexOption.DOT_MATCHES_ALL)
         val urlRegex = Regex("<stream_url><!\\[CDATA\\[(.*?)\\]\\]></stream_url>", RegexOption.DOT_MATCHES_ALL)
 
-        // Kanal bloklarını tara
         for (channelMatch in channelRegex.findAll(content)) {
             val channelBlock = channelMatch.groupValues.getOrNull(1) ?: continue
 
@@ -92,8 +100,10 @@ class XmlPlaylistParser {
 
             if (!title.isNullOrBlank() && !url.isNullOrBlank()) {
                 val attributesMap = mutableMapOf<String, String>()
-                attributesMap["tvg-logo"] = logo ?: ""
-                attributesMap["group-title"] = "XML Kanalları"
+                // XML'den yakalanan logoyu CloudStream'in tvg-logo alanına atar
+                attributesMap["tvg-logo"] = logo ?: "" 
+                // Tüm kanallara zorunlu bir grup başlığı atar
+                attributesMap["group-title"] = "XML Kanalları" 
 
                 playlistItems.add(
                     PlaylistItem(
@@ -130,8 +140,3 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
-
-
-
-
-
