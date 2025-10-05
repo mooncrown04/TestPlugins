@@ -4,7 +4,8 @@ import android.util.Log
 // CLOUDSTREAM SINIFLARI İÇİN TEMEL İMPORTLAR
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.* import com.lagradost.cloudstream3.utils.Qualities
-import com.lagradost.cloudstream3.extractors.ExtractorLinkType // ExtractorLinkType import'u eklendi
+// ⭐ DÜZELTME: ExtractorLinkType için doğru import yolu
+import com.lagradost.cloudstream3.extractors.ExtractorLinkType 
 
 // KOTLIN TEXT İMPORTLARI: RegEx sorunlarını (DOT_ALL, findAll, trim) çözmek için kritik
 import kotlin.text.* import kotlin.collections.* /**
@@ -14,7 +15,7 @@ class Xmltv : MainAPI() {
     // Birincil XML URL'si
     override var mainUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b.xml"
     
-    // İkinci XML kaynağı için URL
+    // İkinci XML kaynağı için URL. ⭐ BURAYI KENDİ İKİNCİ URL'NİZLE DEĞİŞTİRİN
     private val secondaryXmlUrl = "https://dl.dropbox.com/scl/fi/emegyd857cyocpk94w5lr/xmltv.xml?rlkey=kuyabjk4a8t65xvcob3cpidab"
     
     // Grup adları
@@ -29,20 +30,19 @@ class Xmltv : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val homepageLists = mutableListOf<HomePageList>()
 
-        // Helper fonksiyon: Kanal listesini oluşturur ve URL'yi logo ile birleştirir.
+        // Helper fonksiyon: Kanal listesini oluşturur ve poster aktarımı için URL'yi birleştirir.
         fun createChannelItems(playlist: Playlist): List<SearchResponse> {
             return playlist.items.map {
                 val logoUrl = it.attributes["tvg-logo"] ?: ""
                 
                 // ⭐ POSTER AKTARIMI KRİTİK: Akış URL'si ve logo URL'sini '|' ile birleştir
-                // Bu, load fonksiyonunda posteri geri almamızı sağlar.
                 val combinedUrl = if (logoUrl.isBlank()) it.url else "${it.url}|logo=$logoUrl"
 
                 newMovieSearchResponse(
                     name = it.title,
-                    url = combinedUrl, // Birleştirilmiş URL'yi gönder
+                    url = combinedUrl, // Birleştirilmiş URL'yi Load'a gönder
                 ) {
-                    this.posterUrl = it.attributes["tvg-logo"]
+                    this.posterUrl = it.attributes["tvg-logo"] // Listede logo görünümü
                     this.type = TvType.Live
                 }
             }
@@ -74,14 +74,14 @@ class Xmltv : MainAPI() {
              Log.e("Xmltv", "İkincil URL yüklenemedi veya ayrıştırılamadı: ${e.message}")
         }
 
-        // En üstteki afiş/poster bölümünü boş geçerek temiz bir görünüm sağlar.
+        // ⭐ DÜZELTME: newHomePageResponse artık sadece List<HomePageList> bekler
+        // Bu, üstteki featured (afiş) alanı boş bırakır ve alt listeleri gösterir.
         return newHomePageResponse(
-            list = homepageLists,
-            featuredList = null 
+            homepageLists 
         )
     }
 
-    // ⭐ GÜNCELLENEN LOAD FONKSİYONU: Poster URL'sini geri alır.
+    // ⭐ LOAD FONKSİYONU: Poster URL'sini geri alır.
     override suspend fun load(url: String): LoadResponse {
         // URL'yi parçala: [0] -> Akış URL'si, [1] -> Logo bilgisi (varsa)
         val parts = url.split('|') 
@@ -94,15 +94,15 @@ class Xmltv : MainAPI() {
         return newLiveStreamLoadResponse(
             name = "Canlı Yayın",
             url = streamUrl,       
-            dataUrl = streamUrl,   // loadLinks'e sadece temiz akış URL'si gitsin
+            dataUrl = streamUrl,   // loadLinks'e temiz akış URL'si gitsin
         ) {
-            this.posterUrl = logoUrl // ⭐ Burası KRİTİK: Logo URL'si atanır.
+            this.posterUrl = logoUrl // ⭐ Logo URL'si menüye atanır.
             this.plot = "Canlı yayın akışı"
             this.type = TvType.Live
         }
     }
 
-    // ⭐ LOADLINKS FONKSİYONU
+    // ⭐ LOADLINKS FONKSİYONU: Dinamik link türü belirleme
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -113,7 +113,8 @@ class Xmltv : MainAPI() {
         val linkType = if (data.endsWith(".m3u8", ignoreCase = true)) {
             ExtractorLinkType.M3U8
         } else {
-            ExtractorLinkType.LINK
+            // TS, MP4 gibi diğer direkt akışları desteklemek için
+            ExtractorLinkType.LINK 
         }
         
         callback.invoke(
@@ -152,7 +153,9 @@ class XmlPlaylistParser {
             "<logo_30x30>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</logo_30x30>",
             RegexOption.DOT_MATCHES_ALL
         )
+        // Eğer XML'de stream_url veya playlist_url varsa, aşağıdaki URL yakalama mantığını kullanın:
         val streamUrlRegex = Regex(
+            // Sadece stream_url etiketi var varsayıyoruz. Eğer playlist_url varsa, regex değiştirilmelidir.
             "<stream_url>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</stream_url>",
             RegexOption.DOT_MATCHES_ALL
         )
@@ -166,8 +169,8 @@ class XmlPlaylistParser {
 
             if (!title.isNullOrBlank() && !url.isNullOrBlank()) {
                 val attributesMap = mutableMapOf<String, String>()
-                attributesMap["tvg-logo"] = logo ?: "" // Poster URL'si buraya atanır.
-                attributesMap["group-title"] = "XML Kanalları" // Gruplama için tutulan varsayılan değer.
+                attributesMap["tvg-logo"] = logo ?: "" 
+                attributesMap["group-title"] = "XML Kanalları" 
 
                 playlistItems.add(
                     PlaylistItem(
