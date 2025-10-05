@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import java.io.InputStream
+import kotlin.text.RegexOption
 import kotlinx.coroutines.coroutineScope
 
 // --- Ana Eklenti Sınıfı ---
@@ -465,3 +466,4 @@ class XmlPlaylistParser {
         return Playlist(playlistItems)
     }
 }
+
