@@ -107,26 +107,38 @@ class Xmltv : MainAPI() {
         }
     }
 
-      // ⭐ LOADLINKS FONKSİYONU
-    override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        callback.invoke(
-            newExtractorLink(
-                source = "XMLTV",
-                name = this.name,
-                url = data,
-                type = ExtractorLinkType.M3U8
-            ) {
-                this.referer = ""
-                this.quality = Qualities.Unknown.value
-            }
-        )
-        return true
+// ⭐ LOADLINKS FONKSİYONU
+override suspend fun loadLinks(
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    // 1. URL'nin uzantısına göre uygun ExtractorLinkType'ı belirle
+    val linkType = when {
+        data.endsWith(".mp4", ignoreCase = true) -> ExtractorLinkType.MP4
+        data.endsWith(".ts", ignoreCase = true) -> ExtractorLinkType.DOWNLOADABLE
+        data.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.DOWNLOADABLE
+        data.endsWith(".m3u8", ignoreCase = true) -> ExtractorLinkType.M3U8
+        // Varsayılan olarak M3U8 veya akış olduğunu varsayabiliriz.
+        else -> ExtractorLinkType.M3U8 
     }
+
+    // 2. ExtractorLink'i geriye çağır
+    callback.invoke(
+        newExtractorLink(
+            source = "XMLTV",
+            name = this.name,
+            url = data,
+            // Düzeltilen Kısım: Dinamik olarak belirlenen linkType kullanılıyor
+            type = linkType 
+        ) {
+            this.referer = ""
+            this.quality = Qualities.Unknown.value
+        }
+    )
+    return true
+}
 }
 // -------------------------------------------------------------
 // --- XML Ayrıştırıcı Sınıfı (RegEx Tabanlı) ---
@@ -202,5 +214,6 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
+
 
 
