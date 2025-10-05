@@ -45,10 +45,10 @@ class Xmltv : MainAPI() {
             name = "Canlı Yayın",
             url = url,       
             dataUrl = url,   // loadLinks'e aktarılacak olan URL
-            type = TvType.Live
         ) {
             this.posterUrl = null
             this.plot = "Canlı yayın akışı"
+            this.type = TvType.Live
         }
     }
 
@@ -141,4 +141,5 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
+
 
