@@ -7,10 +7,9 @@ import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import java.io.InputStream
 import kotlinx.coroutines.coroutineScope
-
-// YALNIZCA BU İKİ SATIRI EKLEYİN/GÜNCELLEYİN:
+// KESİN ÇÖZÜM: Yalnızca ihtiyacımız olanları açıkça içeri aktarın.
 import kotlin.text.Regex
-import kotlin.text.RegexOption.DOT_ALL // DOT_ALL'ı tek başına değil, Option sınıfı içinden import edin.
+import kotlin.text.RegexOption.DOT_ALL 
 
 // TÜM KOTLIN TEXT KÜTÜPHANESİNİ İÇE AKTAR (Gerekli tüm RegEx fonksiyonlarını kapsar)
 import kotlin.text.* // Diğer gerekli import'lar genellikle örtülü olarak gelir, ancak buraya açıkça ekleyebiliriz:
@@ -467,4 +466,5 @@ class XmlPlaylistParser {
         return Playlist(playlistItems)
     }
 }
+
 
