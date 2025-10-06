@@ -104,7 +104,7 @@ class Xmltv : MainAPI() {
         }
     }
 
-// ⭐ LOADLINKS FONKSİYONU (Düzeltilmiş Hali)
+// ⭐ LOADLINKS FONKSİYONU (Tüm Hatalar İçin Düzeltildi)
 override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
@@ -113,15 +113,18 @@ override suspend fun loadLinks(
 ): Boolean {
     // 1. URL'nin uzantısına göre uygun ExtractorLinkType'ı belirle
     val linkType = when {
-        // VIDEO dosya türleri için MP4 ve DOWNLOADABLE kullanılıyor
-        data.endsWith(".mp4", ignoreCase = true) -> ExtractorLinkType.MP4
-        data.endsWith(".ts", ignoreCase = true) -> ExtractorLinkType.DOWNLOADABLE
+        // Hata veren MP4 yerine DOWNLOADABLE kullanıldı
+        data.endsWith(".mp4", ignoreCase = true) -> ExtractorLinkType.DOWNLOADABLE 
+        
+        // Bu ve MKV, indirilebilir dosya türleri olarak kalır
+        data.endsWith(".ts", ignoreCase = true) -> ExtractorLinkType.DOWNLOADABLE 
         data.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.DOWNLOADABLE
         
-        // M3U8 ve diğer varsayılanlar
+        // M3U8 akışlar için
         data.endsWith(".m3u8", ignoreCase = true) -> ExtractorLinkType.M3U8
-        // Varsayılan olarak M3U8 (Canlı yayınlarda en yaygın ve uyumlu türdür)
-        else -> ExtractorLinkType.M3U8 
+        
+        // Diğer her şey için varsayılan akış tipi (M3U8)
+        else -> ExtractorLinkType.M3U8  
     }
 
     // 2. ExtractorLink'i geriye çağır
@@ -214,3 +217,4 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
+
