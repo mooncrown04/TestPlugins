@@ -99,7 +99,7 @@ class Xmltv : MainAPI() {
         }
     }
 
-// ⭐ LOADLINKS FONKSİYONU (MP4 ve TS Desteğiyle Geri Getirildi)
+// ⭐ LOADLINKS FONKSİYONU (Hata Veren MP4 ve DOWNLOADABLE'sız Versiyon)
 override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
@@ -109,17 +109,17 @@ override suspend fun loadLinks(
     
     val videoUrl = data
     
-    // 1. URL uzantısına göre en uygun tip belirlenir. 
-    // Bu tiplerin (MP4, VIDEO, DOWNLOADABLE) artık çalıştığı varsayılır.
+    // 1. URL uzantısına göre en uygun tip belirlenir.
     val linkType = when {
-        // İndirilebilir video dosyaları
-        videoUrl.endsWith(".mp4", ignoreCase = true) -> ExtractorLinkType.MP4 
-        videoUrl.endsWith(".ts", ignoreCase = true) -> ExtractorLinkType.VIDEO // TS için daha genel olan VIDEO
-        videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.DOWNLOADABLE // MKV için DOWNLOADABLE
+        // MP4, TS, MKV gibi tüm indirilebilir video dosyaları için VIDEO kullanıldı
+        videoUrl.endsWith(".mp4", ignoreCase = true) -> ExtractorLinkType.VIDEO // MP4 yerine VIDEO
+        videoUrl.endsWith(".ts", ignoreCase = true) -> ExtractorLinkType.VIDEO
+        videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.VIDEO // DOWNLOADABLE yerine VIDEO
         
         // Akış protokolleri
         videoUrl.endsWith(".m3u8", ignoreCase = true) -> ExtractorLinkType.M3U8
-        videoUrl.endsWith(".mpd", ignoreCase = true) -> ExtractorLinkType.DASH // DASH'in de çalıştığı varsayılıyor
+        // DASH'in çalıştığı varsayılıyor (Diğer örnekte çalışmıştı)
+        videoUrl.endsWith(".mpd", ignoreCase = true) -> ExtractorLinkType.DASH 
         
         // Varsayılan
         else -> ExtractorLinkType.M3U8 
@@ -131,7 +131,6 @@ override suspend fun loadLinks(
             source = "XMLTV",
             name = this.name,
             url = data,
-            // MP4 ve TS gibi dosyaları oynaması için dinamik linkType kullanılıyor
             type = linkType 
         ) {
             this.referer = ""
@@ -214,3 +213,4 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
+
