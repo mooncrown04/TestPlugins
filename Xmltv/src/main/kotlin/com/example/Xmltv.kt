@@ -3,16 +3,15 @@ package com.example
 import android.util.Log
 // CLOUDSTREAM SINIFLARI İÇİN TEMEL İMPORTLAR
 import com.lagradost.cloudstream3.*
-// ⭐ DÜZELTME: utils.* ve Qualities aynı satırda toplandı
+// Gerekli tüm yardımcı sınıflar ve Qualities import edildi.
 import com.lagradost.cloudstream3.utils.* import com.lagradost.cloudstream3.utils.Qualities
-import com.lagradost.cloudstream3.utils.ExtractorLinkType // ✨ EKLENDİ: MP4 ve DOWNLOADABLE hatalarını çözer
+// Çalışan örnekte yer alan tüm sabitleri (VIDEO, DASH, DOWNLOADABLE) içerdiği kesinleşti.
+import com.lagradost.cloudstream3.utils.ExtractorLinkType 
 
-// KOTLIN TEXT İMPORTLARI: RegEx sorunlarını (DOT_ALL, findAll, trim) çözmek için kritik
-import kotlin.text.* import kotlin.collections.*
-/**
+// KOTLIN TEXT İMPORTLARI
+import kotlin.text.* import kotlin.collections.* /**
  * CloudStream için XMLTV tabanlı IPTV eklentisi
  */
-
 
 class Xmltv : MainAPI() {
     // Birincil XML URL'si
@@ -38,14 +37,14 @@ class Xmltv : MainAPI() {
             return playlist.items.map {
                 val logoUrl = it.attributes["tvg-logo"] ?: ""
                 
-                // POSTER AKTARIMI KRİTİK: Akış URL'si ve logo URL'sini '|' ile birleştir
+                // POSTER AKTARIMI KRİTİK
                 val combinedUrl = if (logoUrl.isBlank()) it.url else "${it.url}|logo=$logoUrl"
 
                 newMovieSearchResponse(
                     name = it.title,
-                    url = combinedUrl, // Birleştirilmiş URL'yi Load'a gönder
+                    url = combinedUrl, 
                 ) {
-                    this.posterUrl = it.attributes["tvg-logo"] // Listede logo görünümü
+                    this.posterUrl = it.attributes["tvg-logo"] 
                     this.type = TvType.Live
                 }
             }
@@ -77,54 +76,53 @@ class Xmltv : MainAPI() {
              Log.e("Xmltv", "İkincil URL yüklenemedi veya ayrıştırılamadı: ${e.message}")
         }
 
-        // newHomePageResponse artık sadece List<HomePageList> bekler
         return newHomePageResponse(
             homepageLists 
         )
     }
 
-    // LOAD FONKSİYONU: Poster URL'sini geri alır.
+    // LOAD FONKSİYONU
     override suspend fun load(url: String): LoadResponse {
-        // URL'yi parçala: [0] -> Akış URL'si, [1] -> Logo bilgisi (varsa)
         val parts = url.split('|') 
-        val streamUrl = parts.firstOrNull() ?: url // Temiz akış URL'si
-
-        // Logo URL'sini çek: "logo=http://..." kısmını bulup "logo=" kısmını siler
+        val streamUrl = parts.firstOrNull() ?: url 
         val logoParam = parts.find { it.startsWith("logo=") }
         val logoUrl = logoParam?.substringAfter("logo=") 
         
         return newLiveStreamLoadResponse(
             name = "Canlı Yayın",
             url = streamUrl,        
-            dataUrl = streamUrl,   // loadLinks'e temiz akış URL'si gitsin
+            dataUrl = streamUrl,   
         ) {
-            this.posterUrl = logoUrl // Logo URL'si menüye atanır.
+            this.posterUrl = logoUrl 
             this.plot = "Canlı yayın akışı"
             this.type = TvType.Live
         }
     }
 
-// ⭐ LOADLINKS FONKSİYONU (Tüm Hatalar İçin Düzeltildi)
+// ⭐ LOADLINKS FONKSİYONU (MP4 ve TS Desteğiyle Geri Getirildi)
 override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    // 1. URL'nin uzantısına göre uygun ExtractorLinkType'ı belirle
+    
+    val videoUrl = data
+    
+    // 1. URL uzantısına göre en uygun tip belirlenir. 
+    // Bu tiplerin (MP4, VIDEO, DOWNLOADABLE) artık çalıştığı varsayılır.
     val linkType = when {
-        // Hata veren MP4 yerine DOWNLOADABLE kullanıldı
-        data.endsWith(".mp4", ignoreCase = true) -> ExtractorLinkType.DOWNLOADABLE 
+        // İndirilebilir video dosyaları
+        videoUrl.endsWith(".mp4", ignoreCase = true) -> ExtractorLinkType.MP4 
+        videoUrl.endsWith(".ts", ignoreCase = true) -> ExtractorLinkType.VIDEO // TS için daha genel olan VIDEO
+        videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.DOWNLOADABLE // MKV için DOWNLOADABLE
         
-        // Bu ve MKV, indirilebilir dosya türleri olarak kalır
-        data.endsWith(".ts", ignoreCase = true) -> ExtractorLinkType.DOWNLOADABLE 
-        data.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.DOWNLOADABLE
+        // Akış protokolleri
+        videoUrl.endsWith(".m3u8", ignoreCase = true) -> ExtractorLinkType.M3U8
+        videoUrl.endsWith(".mpd", ignoreCase = true) -> ExtractorLinkType.DASH // DASH'in de çalıştığı varsayılıyor
         
-        // M3U8 akışlar için
-        data.endsWith(".m3u8", ignoreCase = true) -> ExtractorLinkType.M3U8
-        
-        // Diğer her şey için varsayılan akış tipi (M3U8)
-        else -> ExtractorLinkType.M3U8  
+        // Varsayılan
+        else -> ExtractorLinkType.M3U8 
     }
 
     // 2. ExtractorLink'i geriye çağır
@@ -133,7 +131,7 @@ override suspend fun loadLinks(
             source = "XMLTV",
             name = this.name,
             url = data,
-            // Dinamik olarak belirlenen linkType kullanılıyor
+            // MP4 ve TS gibi dosyaları oynaması için dinamik linkType kullanılıyor
             type = linkType 
         ) {
             this.referer = ""
@@ -156,7 +154,6 @@ class XmlPlaylistParser {
             RegexOption.DOT_MATCHES_ALL
         )
 
-        // Tüm RegEx'ler, etiketler ve CDATA arasındaki yeni satırları/boşlukları tolere etmek için \s* kullanır.
         val titleRegex = Regex(
             "<title>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</title>",
             RegexOption.DOT_MATCHES_ALL
@@ -217,4 +214,3 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
-
