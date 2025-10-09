@@ -35,7 +35,7 @@ import kotlin.math.min
 // --- Ana Eklenti Sınıfı ---
 class MoOnCrOwNAlways(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mOoncr0wn always FULL--007"
+    override var name = "35 mOoncr0wn always FULL"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -715,10 +715,15 @@ override suspend fun load(url: String): LoadResponse {
    val baseImageUrl = "https://image.tmdb.org/t/p/w500"
 val defaultActorImage = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNAMQEgmCPDgrUXc_WixWFFcYdEDUJA3-WBg&s" // fallback görsel
 
+// 1. tmdbData'dan 'credits' JSON nesnesini al
+val tmdbCreditsData = tmdbData?.optJSONObject("credits") 
+
+// 2. Bu nesneyi kullanarak 'cast' dizisini al
 val castArray = tmdbCreditsData?.optJSONArray("cast")
+
 val actorsList = mutableListOf<ActorData>()
 
-if (castArray != null) {
+if (castArray != null && castArray.length() > 0) {
     for (i in 0 until castArray.length()) {
         val castMember = castArray.getJSONObject(i)
         val name = castMember.optString("name")
@@ -740,13 +745,6 @@ if (castArray != null) {
     }
 }
 
-   
-   
-   
-   
-   
-   
-   
    
    
    
