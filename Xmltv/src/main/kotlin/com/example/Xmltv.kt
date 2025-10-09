@@ -133,7 +133,7 @@ class Xmltv : MainAPI() {
                 // Not: VIDEO ve DOWNLOADABLE Cloudstream'in dahili tipleridir.
                 videoUrl.endsWith(".mp4", ignoreCase = true) || 
                 videoUrl.endsWith(".ts", ignoreCase = true) || 
-                videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.DOWNLOADABLE // İndirilebilir medya tipleri
+                videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.VIDEO  // İndirilebilir medya tipleri
                 
                 videoUrl.endsWith(".m3u8", ignoreCase = true) -> ExtractorLinkType.M3U8
                 videoUrl.endsWith(".mpd", ignoreCase = true) -> ExtractorLinkType.DASH
@@ -235,3 +235,4 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
+
