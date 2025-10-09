@@ -112,55 +112,58 @@ class Xmltv : MainAPI() {
     }
 
     // --- GÜNCELLENMİŞ LOADLINKS FONKSİYONU ---
-    override suspend fun loadLinks(
-        data: String, // Bu, artık tüm PlaylistItem'ları içeren GroupedChannelData JSON'u
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        // data'yı GroupedChannelData nesnesine geri çevir
-        val groupedData = parseJson<GroupedChannelData>(data)
+override suspend fun loadLinks(
+    data: String, // Bu, artık tüm PlaylistItem'ları içeren GroupedChannelData JSON'u
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    // data'yı GroupedChannelData nesnesine geri çevir
+    val groupedData = parseJson<GroupedChannelData>(data)
+    
+    var foundLink = false
+
+    // ⭐ GÜNCELLEME: Diziyi index (sıra) ile birlikte döngüye alıyoruz.
+    groupedData.items.forEachIndexed { index, item ->
+        val videoUrl = item.url
+        if (videoUrl.isNullOrBlank()) return@forEachIndexed
         
-        var foundLink = false
-
-        // Gruptaki her bir kaynak PlaylistItem'ı için ExtractorLink oluştur
-        for (item in groupedData.items) {
-            val videoUrl = item.url
-            if (videoUrl.isNullOrBlank()) continue
+        // ⭐ YENİ EKLEME: Kaynak adını orijinal başlık ve sıra numarası ile oluşturuyoruz.
+        val linkName = groupedData.title + " Kaynak ${index + 1}"
+        
+        // 1. URL uzantısına göre en uygun tip belirlenir.
+        val linkType = when {
+            // Not: VIDEO ve DOWNLOADABLE Cloudstream'in dahili tipleridir.
+            videoUrl.endsWith(".mp4", ignoreCase = true) || 
+            videoUrl.endsWith(".ts", ignoreCase = true) || 
+            videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.VIDEO // İndirilebilir medya tipleri
             
-            // 1. URL uzantısına göre en uygun tip belirlenir.
-            val linkType = when {
-                // Not: VIDEO ve DOWNLOADABLE Cloudstream'in dahili tipleridir.
-                videoUrl.endsWith(".mp4", ignoreCase = true) || 
-                videoUrl.endsWith(".ts", ignoreCase = true) || 
-                videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.VIDEO  // İndirilebilir medya tipleri
-                
-                videoUrl.endsWith(".m3u8", ignoreCase = true) -> ExtractorLinkType.M3U8
-                videoUrl.endsWith(".mpd", ignoreCase = true) -> ExtractorLinkType.DASH
-                
-                else -> ExtractorLinkType.M3U8 // Varsayılan olarak canlı yayın tipi
-            }
-
-            // ExtractorLink'i geriye çağır (Farklı kaynakları listelemek için)
-            callback.invoke(
-                newExtractorLink(
-                   //  source = "XMLTV Kaynak: ${item.title}", // Kaynak ismini farklı tutmak faydalı
-                     source = item.title, 
-					name = groupedData.title,
-                    url = videoUrl,
-                    type = linkType
-                ) {
-                    this.referer = ""
-                    // Kalite tahmini (Varsayılan olarak Unknown)
-                    this.quality = Qualities.Unknown.value
-                    // Eğer bir User-Agent varsa buraya eklenebilir.
-                    item.userAgent?.let { ua -> this.headers = mapOf("User-Agent" to ua) }
-                }
-            )
-            foundLink = true
+            videoUrl.endsWith(".m3u8", ignoreCase = true) -> ExtractorLinkType.M3U8
+            videoUrl.endsWith(".mpd", ignoreCase = true) -> ExtractorLinkType.DASH
+            
+            else -> ExtractorLinkType.M3U8 // Varsayılan olarak canlı yayın tipi
         }
-        return foundLink
+
+        // ExtractorLink'i geriye çağır (Farklı kaynakları listelemek için)
+        callback.invoke(
+            newExtractorLink(
+                // ⭐ Kaynak (Source) adı olarak benzersiz linkName kullanıldı
+                source = linkName,
+                name = groupedData.title,
+                url = videoUrl,
+                type = linkType
+            ) {
+                this.referer = ""
+                // Kalite tahmini (Varsayılan olarak Unknown)
+                this.quality = Qualities.Unknown.value
+                // Eğer bir User-Agent varsa buraya eklenebilir.
+                item.userAgent?.let { ua -> this.headers = mapOf("User-Agent" to ua) }
+            }
+        )
+        foundLink = true
     }
+    return foundLink
+  }
 }
 // -------------------------------------------------------------
 // --- XML Ayrıştırıcı ve Veri Modeli (Değişmedi) ---
