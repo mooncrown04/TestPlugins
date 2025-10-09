@@ -35,7 +35,7 @@ import kotlin.math.min
 // --- Ana Eklenti Sınıfı ---
 class MoOnCrOwNAlways(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name = "35 mOoncr0wn always FULL"
+    override var name = "35 mOoncr0wn always FULL--007"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
@@ -597,15 +597,41 @@ override suspend fun load(url: String): LoadResponse {
         }
     }
     val allShows = loadData.items
+
+// ✨ YENİ POSTER MANTIĞI BAŞLANGICI
+    val tmdbPosterPath = tmdbData?.optString("poster_path")
+    val tmdbBackdropPath = tmdbData?.optString("backdrop_path")
+    
+    // TMDB posterini oluştur. W500, orta çözünürlük için iyi bir seçimdir.
+    val tmdbPosterUrl = if (tmdbPosterPath != null && tmdbPosterPath.isNotEmpty()) {
+        "https://image.tmdb.org/t/p/w500$tmdbPosterPath"
+    } else if (tmdbBackdropPath != null && tmdbBackdropPath.isNotEmpty()) {
+        // Eğer poster yoksa, backdrop'ı (arka plan resmi) kullanmayı deneyebiliriz.
+        "https://image.tmdb.org/t/p/w780$tmdbBackdropPath"
+    } else {
+        null
+    }
+    
+    // ✅ DİZİNİN GENEL POSTERİNİN BELİRLENMESİ
+    // Öncelik TMDB'dir, eğer TMDB'den poster gelmezse, PlaylistItem'daki (iptv) posteri kullan.
+    val finalPosterUrl = tmdbPosterUrl 
+        ?: checkPosterUrl(loadData.items.firstOrNull()?.attributes?.get("tvg-logo")) 
+        ?: DEFAULT_POSTER_URL
+
     
 
-    val finalPosterUrl = loadData.poster
 
     // loadData'dan gelen puanı kullan
     val scoreToUse = loadData.score
     val dubbedEpisodes = mutableListOf<Episode>()
     val subbedEpisodes = mutableListOf<Episode>()
-    // Bölümleri sezon ve bölüme göre gruplandırıp, aynı bölümün tüm kaynaklarını bir arada tutar.
+    
+	  // Bölüm özetini tutacak değişken
+        var episodePlot: String? = null
+        var tmdbEpisodePosterUrl: String? = null // Yeni değişken
+		
+	
+	// Bölümleri sezon ve bölüme göre gruplandırıp, aynı bölümün tüm kaynaklarını bir arada tutar.
     val groupedEpisodes = allShows.groupBy {
         val (_, season, episode) = parseEpisodeInfo(it.title.toString())
         Pair(season, episode)
@@ -618,25 +644,33 @@ override suspend fun load(url: String): LoadResponse {
         val finalEpisode = episode ?: 1
         val isDubbed = isDubbed(item)
         val isSubbed = isSubbed(item)
-        val episodePoster = item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: finalPosterUrl
-
-        // Bölüm özetini tutacak değişken
-        var episodePlot: String? = null
-        
+        val episodePoster = tmdbEpisodePosterUrl 
+                           ?: item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } 
+                           ?: finalPosterUrl // En son genel dizi posterine düşer
+    
+      
         // ✨ YENİ: TMDB ID varsa ve bu bir TV şovuysa bölüm özetini çek
         if (tmdbId != null && tmdbType == TvType.TvSeries) {
             val tmdbEpisodeData = fetchEpisodeTMDBData(tmdbId, finalSeason, finalEpisode)
-            // Bölüm özetini al
+          
+			// Bölüm özetini al
             episodePlot = tmdbEpisodeData?.optString("overview")?.takeIf { it.isNotBlank() }
-        }
+       
+  // TMDB'den bölümün still resmini al.
+    val stillPath = tmdbEpisodeData?.optString("still_path")
+    if (stillPath != null && stillPath.isNotEmpty()) {
+        tmdbEpisodePosterUrl = "https://image.tmdb.org/t/p/w300$stillPath"
+    }
+
+
+	   }
 
 
         val episodeLoadData = LoadData(
             items = episodeItems,
             title = itemCleanTitle,
             poster = item.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } 
-                           ?: finalPosterUrl, // En son genel dizi posterine düşer
-    
+                           ?: finalPosterUrl, // En son genel dizi posterine düşer,
             group = item.attributes["group-title"] ?: "Bilinmeyen Grup",
             nation = item.attributes["tvg-country"] ?: "TR",
             season = finalSeason,
@@ -677,8 +711,46 @@ override suspend fun load(url: String): LoadResponse {
     if (subbedEpisodes.isNotEmpty()) {
         episodesMap[DubStatus.Subbed] = subbedEpisodes
     }
-    val actorsList = mutableListOf<ActorData>()
-    actorsList.add(
+   
+   val baseImageUrl = "https://image.tmdb.org/t/p/w500"
+val defaultActorImage = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNAMQEgmCPDgrUXc_WixWFFcYdEDUJA3-WBg&s" // fallback görsel
+
+val castArray = tmdbCreditsData?.optJSONArray("cast")
+val actorsList = mutableListOf<ActorData>()
+
+if (castArray != null) {
+    for (i in 0 until castArray.length()) {
+        val castMember = castArray.getJSONObject(i)
+        val name = castMember.optString("name")
+        val character = castMember.optString("character")
+        val profilePath = castMember.optString("profile_path")
+
+        val actorImageUrl = if (profilePath.isNotEmpty()) {
+            "$baseImageUrl$profilePath"
+        } else {
+            defaultActorImage
+        }
+
+        actorsList.add(
+            ActorData(
+                actor = Actor(name, actorImageUrl),
+                roleString = character
+            )
+        )
+    }
+}
+
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   actorsList.add(
         ActorData(
             actor = Actor("MoOnCrOwN","https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"),
             roleString = "yazılım amalesi"
@@ -713,8 +785,10 @@ override suspend fun load(url: String): LoadResponse {
         }
         
         newAnimeSearchResponse(episodeTitleWithNumber, episode.data).apply {
-            this.posterUrl = episodeLoadData.poster
-            type = TvType.Anime
+       //    this.posterUrl = episodeLoadData.poster
+           this.posterUrl = episodeLoadData.poster?.let { it }
+
+		   type = TvType.Anime
             // HER DİSİ İÇİN KENDİ SKORUNU EKLEME KISMI
             this.score = episodeLoadData.score?.let { Score.from10(it) }
 
