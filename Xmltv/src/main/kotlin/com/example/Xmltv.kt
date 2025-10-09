@@ -1,26 +1,22 @@
 package com.example
 
 import android.util.Log
-// CLOUDSTREAM SINIFLARI İÇİN TEMEL İMPORTLAR
 import com.lagradost.cloudstream3.*
-// Gerekli tüm yardımcı sınıflar ve Qualities import edildi.
-import com.lagradost.cloudstream3.utils.* import com.lagradost.cloudstream3.utils.Qualities
-// Çalışan örnekte yer alan tüm sabitleri (VIDEO, DASH, DOWNLOADABLE) içerdiği kesinleşti.
-import com.lagradost.cloudstream3.utils.ExtractorLinkType 
+import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.ExtractorLinkType
+import kotlin.text.*
+import kotlin.collections.*
+import com.lagradost.cloudstream3.utils.AppUtils.parseJson
+import com.lagradost.cloudstream3.utils.AppUtils.toJson
 
-// KOTLIN TEXT İMPORTLARI
-import kotlin.text.* import kotlin.collections.* /**
+/**
  * CloudStream için XMLTV tabanlı IPTV eklentisi
  */
 
 class Xmltv : MainAPI() {
-    // Birincil XML URL'si
     override var mainUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b.xml"
-    
-    // İkinci XML kaynağı için URL.
     private val secondaryXmlUrl = "https://dl.dropbox.com/scl/fi/emegyd857cyocpk94w5lr/xmltv.xml?rlkey=kuyabjk4a8t65xvcob3cpidab"
-    
-    // Grup adları
     private val primaryGroupName = "Favori Listem"
     private val secondaryGroupName = "Diğer Kanallar"
 
@@ -29,32 +25,52 @@ class Xmltv : MainAPI() {
     override val hasMainPage = true
     override val supportedTypes = setOf(TvType.Live)
 
+    // --- YENİ VERİ MODELİ ---
+    // Aynı isme sahip tüm kaynakları ve ortak meta veriyi tutar.
+    data class GroupedChannelData(
+        val title: String,
+        val posterUrl: String,
+        val items: List<PlaylistItem> // Bu gruptaki tüm kaynak PlaylistItem'ları
+    )
+
+    // Helper fonksiyon: Kanal listesini oluşturur ve aynı isme sahip kanalları gruplar.
+    private fun createGroupedChannelItems(playlist: Playlist): List<SearchResponse> {
+        // Kanalları başlığa göre grupla (örneğin "ATV" başlığı altındaki tüm ATV kaynakları)
+        val groupedByTitle = playlist.items.groupBy { it.title }
+
+        return groupedByTitle.mapNotNull { (title, items) ->
+            if (items.isEmpty()) return@mapNotNull null
+
+            // Grubun ilk öğesini kullanarak ortak meta veriyi (poster vb.) al.
+            val firstItem = items.first()
+            val logoUrl = firstItem.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: ""
+
+            // YENİ: Grup verisini modelle ve JSON'a dönüştür.
+            val groupedData = GroupedChannelData(
+                title = title,
+                posterUrl = logoUrl,
+                items = items
+            )
+            val dataUrl = groupedData.toJson() // SearchResponse'un URL'si artık JSON data
+
+            newMovieSearchResponse(
+                name = title,
+                url = dataUrl, // JSON verisini URL olarak sakla
+            ) {
+                this.posterUrl = logoUrl
+                this.type = TvType.Live
+            }
+        }
+    }
+
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val homepageLists = mutableListOf<HomePageList>()
 
-        // Helper fonksiyon: Kanal listesini oluşturur ve poster aktarımı için URL'yi birleştirir.
-        fun createChannelItems(playlist: Playlist): List<SearchResponse> {
-            return playlist.items.map {
-                val logoUrl = it.attributes["tvg-logo"] ?: ""
-                
-                // POSTER AKTARIMI KRİTİK
-                val combinedUrl = if (logoUrl.isBlank()) it.url else "${it.url}|logo=$logoUrl"
-
-                newMovieSearchResponse(
-                    name = it.title,
-                    url = combinedUrl, 
-                ) {
-                    this.posterUrl = it.attributes["tvg-logo"] 
-                    this.type = TvType.Live
-                }
-            }
-        }
-
-        // 1. Birincil XML'i Çek ve İşle
+        // 1. Birincil XML'i Çek ve İşle (Gruplayarak)
         try {
             val primaryResponse = app.get(mainUrl).text
             val primaryPlaylist = XmlPlaylistParser().parseXML(primaryResponse)
-            val primaryItems = createChannelItems(primaryPlaylist)
+            val primaryItems = createGroupedChannelItems(primaryPlaylist)
             
             if (primaryItems.isNotEmpty()) {
                 homepageLists.add(HomePageList(primaryGroupName, primaryItems))
@@ -63,88 +79,94 @@ class Xmltv : MainAPI() {
             Log.e("Xmltv", "Birincil URL yüklenemedi veya ayrıştırılamadı: ${e.message}")
         }
         
-        // 2. İkincil XML'i Çek ve İşle
+        // 2. İkincil XML'i Çek ve İşle (Gruplayarak)
         try {
             val secondaryResponse = app.get(secondaryXmlUrl).text
             val secondaryPlaylist = XmlPlaylistParser().parseXML(secondaryResponse)
-            val secondaryItems = createChannelItems(secondaryPlaylist)
+            val secondaryItems = createGroupedChannelItems(secondaryPlaylist)
 
             if (secondaryItems.isNotEmpty()) {
                 homepageLists.add(HomePageList(secondaryGroupName, secondaryItems))
             }
         } catch (e: Exception) {
-             Log.e("Xmltv", "İkincil URL yüklenemedi veya ayrıştırılamadı: ${e.message}")
+            Log.e("Xmltv", "İkincil URL yüklenemedi veya ayrıştırılamadı: ${e.message}")
         }
 
-        return newHomePageResponse(
-            homepageLists 
-        )
+        return newHomePageResponse(homepageLists)
     }
 
-    // LOAD FONKSİYONU
+    // --- YENİ LOAD FONKSİYONU ---
     override suspend fun load(url: String): LoadResponse {
-        val parts = url.split('|') 
-        val streamUrl = parts.firstOrNull() ?: url 
-        val logoParam = parts.find { it.startsWith("logo=") }
-        val logoUrl = logoParam?.substringAfter("logo=") 
-        
+        // Gelen URL, artık bir kanal grubu verisini tutan JSON string'dir.
+        val groupedData = parseJson<GroupedChannelData>(url)
+
         return newLiveStreamLoadResponse(
-            name = "Canlı Yayın",
-            url = streamUrl,        
-            dataUrl = streamUrl,   
+            name = groupedData.title,
+            url = groupedData.items.firstOrNull()?.url ?: "", // İlk linki kullan
+            dataUrl = groupedData.toJson(), // loadLinks'in kullanması için tüm listeyi dataUrl'de tut
         ) {
-            this.posterUrl = logoUrl 
-            this.plot = "Canlı yayın akışı"
+            this.posterUrl = groupedData.posterUrl
+            this.plot = "Bu kanal için ${groupedData.items.size} adet yayın kaynağı bulundu. En iyi kalite otomatik olarak seçilecektir."
             this.type = TvType.Live
         }
     }
 
-// ⭐ LOADLINKS FONKSİYONU (Hata Veren MP4 ve DOWNLOADABLE'sız Versiyon)
-override suspend fun loadLinks(
-    data: String,
-    isCasting: Boolean,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
-): Boolean {
-    
-    val videoUrl = data
-    
-    // 1. URL uzantısına göre en uygun tip belirlenir.
-    val linkType = when {
-        // MP4, TS, MKV gibi tüm indirilebilir video dosyaları için VIDEO kullanıldı
-        videoUrl.endsWith(".mp4", ignoreCase = true) -> ExtractorLinkType.VIDEO // MP4 yerine VIDEO
-        videoUrl.endsWith(".ts", ignoreCase = true) -> ExtractorLinkType.VIDEO
-        videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.VIDEO // DOWNLOADABLE yerine VIDEO
+    // --- GÜNCELLENMİŞ LOADLINKS FONKSİYONU ---
+    override suspend fun loadLinks(
+        data: String, // Bu, artık tüm PlaylistItem'ları içeren GroupedChannelData JSON'u
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        // data'yı GroupedChannelData nesnesine geri çevir
+        val groupedData = parseJson<GroupedChannelData>(data)
         
-        // Akış protokolleri
-        videoUrl.endsWith(".m3u8", ignoreCase = true) -> ExtractorLinkType.M3U8
-        // DASH'in çalıştığı varsayılıyor (Diğer örnekte çalışmıştı)
-        videoUrl.endsWith(".mpd", ignoreCase = true) -> ExtractorLinkType.DASH 
-        
-        // Varsayılan
-        else -> ExtractorLinkType.M3U8 
-    }
+        var foundLink = false
 
-    // 2. ExtractorLink'i geriye çağır
-    callback.invoke(
-        newExtractorLink(
-            source = "XMLTV",
-            name = this.name,
-            url = data,
-            type = linkType 
-        ) {
-            this.referer = ""
-            this.quality = Qualities.Unknown.value
+        // Gruptaki her bir kaynak PlaylistItem'ı için ExtractorLink oluştur
+        for (item in groupedData.items) {
+            val videoUrl = item.url
+            if (videoUrl.isNullOrBlank()) continue
+            
+            // 1. URL uzantısına göre en uygun tip belirlenir.
+            val linkType = when {
+                // Not: VIDEO ve DOWNLOADABLE Cloudstream'in dahili tipleridir.
+                videoUrl.endsWith(".mp4", ignoreCase = true) || 
+                videoUrl.endsWith(".ts", ignoreCase = true) || 
+                videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.DOWNLOADABLE // İndirilebilir medya tipleri
+                
+                videoUrl.endsWith(".m3u8", ignoreCase = true) -> ExtractorLinkType.M3U8
+                videoUrl.endsWith(".mpd", ignoreCase = true) -> ExtractorLinkType.DASH
+                
+                else -> ExtractorLinkType.M3U8 // Varsayılan olarak canlı yayın tipi
+            }
+
+            // ExtractorLink'i geriye çağır (Farklı kaynakları listelemek için)
+            callback.invoke(
+                newExtractorLink(
+                    source = "XMLTV Kaynak: ${item.title}", // Kaynak ismini farklı tutmak faydalı
+                    name = groupedData.title,
+                    url = videoUrl,
+                    type = linkType
+                ) {
+                    this.referer = ""
+                    // Kalite tahmini (Varsayılan olarak Unknown)
+                    this.quality = Qualities.Unknown.value
+                    // Eğer bir User-Agent varsa buraya eklenebilir.
+                    item.userAgent?.let { ua -> this.headers = mapOf("User-Agent" to ua) }
+                }
+            )
+            foundLink = true
         }
-    )
-    return true
-}
+        return foundLink
+    }
 }
 // -------------------------------------------------------------
-// --- XML Ayrıştırıcı Sınıfı (RegEx Tabanlı) ---
+// --- XML Ayrıştırıcı ve Veri Modeli (Değişmedi) ---
 // -------------------------------------------------------------
 
 class XmlPlaylistParser {
+    // ... (XmlPlaylistParser sınıfının içeriği aynı kalır)
     fun parseXML(content: String): Playlist {
         val playlistItems: MutableList<PlaylistItem> = mutableListOf()
 
@@ -175,8 +197,8 @@ class XmlPlaylistParser {
 
             if (!title.isNullOrBlank() && !url.isNullOrBlank()) {
                 val attributesMap = mutableMapOf<String, String>()
-                attributesMap["tvg-logo"] = logo ?: "" 
-                attributesMap["group-title"] = "XML Kanalları" 
+                attributesMap["tvg-logo"] = logo ?: ""
+                attributesMap["group-title"] = "XML Kanalları"
 
                 playlistItems.add(
                     PlaylistItem(
@@ -201,7 +223,7 @@ class XmlPlaylistParser {
 }
 
 // -------------------------------------------------------------
-// --- Veri Modeli ---
+// --- Orijinal Veri Modelleri (Uyum için tutuldu) ---
 // -------------------------------------------------------------
 
 data class Playlist(val items: List<PlaylistItem>)
@@ -213,4 +235,3 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
-
