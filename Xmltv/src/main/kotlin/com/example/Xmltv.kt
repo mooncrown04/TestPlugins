@@ -144,8 +144,9 @@ class Xmltv : MainAPI() {
             // ExtractorLink'i geriye çağır (Farklı kaynakları listelemek için)
             callback.invoke(
                 newExtractorLink(
-                    source = "XMLTV Kaynak: ${item.title}", // Kaynak ismini farklı tutmak faydalı
-                    name = groupedData.title,
+                   //  source = "XMLTV Kaynak: ${item.title}", // Kaynak ismini farklı tutmak faydalı
+                     source = item.title, 
+					name = groupedData.title,
                     url = videoUrl,
                     type = linkType
                 ) {
@@ -235,4 +236,3 @@ data class PlaylistItem(
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
-
