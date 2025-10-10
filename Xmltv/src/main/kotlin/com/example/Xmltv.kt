@@ -278,7 +278,7 @@ data class Playlist(val items: List<PlaylistItem>)
 data class PlaylistItem(
     val title: String,
     val url: String,
-	val description: String? = null //
+	val description: String? = null, //
 	val attributes: Map<String, String> = emptyMap(),
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
