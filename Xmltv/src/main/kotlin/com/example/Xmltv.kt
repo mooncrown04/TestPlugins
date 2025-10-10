@@ -10,7 +10,7 @@ import kotlin.collections.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.ActorData
-// import com.lagradost.cloudstream3.LiveStreamSearchResponse // Hata verdiği için kaldırıldı
+// LiveStreamSearchResponse ve LiveStreamSearchResponse'u çağıran helper fonksiyonları güvenilmez olduğu için kaldırıldı.
 
 /**
  * CloudStream için XMLTV tabanlı IPTV eklentisi
@@ -65,17 +65,15 @@ class Xmltv : MainAPI() {
             )
             val dataUrl = groupedData.toJson()
 
-            // ⭐ DÜZELTME 1: newSearchResponse/LiveStreamSearchResponse hataları yerine, 
-            // TvSeriesSearchResponse'un basitleştirilmiş Live TV için kullanımı:
-            TvSeriesSearchResponse(
-                name = title,
-                url = dataUrl, // JSON verisini tutar
-                apiName = name,
-                type = TvType.Live,
-                posterUrl = logoUrl,
-                // Diğer parametreler (posterHeader, rating, vb.) varsayılan değerleri alır.
-                posterHeader = null,
-                year = null
+            // ⭐ DÜZELTME 1: newTvSeriesSearchResponse kullanıldı (depreciation uyarısını çözmek için)
+            // ve Live TV için sadece zorunlu parametreler verildi.
+            newTvSeriesSearchResponse(
+                title,
+                dataUrl, // url: JSON verisini tutar
+                TvType.Live,
+                logoUrl, // posterUrl
+                null,    // year
+                null     // rating
             )
         }
     }
@@ -170,19 +168,19 @@ class Xmltv : MainAPI() {
             )
         )
         
-        // ⭐ DÜZELTME 2: newLiveStreamLoadResponse çağrısında sadece zorunlu 3 string parametresi kullanıldı.
+        // ⭐ DÜZELTME 2: newLiveStreamLoadResponse'un TvType parametresi zorunlu olarak eklendi.
         return newLiveStreamLoadResponse(
-            groupedData.title,
-            groupedData.items.firstOrNull()?.url ?: "",
-            groupedData.toJson()
+            name = groupedData.title,
+            url = groupedData.items.firstOrNull()?.url ?: "",
+            data = groupedData.toJson(), // data (eski dataUrl)
+            type = TvType.Live // Eklenmesi gereken zorunlu parametre
         ) {
             this.posterUrl = groupedData.posterUrl
             this.plot = groupedData.description
-            this.type = TvType.Live
-            val tagsList = mutableListOf<String>()
-            tagsList.add("${groupedData.items.size} adet yayın kaynağı bulundu")
-            groupedData.nation?.let { tagsList.add(it) } 
-            this.tags = tagsList
+            this.tags = listOfNotNull(
+                "${groupedData.items.size} adet yayın kaynağı bulundu",
+                groupedData.nation
+            )
             this.actors = actorsList
             this.recommendations = allChannelsCache.filter { it.name != groupedData.title }
         }
@@ -286,8 +284,8 @@ class XmlPlaylistParser {
 
                 playlistItems.add(
                     PlaylistItem(
-                        title = title!!, // title'ın null olmadığı garanti edildi
-                        url = url!!, // url'nin null olmadığı garanti edildi
+                        title = title!!, 
+                        url = url!!, 
                         description = description,
                         nation = nation,
                         attributes = attributesMap.toMap(),
