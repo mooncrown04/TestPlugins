@@ -30,10 +30,7 @@ class Xmltv : MainAPI() {
     override val hasMainPage = true
     override val supportedTypes = setOf(TvType.Live)
     
-    // DÜZELTME 1: has_search kaldırıldı. search metodunu override etmek yeterli.
-    
-    // ⭐ YENİ: ARAMA İÇİN TÜM KANALLARI TUTACAK CACHE
-    // Volatile ekledik, birden fazla thread erişse bile doğru değeri görmesini sağlamak için (iyi uygulama)
+    // Arama için tüm kanalları tutacak önbellek
     @Volatile 
     private var allChannelsCache: List<SearchResponse> = emptyList()
 
@@ -78,66 +75,6 @@ class Xmltv : MainAPI() {
         }
     }
     
-    // ⭐ YENİ: TÜM LİSTELERİ ÇEKİP ÖN BELLEĞE ALAN ORTAK FONKSİYON
-    // Bu fonksiyon getMainPage ve search tarafından kullanılabilir.
-    private suspend fun fetchAllChannelsAndGroup(forceReload: Boolean = false): List<HomePageList> {
-        // Cache boşsa veya zorla yeniden yükleme isteniyorsa yükle
-        if (allChannelsCache.isEmpty() || forceReload) {
-            val homepageLists = mutableListOf<HomePageList>()
-            val allItems = mutableListOf<SearchResponse>()
-            
-            // XML URL'lerinin listesi
-            val xmlSources = listOf(
-                Triple(mainUrl, primaryGroupName, "Birincil"),
-                Triple(secondaryXmlUrl, secondaryGroupName, "İkincil"),
-                Triple(tertiaryXmlUrl, tertiaryGroupName, "Üçüncü")
-            )
-
-            xmlSources.forEach { (url, groupName, logName) ->
-                try {
-                    val response = app.get(url).text
-                    val playlist = XmlPlaylistParser().parseXML(response)
-                    val items = createGroupedChannelItems(playlist)
-
-                    if (items.isNotEmpty()) {
-                        homepageLists.add(HomePageList(groupName, items))
-                        allItems.addAll(items)
-                    }
-                } catch (e: Exception) {
-                    Log.e("Xmltv", "$logName URL yüklenemedi veya ayrıştırılamadı: ${e.message}")
-                }
-            }
-            // Cache'i doldur ve gruplu listeyi döndür.
-            allChannelsCache = allItems.distinctBy { it.name } // Tekrar edenleri temizle
-            return homepageLists
-        }
-        
-        // Cache doluysa, MainPageResponse için cache'deki veriyi gruplara bölerek döndürmeliyiz.
-        // Ancak bu karmaşık olduğu için, `search`'ün ihtiyacı olan cache'i doldurup
-        // `getMainPage`'i sadece gruplu listeyi çekmeye odaklayalım. 
-        // Veya daha iyisi: Cache doluyken bile doğru gruplamayı yapmalıyız. 
-        
-        // Basitlik için, cache doluysa ana sayfa listelerini yeniden oluşturmak yerine, 
-        // sadece cache'i doldurup boş olduğunu varsayalım ve MainPage'in gruplamasını kullanmaya devam edelim.
-        // Bu fonksiyonu yalnızca `search` için kullanalım ve `getMainPage` mantığını basitleştirelim.
-        
-        // *Yeni Mantık: Sadece Cache'i doldur*
-        
-        val primaryItems = try {
-            val response = app.get(mainUrl).text
-            val playlist = XmlPlaylistParser().parseXML(response)
-            createGroupedChannelItems(playlist)
-        } catch (e: Exception) {
-            Log.e("Xmltv", "Birincil URL yüklenemedi.")
-            emptyList()
-        }
-        //... (Diğer listeler de benzer şekilde çekilir)
-        
-        // *Cache doldurma mantığını getMainPage'e geri taşıyalım, getAllChannels() metodunu silelim.*
-        return emptyList() // Bu metodu iptal edip, aşağıdaki yapıya geri dönüyoruz.
-    }
-
-
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val homepageLists = mutableListOf<HomePageList>()
         val allItems = mutableListOf<SearchResponse>() // Cache'i doldurmak için
@@ -184,33 +121,40 @@ class Xmltv : MainAPI() {
             allItems.addAll(tertiaryItems)
         }
 
-        // Arama için cache'i burada dolduruyoruz
+        // Arama için cache'i doldur
         allChannelsCache = allItems.distinctBy { it.name }
         
         return newHomePageResponse(homepageLists)
     }
 
-    // ⭐ DÜZELTME 2 & 3: search fonksiyonu imzası CloudStream API'sine uygun hale getirildi.
-    override suspend fun search(query: String, list: List<SearchResponse>): List<SearchResponse> {
-        // Arama sorgusu boşsa, boş liste döndür
-        if (query.isBlank()) return emptyList()
+    // Arama fonksiyonu: CloudStream API'sine uygun imza kullanıldı.
+    override suspend fun search(query: String, page: Int): SearchResponseList? {
+        // Sayfalama yapılmadığı için sadece ilk sayfayı (page 1) kabul ediyoruz.
+        if (page != 1) return SearchResponseList(emptyList(), false)
 
-        // Cache boşsa, kanalları yükle. Bu aynı zamanda cache'i de doldurur.
-        // Bu, kullanıcının ana sayfayı ziyaret etmeden doğrudan arama yapmaya başlaması durumunda gereklidir.
+        // Arama sorgusu boşsa, boş liste döndür
+        if (query.isBlank()) return SearchResponseList(emptyList(), false)
+
+        // Cache boşsa, kanalları yükle.
         if (allChannelsCache.isEmpty()) {
             getMainPage(1, MainPageRequest()) 
         }
 
         val searchResult = allChannelsCache.filter {
-            // Kanal adını küçük harfe çevirerek sorgu ile karşılaştır
+            // Kanal adını küçük/büyük harf duyarlılığı olmadan sorgu ile karşılaştır
             it.name.contains(query.trim(), ignoreCase = true)
-        } // distinctBy { it.name } zaten cache doldurulurken yapıldı.
+        } 
 
         Log.d("Xmltv", "Arama sonuçlandı: ${searchResult.size} kanal bulundu.")
-        return searchResult
+        
+        // Sonuçları SearchResponseList içine sarmala
+        return SearchResponseList(
+            list = searchResult,
+            hasNext = false // Tek sayfada tüm sonuçlar döndürülüyor.
+        )
     }
     
-    // --- LOAD ve LOADLINKS FONKSİYONLARI AYNEN KALDI ---
+    // --- LOAD FONKSİYONU ---
     override suspend fun load(url: String): LoadResponse {
         val groupedData = parseJson<GroupedChannelData>(url)
         val actorsList = mutableListOf<ActorData>()
@@ -239,6 +183,7 @@ class Xmltv : MainAPI() {
         }
     }
 
+    // --- LOADLINKS FONKSİYONU ---
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -283,10 +228,11 @@ class Xmltv : MainAPI() {
     }
 }
 // -------------------------------------------------------------
-// --- XML Ayrıştırıcı ve Veri Modeli (Aynen Kaldı) ---
+// --- XML Ayrıştırıcı ve Veri Modeli ---
 // -------------------------------------------------------------
 
 class XmlPlaylistParser {
+    // Description içindeki "nation : [değer]" kalıbını bulur.
     private val nationRegex = Regex(
         "nation\\s*:\\s*(.*)",
         RegexOption.IGNORE_CASE 
@@ -358,7 +304,7 @@ class XmlPlaylistParser {
 }
 
 // -------------------------------------------------------------
-// --- Orijinal Veri Modelleri (Aynen Kaldı) ---
+// --- Orijinal Veri Modelleri ---
 // -------------------------------------------------------------
 
 data class Playlist(val items: List<PlaylistItem>)
