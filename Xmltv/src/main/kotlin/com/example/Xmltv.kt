@@ -73,6 +73,8 @@ class Xmltv : MainAPI() {
             ) {
                 this.posterUrl = logoUrl
                 this.type = TvType.Live
+                // ⭐ DÜZELTME: Arama/Liste sonuçlarında bayrak için 'lang' eklendi.
+                groupedData.nation?.let { this.lang = it } 
             }
         }
     }
@@ -121,7 +123,7 @@ class Xmltv : MainAPI() {
         return newHomePageResponse(homepageLists)
     }
 
-    // --- YENİ LOAD FONKSİYONU ---
+    // --- DÜZELTİLMİŞ LOAD FONKSİYONU ---
     override suspend fun load(url: String): LoadResponse {
         // Gelen URL, artık bir kanal grubu verisini tutan JSON string'dir.
         val groupedData = parseJson<GroupedChannelData>(url)
@@ -142,16 +144,18 @@ class Xmltv : MainAPI() {
             dataUrl = groupedData.toJson(), // loadLinks'in kullanması için tüm listeyi dataUrl'de tut
         ) {
             this.posterUrl = groupedData.posterUrl
-              this.plot = groupedData.description
-              this.type = TvType.Live
-              val tagsList = mutableListOf<String>()
-              tagsList.add("${groupedData.items.size} adet yayın kaynağı bulundu")
-              
-              // ⭐ GÜNCELLEME: nation bilgisini tags'e ekle
-              groupedData.nation?.let { tagsList.add(it) } 
-              this.lang = groupedData.nation
-              this.tags = tagsList
-              this.actors = actorsList
+            this.plot = groupedData.description
+            this.type = TvType.Live
+            val tagsList = mutableListOf<String>()
+            tagsList.add("${groupedData.items.size} adet yayın kaynağı bulundu")
+            
+            // ⭐ GÜNCELLEME: nation bilgisini tags'e ekle
+            groupedData.nation?.let { tagsList.add(it) } 
+            // ❌ ÖNEMLİ DÜZELTME: Hata veren 'this.lang = ...' satırı KALDIRILDI.
+            // Bu alan LoadResponse içinde bulunmaz. Bayrak bilgisi tags içinde iletilir.
+            
+            this.tags = tagsList
+            this.actors = actorsList
      }
     }
 
@@ -178,8 +182,8 @@ override suspend fun loadLinks(
         // 1. URL uzantısına göre en uygun tip belirlenir.
         val linkType = when {
             // Not: VIDEO ve DOWNLOADABLE Cloudstream'in dahili tipleridir.
-            videoUrl.endsWith(".mp4", ignoreCase = true) || 
-            videoUrl.endsWith(".ts", ignoreCase = true) || 
+            videoUrl.endsWith(".mp4", ignoreCase = true) || 
+            videoUrl.endsWith(".ts", ignoreCase = true) || 
             videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.VIDEO // İndirilebilir medya tipleri
             
             videoUrl.endsWith(".m3u8", ignoreCase = true) -> ExtractorLinkType.M3U8
@@ -270,7 +274,7 @@ class XmlPlaylistParser {
                         description = description,
                         nation = nation, // ⭐ GÜNCELLEME: nation eklendi
                         attributes = attributesMap.toMap(),
-                        headers = emptyMap(),                    
+                        headers = emptyMap(),              
                         userAgent = null
                         
                     )
