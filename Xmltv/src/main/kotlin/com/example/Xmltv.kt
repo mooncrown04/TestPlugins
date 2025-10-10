@@ -13,7 +13,6 @@ import com.lagradost.cloudstream3.ActorData
 // ⭐ KRİTİK DÜZELTME: Program modelini CloudStream3'ten açıkça içe aktarın.
 import com.lagradost.cloudstream3.Program 
 import java.util.Calendar 
-import com.example.Program
 
 /**
  * CloudStream için XMLTV tabanlı IPTV eklentisi
@@ -449,4 +448,5 @@ class XmlPlaylistParser {
         return Playlist(playlistItems)
     }
 }
+
 
