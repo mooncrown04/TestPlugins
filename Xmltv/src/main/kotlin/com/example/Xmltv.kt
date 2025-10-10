@@ -98,7 +98,7 @@ class Xmltv : MainAPI() {
             emptyList()
         }
         if (primaryItems.isNotEmpty()) {
-            homepageLists.add(HomePageList(primaryGroupName, primaryItems, isHorizontalImages = true))
+            homepageLists.add(HomePageList(name, list, data, horizontalImages))
             allItems.addAll(primaryItems)
         }
 
