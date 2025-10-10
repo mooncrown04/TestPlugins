@@ -64,15 +64,14 @@ class Xmltv : MainAPI() {
             )
             val dataUrl = groupedData.toJson()
 
-            // ⭐ DÜZELTME: newMovieSearchResponse'a eksik parametreler (data ve horizontalImages) null olarak eklendi.
-            newMovieSearchResponse(
-                name = title,
-                url = dataUrl,
-                data = null, // Hatanın çözümü
-                horizontalImages = null // Hatanın çözümü
+            // ⭐ DÜZELTME: newSearchResponse kullanıldı. Bu, Movie, TV veya Live yayın fark etmeksizin
+            // daha genel ve API değişikliklerine daha az duyarlı bir yoldur.
+            newSearchResponse(
+                title,
+                dataUrl,
+                TvType.Live
             ) {
                 this.posterUrl = logoUrl
-                this.type = TvType.Live
             }
         }
     }
@@ -129,7 +128,7 @@ class Xmltv : MainAPI() {
         return newHomePageResponse(homepageLists)
     }
 
-    // Arama fonksiyonu: CloudStream API'sine uygun imza kullanıldı.
+    // Arama fonksiyonu
     override suspend fun search(query: String, page: Int): SearchResponseList? {
         if (page != 1) return SearchResponseList(emptyList(), false)
         if (query.isBlank()) return SearchResponseList(emptyList(), false)
@@ -145,7 +144,6 @@ class Xmltv : MainAPI() {
 
         Log.d("Xmltv", "Arama sonuçlandı: ${searchResult.size} kanal bulundu.")
         
-        // SearchResponseList çağrısı doğru.
         return SearchResponseList(
             searchResult,
             hasNext = false // Tek sayfada tüm sonuçlar döndürülüyor.
