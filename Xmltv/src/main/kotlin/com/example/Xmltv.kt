@@ -54,7 +54,7 @@ class Xmltv : MainAPI() {
     private val secondaryGroupName = "Diğer Kanallar"
     private val defaultPosterUrl = "https://www.shutterstock.com/shutterstock/photos/2174119547/display_1500/stock-vector-mount-ararat-rises-above-the-clouds-dawn-panoramic-view-vector-illustration-2174119547.jpg"
 
-    private val epgUrl = "EPG_XML_URL_NIZI_BURAYA_EKLEYIN"
+    private val epgUrl = "https://raw.githubusercontent.com/braveheart1983/tvg-macther/refs/heads/main/tr-epg.xml"
     private var cachedEpgData: EpgData? = null
 
     override var name = "35 Xmltv"
@@ -182,3 +182,4 @@ class Xmltv : MainAPI() {
         return allResults
     }
 }
+
