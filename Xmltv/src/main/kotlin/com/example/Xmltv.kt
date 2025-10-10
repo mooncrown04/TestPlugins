@@ -67,14 +67,15 @@ class Xmltv : MainAPI() {
             )
             val dataUrl = groupedData.toJson() // SearchResponse'un URL'si artık JSON data
 
-            newMovieSearchResponse(
+            // DÜZELTME: Bayrak için 'lang' özelliği olan newLiveSearchResponse kullanıldı.
+            newLiveSearchResponse(
                 name = title,
                 url = dataUrl, // JSON verisini URL olarak sakla
+                type = TvType.Live
             ) {
                 this.posterUrl = logoUrl
-                this.type = TvType.Live
-                // ⭐ DÜZELTME: Arama/Liste sonuçlarında bayrak için 'lang' eklendi.
-                groupedData.nation?.let { this.lang = it } 
+                // HATA DÜZELTME: newLiveSearchResponse içinde 'lang' geçerlidir.
+                groupedData.nation?.let { this.lang = it }
             }
         }
     }
@@ -151,15 +152,14 @@ class Xmltv : MainAPI() {
             
             // ⭐ GÜNCELLEME: nation bilgisini tags'e ekle
             groupedData.nation?.let { tagsList.add(it) } 
-            // ❌ ÖNEMLİ DÜZELTME: Hata veren 'this.lang = ...' satırı KALDIRILDI.
-            // Bu alan LoadResponse içinde bulunmaz. Bayrak bilgisi tags içinde iletilir.
+            // ❌ HATA DÜZELTME: Bu alanda 'this.lang' bulunmaz. Önceki konuşmadaki hata giderildi.
             
             this.tags = tagsList
             this.actors = actorsList
      }
     }
 
-    // --- GÜNCELLENMİŞ LOADLINKS FONKSİYONU ---
+    // --- DÜZELTİLMİŞ LOADLINKS FONKSİYONU ---
 override suspend fun loadLinks(
     data: String, // Bu, artık tüm PlaylistItem'ları içeren GroupedChannelData JSON'u
     isCasting: Boolean,
@@ -180,8 +180,8 @@ override suspend fun loadLinks(
         val linkName = groupedData.title + " Kaynak ${index + 1}"
         
         // 1. URL uzantısına göre en uygun tip belirlenir.
+        // ❌ HATA DÜZELTME: Koşullar arasında virgül yerine '||' kullanıldı.
         val linkType = when {
-            // Not: VIDEO ve DOWNLOADABLE Cloudstream'in dahili tipleridir.
             videoUrl.endsWith(".mp4", ignoreCase = true) || 
             videoUrl.endsWith(".ts", ignoreCase = true) || 
             videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.VIDEO // İndirilebilir medya tipleri
