@@ -13,7 +13,7 @@ import com.lagradost.cloudstream3.ActorData
 import java.util.Calendar
 
 // ⭐ KRİTİK DÜZELTME: CloudStream'in Program sınıfını kullanmak için içe aktarıyoruz.
-import com.lagradost.cloudstream3.Program 
+import com.lagradost.cloudstream3.Program
 
 
 // EPG ve Playlist için temel modeller (Kendi Program tanımınızı sildik)
@@ -252,3 +252,4 @@ class Xmltv : MainAPI() {
         return foundLink
     }
 }
+
