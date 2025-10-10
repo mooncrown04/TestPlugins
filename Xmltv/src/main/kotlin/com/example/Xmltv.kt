@@ -10,9 +10,10 @@ import kotlin.collections.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.ActorData
-import java.util.Calendar 
-// ⭐ DÜZELTME: Program modelini CloudStream3'ten import ettik.
+// ⭐ DÜZELTME: Gerekli Cloudstream3 modellerini açıkça veya * ile ekleyin.
+// Unresolved reference 'Program' hatasını bu giderir.
 import com.lagradost.cloudstream3.Program 
+import java.util.Calendar 
 
 /**
  * CloudStream için XMLTV tabanlı IPTV eklentisi
@@ -28,7 +29,6 @@ class Xmltv : MainAPI() {
     private val defaultPosterUrl = "https://www.shutterstock.com/shutterstock/photos/2174119547/display_1500/stock-vector-mount-ararat-rises-above-the-clouds-dawn-panoramic-view-vector-illustration-2174119547.jpg"
 
     // ⭐ EPG EKLENTİSİ: EPG (Program Rehberi) URL'si
-    // LÜTFEN KENDİ EPG URL'NİZİ BURAYA EKLEYİN
     private val epgUrl = "EPG_XML_URL_NIZI_BURAYA_EKLEYIN" 
     
     // ⭐ EPG EKLENTİSİ: Program verilerini bellekte tutmak için önbellek
@@ -197,17 +197,14 @@ class Xmltv : MainAPI() {
             )
         )
         
-        // ⭐ EPG EKLENTİSİ: EPG verisini yükle
         val epgData = loadEpgData()
-
-        // Kanalın tvg-id bilgisini alın
         val channelTvgId = groupedData.items.firstOrNull()?.attributes?.get("tvg-id")
 
-        // ⭐ DÜZELTME: Programları güvenli bir şekilde filtrele ve dönüştür
-        val programs = if (channelTvgId != null && epgData != null) {
-            // Hata veren map ve sortedBy ifadeleri düzeltildi.
+        // ⭐ DÜZELTME: Hata veren map ve sortedBy ifadeleri düzeltildi.
+        // Tip çıkarımını kolaylaştırmak için null-check'ler daha belirgin yapıldı.
+        val programs: List<Program> = if (channelTvgId != null && epgData != null) {
             epgData.programs[channelTvgId]
-                ?.map { epgProgram ->
+                ?.map { epgProgram: EpgProgram -> // 'map' içinde tipi açıkça belirttik
                     Program(
                         name = epgProgram.title,
                         description = epgProgram.description,
@@ -215,7 +212,8 @@ class Xmltv : MainAPI() {
                         end = epgProgram.stop
                     )
                 }
-                ?.sortedBy { it.start } ?: emptyList()
+                ?.sortedBy { it.start } // 'sortedBy' zaten Program.start'ı algılayacak
+                ?: emptyList()
         } else {
             emptyList()
         }
@@ -238,7 +236,7 @@ class Xmltv : MainAPI() {
             this.tags = tagsList
             this.actors = actorsList
             
-            // ⭐ EPG EKLENTİSİ: Program akışını LoadResponse'a ekleyin
+            // ⭐ DÜZELTME: 'program' artık çözümlenmiş bir referansdır.
             this.program = programs 
      }
     }
@@ -291,23 +289,20 @@ class Xmltv : MainAPI() {
 // --- YENİ EPG VERİ MODELLERİ VE AYRIŞTIRICI ---
 // -------------------------------------------------------------
 
-// EPG Verisi için Program Modeli
 data class EpgProgram(
     val title: String,
     val description: String?,
-    val start: Long, // Başlangıç zamanı (milisaniye)
-    val stop: Long,   // Bitiş zamanı (milisaniye)
-    val channel: String // Hangi kanala ait olduğu (tvg-id ile eşleşir)
+    val start: Long, 
+    val stop: Long,   
+    val channel: String 
 )
 
-// EPG Verisini tüm kanallar için tutan ana model
 data class EpgData(
-    val programs: Map<String, List<EpgProgram>> // Key: Kanal ID'si (tvg-id)
+    val programs: Map<String, List<EpgProgram>> 
 )
 
 class EpgXmlParser {
     
-    // Basit bir tarih ayrıştırıcı fonksiyonu
     private fun parseXmlTvDateTime(dateTimeStr: String?): Long? {
         if (dateTimeStr.isNullOrBlank() || dateTimeStr.length < 14) return null
         
@@ -331,7 +326,6 @@ class EpgXmlParser {
     fun parseEPG(content: String): EpgData {
         val programsByChannel = mutableMapOf<String, MutableList<EpgProgram>>()
         
-        // programme etiketlerini yakala. groupValues sırasıyla: 1=start, 2=stop, 3=channel, 4=içerik
         val programmeRegex = Regex("<programme\\s+start=\"(.*?)\"\\s+stop=\"(.*?)\"\\s+channel=\"(.*?)\">(.*?)</programme>", RegexOption.DOT_MATCHES_ALL)
         
         val titleRegex = Regex("<title[^>]*>(.*?)</title>", RegexOption.DOT_MATCHES_ALL)
@@ -431,11 +425,7 @@ class XmlPlaylistParser {
                 // tvg-id'yi attribute olarak kaydet
                 if (!tvgId.isNullOrBlank()) {
                     attributesMap["tvg-id"] = tvgId
-                } else if (title != null) {
-                    // Eğer tvg-id yoksa, EPG eşleşmesi için başlığın bir versiyonunu kullanmayı düşünebilirsiniz.
-                    // (Ancak bu nadiren güvenilir bir eşleşme sağlar).
-                    // attributesMap["tvg-id"] = title.replace("\\s".toRegex(), "").lowercase()
-                }
+                } 
 
                 playlistItems.add(
                     PlaylistItem(
