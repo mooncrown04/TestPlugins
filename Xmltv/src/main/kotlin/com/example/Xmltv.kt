@@ -65,16 +65,21 @@ class Xmltv : MainAPI() {
             )
             val dataUrl = groupedData.toJson()
 
-            // ⭐ DÜZELTME 1: newTvSeriesSearchResponse kullanıldı (depreciation uyarısını çözmek için)
-            // ve Live TV için sadece zorunlu parametreler verildi.
+            // ⭐ DÜZELTME 1: newTvSeriesSearchResponse hataları çözüldü.
+            // 1. 'fix' parametresi için true değeri (Boolean) verildi.
+            // 2. Lambda (initializer) null yerine boş bir lambda olarak verildi.
+            // 3. name, url, type, posterUrl, year ve rating parametreleri kaldırıldı,
+            //    çünkü bunlar lambda yerine ana fonksiyonda bekleniyordu ve hata veriyordu.
             newTvSeriesSearchResponse(
-                title,
-                dataUrl, // url: JSON verisini tutar
-                TvType.Live,
-                logoUrl, // posterUrl
-                null,    // year
-                null     // rating
-            )
+                name = title,
+                url = dataUrl, // url
+                type = TvType.Live,
+                fix = false // Tip uyuşmazlığını gidermek için Boolean değer.
+            ) {
+                this.posterUrl = logoUrl // Lambda içinde posterUrl ayarlandı.
+                this.year = null
+                this.rating = null
+            }
         }
     }
     
@@ -168,12 +173,13 @@ class Xmltv : MainAPI() {
             )
         )
         
-        // ⭐ DÜZELTME 2: newLiveStreamLoadResponse'un TvType parametresi zorunlu olarak eklendi.
+        // ⭐ DÜZELTME 2: newLiveStreamLoadResponse'un parametreleri isimlendirildi ve 
+        // eksik olan 'dataUrl' parametresi (data ile aynı değer) eklendi.
         return newLiveStreamLoadResponse(
             name = groupedData.title,
             url = groupedData.items.firstOrNull()?.url ?: "",
-            data = groupedData.toJson(), // data (eski dataUrl)
-            type = TvType.Live // Eklenmesi gereken zorunlu parametre
+            dataUrl = groupedData.toJson(), // dataUrl parametresi eklendi
+            type = TvType.Live // type parametresi eklendi
         ) {
             this.posterUrl = groupedData.posterUrl
             this.plot = groupedData.description
