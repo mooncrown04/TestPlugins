@@ -22,8 +22,7 @@ class Xmltv : MainAPI() {
 	private val primaryGroupName = "Favori Listem"
     private val secondaryGroupName = "Diğer Kanallar"
     // ⭐ YENİ: SABİT YEDEK POSTER
-    private val defaultPosterUrl = "https://www.shutterstock.com/shutterstock/photos/2174119547/display_1500/stock-vector-mount-ararat-rises-above-the-clouds-dawn-panoramic-view-vector-illustration-2174119547.jpg
-" 
+    private val defaultPosterUrl = "https://www.shutterstock.com/shutterstock/photos/2174119547/display_1500/stock-vector-mount-ararat-rises-above-the-clouds-dawn-panoramic-view-vector-illustration-2174119547.jpg" 
 
 
     override var name = "35 Xmltv"
@@ -144,7 +143,7 @@ class Xmltv : MainAPI() {
               this.plot = groupedData.description
 			  this.type = TvType.Live
               this.tags = listOf("${groupedData.items.size} adet yayın kaynağı bulundu") 
-              this.actorData = actorsList
+              this.actors = actorsList
 	 }
     }
 
