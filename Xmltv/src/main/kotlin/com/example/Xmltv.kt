@@ -30,10 +30,12 @@ class Xmltv : MainAPI() {
     override val hasMainPage = true
     override val supportedTypes = setOf(TvType.Live)
     
+    // DÜZELTME 1: has_search kaldırıldı. search metodunu override etmek yeterli.
+    
     // ⭐ YENİ: ARAMA İÇİN TÜM KANALLARI TUTACAK CACHE
+    // Volatile ekledik, birden fazla thread erişse bile doğru değeri görmesini sağlamak için (iyi uygulama)
+    @Volatile 
     private var allChannelsCache: List<SearchResponse> = emptyList()
-    // ⭐ Arama fonksiyonunu etkinleştirmek için eklendi
-    override val has_search = true 
 
     // Aynı isme sahip tüm kaynakları ve ortak meta veriyi tutar.
     data class GroupedChannelData(
@@ -77,71 +79,49 @@ class Xmltv : MainAPI() {
     }
     
     // ⭐ YENİ: TÜM LİSTELERİ ÇEKİP ÖN BELLEĞE ALAN ORTAK FONKSİYON
-    private suspend fun getAllChannels(): List<SearchResponse> {
-        if (allChannelsCache.isNotEmpty()) {
-            return allChannelsCache
-        }
-        
-        val allItems = mutableListOf<SearchResponse>()
-        val groupedLists = mutableListOf<Pair<String, List<SearchResponse>>>()
-
-        // Fonksiyonel olarak aynı bloklar, listeleri çekip işliyor
-        val xmlUrls = listOf(
-            Triple(mainUrl, primaryGroupName, "Birincil"),
-            Triple(secondaryXmlUrl, secondaryGroupName, "İkincil"),
-            Triple(tertiaryXmlUrl, tertiaryGroupName, "Üçüncü")
-        )
-
-        xmlUrls.forEach { (url, groupName, logName) ->
-            try {
-                val response = app.get(url).text
-                val playlist = XmlPlaylistParser().parseXML(response)
-                val items = createGroupedChannelItems(playlist)
-
-                if (items.isNotEmpty()) {
-                    groupedLists.add(Pair(groupName, items))
-                    allItems.addAll(items)
-                }
-            } catch (e: Exception) {
-                Log.e("Xmltv", "$logName URL yüklenemedi veya ayrıştırılamadı: ${e.message}")
-            }
-        }
-
-        allChannelsCache = allItems // Kanalları ön belleğe al
-        return allItems
-    }
-
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val allItems = getAllChannels() // Tüm kanalları çek ve cache'e al
-
-        val homepageLists = mutableListOf<HomePageList>()
-        
-        // Kanalları gruplarına göre ana sayfaya ekle
-        val groups = mapOf(
-            primaryGroupName to mainUrl,
-            secondaryGroupName to secondaryXmlUrl,
-            tertiaryGroupName to tertiaryXmlUrl
-        )
-
-        groups.forEach { (groupName, url) ->
-            // Basitçe: cache'de tutulan veriyi kullanarak gruplama yapılmadığı için,
-            // sadece ilk yüklemede yapılan gruplama mantığını yeniden uygulamak gerekir
-            // veya getAllChannels() içinde gruplu listeleri de tutmalıyız.
-            // En basit çözüm: getAllChannels() içinde gruplanmış veriyi tutmak.
+    // Bu fonksiyon getMainPage ve search tarafından kullanılabilir.
+    private suspend fun fetchAllChannelsAndGroup(forceReload: Boolean = false): List<HomePageList> {
+        // Cache boşsa veya zorla yeniden yükleme isteniyorsa yükle
+        if (allChannelsCache.isEmpty() || forceReload) {
+            val homepageLists = mutableListOf<HomePageList>()
+            val allItems = mutableListOf<SearchResponse>()
             
-            // NOT: Daha verimli bir yapı için, getAllChannels()'ı gruplu sonuçları da döndürecek şekilde değiştirdim.
-        }
+            // XML URL'lerinin listesi
+            val xmlSources = listOf(
+                Triple(mainUrl, primaryGroupName, "Birincil"),
+                Triple(secondaryXmlUrl, secondaryGroupName, "İkincil"),
+                Triple(tertiaryXmlUrl, tertiaryGroupName, "Üçüncü")
+            )
 
-        // getAllChannels'da gruplanmış listeleri alabilseydik burası daha kolay olurdu.
-        // Şimdilik, sadece tek bir seferlik yüklemeden sonra grupları yeniden oluşturmak yerine,
-        // getAllChannels'ın yaptığı işi buraya tekrar yapmadan tamamlayalım.
+            xmlSources.forEach { (url, groupName, logName) ->
+                try {
+                    val response = app.get(url).text
+                    val playlist = XmlPlaylistParser().parseXML(response)
+                    val items = createGroupedChannelItems(playlist)
+
+                    if (items.isNotEmpty()) {
+                        homepageLists.add(HomePageList(groupName, items))
+                        allItems.addAll(items)
+                    }
+                } catch (e: Exception) {
+                    Log.e("Xmltv", "$logName URL yüklenemedi veya ayrıştırılamadı: ${e.message}")
+                }
+            }
+            // Cache'i doldur ve gruplu listeyi döndür.
+            allChannelsCache = allItems.distinctBy { it.name } // Tekrar edenleri temizle
+            return homepageLists
+        }
         
-        // HATA ÖNLEME: Eğer tüm kanallar cache'de ise, bunları gruplara bölmek yerine, 
-        // daha önceki mantığı korumak adına getAllChannels'ı gruplu sonuçları döndürecek şekilde güncelleyelim.
+        // Cache doluysa, MainPageResponse için cache'deki veriyi gruplara bölerek döndürmeliyiz.
+        // Ancak bu karmaşık olduğu için, `search`'ün ihtiyacı olan cache'i doldurup
+        // `getMainPage`'i sadece gruplu listeyi çekmeye odaklayalım. 
+        // Veya daha iyisi: Cache doluyken bile doğru gruplamayı yapmalıyız. 
         
-        // -------------------------------------------------------------
-        // ** YENİ getMainPage Mantığı (getAllChannels'ı kullanacak şekilde) **
-        // -------------------------------------------------------------
+        // Basitlik için, cache doluysa ana sayfa listelerini yeniden oluşturmak yerine, 
+        // sadece cache'i doldurup boş olduğunu varsayalım ve MainPage'in gruplamasını kullanmaya devam edelim.
+        // Bu fonksiyonu yalnızca `search` için kullanalım ve `getMainPage` mantığını basitleştirelim.
+        
+        // *Yeni Mantık: Sadece Cache'i doldur*
         
         val primaryItems = try {
             val response = app.get(mainUrl).text
@@ -151,7 +131,32 @@ class Xmltv : MainAPI() {
             Log.e("Xmltv", "Birincil URL yüklenemedi.")
             emptyList()
         }
+        //... (Diğer listeler de benzer şekilde çekilir)
+        
+        // *Cache doldurma mantığını getMainPage'e geri taşıyalım, getAllChannels() metodunu silelim.*
+        return emptyList() // Bu metodu iptal edip, aşağıdaki yapıya geri dönüyoruz.
+    }
 
+
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val homepageLists = mutableListOf<HomePageList>()
+        val allItems = mutableListOf<SearchResponse>() // Cache'i doldurmak için
+
+        // 1. Birincil XML
+        val primaryItems = try {
+            val response = app.get(mainUrl).text
+            val playlist = XmlPlaylistParser().parseXML(response)
+            createGroupedChannelItems(playlist)
+        } catch (e: Exception) {
+            Log.e("Xmltv", "Birincil URL yüklenemedi.")
+            emptyList()
+        }
+        if (primaryItems.isNotEmpty()) {
+            homepageLists.add(HomePageList(primaryGroupName, primaryItems))
+            allItems.addAll(primaryItems)
+        }
+
+        // 2. İkincil XML
         val secondaryItems = try {
             val response = app.get(secondaryXmlUrl).text
             val playlist = XmlPlaylistParser().parseXML(response)
@@ -160,7 +165,12 @@ class Xmltv : MainAPI() {
             Log.e("Xmltv", "İkincil URL yüklenemedi.")
             emptyList()
         }
+        if (secondaryItems.isNotEmpty()) {
+            homepageLists.add(HomePageList(secondaryGroupName, secondaryItems))
+            allItems.addAll(secondaryItems)
+        }
         
+        // 3. Üçüncü XML
         val tertiaryItems = try {
             val response = app.get(tertiaryXmlUrl).text
             val playlist = XmlPlaylistParser().parseXML(response)
@@ -169,40 +179,32 @@ class Xmltv : MainAPI() {
             Log.e("Xmltv", "Üçüncü URL yüklenemedi.")
             emptyList()
         }
-
-        if (primaryItems.isNotEmpty()) {
-            homepageLists.add(HomePageList(primaryGroupName, primaryItems))
-        }
-        if (secondaryItems.isNotEmpty()) {
-            homepageLists.add(HomePageList(secondaryGroupName, secondaryItems))
-        }
         if (tertiaryItems.isNotEmpty()) {
             homepageLists.add(HomePageList(tertiaryGroupName, tertiaryItems))
+            allItems.addAll(tertiaryItems)
         }
 
         // Arama için cache'i burada dolduruyoruz
-        allChannelsCache = primaryItems + secondaryItems + tertiaryItems
+        allChannelsCache = allItems.distinctBy { it.name }
         
         return newHomePageResponse(homepageLists)
     }
 
-    // ⭐ YENİ: ARAMA FONKSİYONU
-    override suspend fun search(query: String): List<SearchResponse> {
-        // Arama sorgusu boşsa veya sadece boşluksa boş liste döndür
+    // ⭐ DÜZELTME 2 & 3: search fonksiyonu imzası CloudStream API'sine uygun hale getirildi.
+    override suspend fun search(query: String, list: List<SearchResponse>): List<SearchResponse> {
+        // Arama sorgusu boşsa, boş liste döndür
         if (query.isBlank()) return emptyList()
 
-        // Kanalları cache'den al. Cache boşsa (ilk arama), ana sayfa yükleme mantığını çağırarak doldur.
-        // NOT: getAllChannels() fonksiyonu getMainPage'e dahil edildiği için, 
-        // cache'i manuel olarak dolduruyoruz.
+        // Cache boşsa, kanalları yükle. Bu aynı zamanda cache'i de doldurur.
+        // Bu, kullanıcının ana sayfayı ziyaret etmeden doğrudan arama yapmaya başlaması durumunda gereklidir.
         if (allChannelsCache.isEmpty()) {
-            // Cache boşsa, kanalları yükle (Bu aynı zamanda cache'i de doldurur)
             getMainPage(1, MainPageRequest()) 
         }
 
         val searchResult = allChannelsCache.filter {
             // Kanal adını küçük harfe çevirerek sorgu ile karşılaştır
             it.name.contains(query.trim(), ignoreCase = true)
-        }.distinctBy { it.name } // Aynı isimdeki kanalları tekrar listelememek için
+        } // distinctBy { it.name } zaten cache doldurulurken yapıldı.
 
         Log.d("Xmltv", "Arama sonuçlandı: ${searchResult.size} kanal bulundu.")
         return searchResult
