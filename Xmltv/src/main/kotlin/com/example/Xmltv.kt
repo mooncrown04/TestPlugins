@@ -12,7 +12,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.ActorData
 import java.util.Calendar
 
-// Eğer CloudStream3'te Program modeli yoksa kendi modelini tanımla:
+// EPG ve Playlist için temel modeller
 data class Program(
     val name: String,
     val description: String?,
@@ -20,9 +20,31 @@ data class Program(
     val end: Long
 )
 
-/**
- * CloudStream için XMLTV tabanlı IPTV eklentisi
- */
+data class EpgData(val programs: List<Program> = emptyList())
+
+data class PlaylistItem(
+    val title: String,
+    val description: String? = null,
+    val nation: String? = null,
+    val attributes: Map<String, String> = emptyMap()
+)
+
+class Playlist(val items: List<PlaylistItem> = emptyList())
+
+class EpgXmlParser {
+    fun parseEPG(xml: String): EpgData {
+        // Gerçek EPG XML parse kodu eklenmeli
+        return EpgData()
+    }
+}
+
+class XmlPlaylistParser {
+    fun parseXML(xml: String): Playlist {
+        // Gerçek playlist XML parse kodu eklenmeli
+        return Playlist()
+    }
+}
+
 class Xmltv : MainAPI() {
     override var mainUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b.xml"
     private val secondaryXmlUrl = "https://dl.dropbox.com/scl/fi/emegyd857cyocpk94w5lr/xmltv.xml?rlkey=kuyabjk4a8t65xvcob3cpidab"
@@ -148,5 +170,15 @@ class Xmltv : MainAPI() {
             val secondaryPlaylist = XmlPlaylistParser().parseXML(secondaryResponse)
             allResults.addAll(createGroupedChannelItems(secondaryPlaylist, lowerCaseQuery))
         } catch (e: Exception) {
-            Log.e("Xmltv", "Arama için İkincil URL yüklenemedi: ${e.message*
-
+            Log.e("Xmltv", "Arama için İkincil URL yüklenemedi: ${e.message}")
+        }
+        try {
+            val tertiaryResponse = app.get(tertiaryXmlUrl).text
+            val tertiaryPlaylist = XmlPlaylistParser().parseXML(tertiaryResponse)
+            allResults.addAll(createGroupedChannelItems(tertiaryPlaylist, lowerCaseQuery))
+        } catch (e: Exception) {
+            Log.e("Xmltv", "Arama için Üçüncü URL yüklenemedi: ${e.message}")
+        }
+        return allResults
+    }
+}
