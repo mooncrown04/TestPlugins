@@ -219,7 +219,7 @@ class XmlPlaylistParser {
     )
 
     fun parseXML(content: String): Playlist {
-        val playlistItems: MutableList<PlaylistItem> = mutableListOf()
+        val playlistItems: MutableList<PlaylistItem>
 
         val channelRegex = Regex(
             "<channel>(.*?)</channel>",
