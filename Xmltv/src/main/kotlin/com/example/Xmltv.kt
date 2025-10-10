@@ -28,6 +28,8 @@ class Xmltv : MainAPI() {
     override var name = "35 Xmltv"
     override var lang = "tr"
     override val hasMainPage = true
+    // ⭐ EKLENDİ: Arama desteği True yapıldı.
+    override val hasQuickSearch = true 
     override val supportedTypes = setOf(TvType.Live)
 
     // --- YENİ VERİ MODELİ ---
@@ -41,13 +43,19 @@ class Xmltv : MainAPI() {
     )
 
     // Helper fonksiyon: Kanal listesini oluşturur ve aynı isme sahip kanalları gruplar.
-    private fun createGroupedChannelItems(playlist: Playlist): List<SearchResponse> {
+    // 'query' parametresi eklendi, böylece sadece arama sorgusuna uyanlar döndürülecek.
+    private fun createGroupedChannelItems(playlist: Playlist, query: String? = null): List<SearchResponse> {
         // Kanalları başlığa göre grupla (örneğin "ATV" başlığı altındaki tüm ATV kaynakları)
         val groupedByTitle = playlist.items.groupBy { it.title }
 
         return groupedByTitle.mapNotNull { (title, items) ->
             if (items.isEmpty()) return@mapNotNull null
-
+            
+            // ⭐ ARAMA FİLTRESİ: Eğer arama sorgusu varsa ve başlık eşleşmiyorsa atla.
+            if (query != null && !title.contains(query, ignoreCase = true)) {
+                return@mapNotNull null
+            }
+            
             // Grubun ilk öğesini kullanarak ortak meta veriyi (poster vb.) al.
             val firstItem = items.first()
             // Poster URL'sini al, eğer boşsa veya yoksa 'defaultPosterUrl'i kullan.
@@ -87,6 +95,7 @@ class Xmltv : MainAPI() {
         try {
             val primaryResponse = app.get(mainUrl).text
             val primaryPlaylist = XmlPlaylistParser().parseXML(primaryResponse)
+            // ARAMA NOT: MainPage'de query null olarak kalır.
             val primaryItems = createGroupedChannelItems(primaryPlaylist)
             
             if (primaryItems.isNotEmpty()) {
@@ -124,6 +133,44 @@ class Xmltv : MainAPI() {
         return newHomePageResponse(homepageLists)
     }
 
+    // ⭐ EKLENDİ: Arama Fonksiyonu
+    override suspend fun search(query: String): List<SearchResponse> {
+        val allResults = mutableListOf<SearchResponse>()
+        val lowerCaseQuery = query.lowercase()
+
+        // 1. Birincil URL'i ara
+        try {
+            val primaryResponse = app.get(mainUrl).text
+            val primaryPlaylist = XmlPlaylistParser().parseXML(primaryResponse)
+            allResults.addAll(createGroupedChannelItems(primaryPlaylist, lowerCaseQuery))
+        } catch (e: Exception) {
+            Log.e("Xmltv", "Arama için Birincil URL yüklenemedi: ${e.message}")
+        }
+        
+        // 2. İkincil URL'i ara
+        try {
+            val secondaryResponse = app.get(secondaryXmlUrl).text
+            val secondaryPlaylist = XmlPlaylistParser().parseXML(secondaryResponse)
+            allResults.addAll(createGroupedChannelItems(secondaryPlaylist, lowerCaseQuery))
+        } catch (e: Exception) {
+            Log.e("Xmltv", "Arama için İkincil URL yüklenemedi: ${e.message}")
+        }
+        
+        // 3. Üçüncü URL'i ara
+        try {
+            val tertiaryResponse = app.get(tertiaryXmlUrl).text
+            val tertiaryPlaylist = XmlPlaylistParser().parseXML(tertiaryResponse)
+            allResults.addAll(createGroupedChannelItems(tertiaryPlaylist, lowerCaseQuery))
+        } catch (e: Exception) {
+            Log.e("Xmltv", "Arama için Üçüncü URL yüklenemedi: ${e.message}")
+        }
+        
+        return allResults.distinctBy { it.name } // Aynı isimli kanalları ele
+    }
+
+    // ⭐ EKLENDİ: Hızlı Arama
+    override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
+
     // --- DÜZELTİLMİŞ LOAD FONKSİYONU ---
     override suspend fun load(url: String): LoadResponse {
         // Gelen URL, artık bir kanal grubu verisini tutan JSON string'dir.
@@ -153,8 +200,6 @@ class Xmltv : MainAPI() {
             // ⭐ GÜNCELLEME: nation bilgisini tags'e ekle
             groupedData.nation?.let { tagsList.add(it) }
             
-            // Hata veren satır kalıcı olarak silinmiştir.
-            
             this.tags = tagsList
             this.actors = actorsList
      }
@@ -181,7 +226,7 @@ override suspend fun loadLinks(
         val linkName = groupedData.title + " Kaynak ${index + 1}"
         
         // 1. URL uzantısına göre en uygun tip belirlenir.
-        // ❌ HATA DÜZELTME: Koşullar arasında VİRGÜL yerine '||' kullanıldı.
+        // HATA DÜZELTME: Koşullar arasında VİRGÜL yerine '||' kullanıldı.
         val linkType = when {
             videoUrl.endsWith(".mp4", ignoreCase = true) || 
             videoUrl.endsWith(".ts", ignoreCase = true) || 
