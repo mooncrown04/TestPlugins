@@ -36,6 +36,7 @@ class Xmltv : MainAPI() {
     data class GroupedChannelData(
         val title: String,
         val posterUrl: String,
+        val description: String? = null,
         val items: List<PlaylistItem> // Bu gruptaki tüm kaynak PlaylistItem'ları
     )
 
@@ -53,11 +54,14 @@ class Xmltv : MainAPI() {
         val logoUrl = firstItem.attributes["tvg-logo"]?.takeIf { it.isNotBlank() }
             ?: defaultPosterUrl // ⭐ BURASI GÜNCELLENDİ
 
+        val description = firstItem.description 
+
             // YENİ: Grup verisini modelle ve JSON'a dönüştür.
             val groupedData = GroupedChannelData(
                 title = title,
                 posterUrl = logoUrl,
-                items = items
+                items = items,
+				description = description 
             )
             val dataUrl = groupedData.toJson() // SearchResponse'un URL'si artık JSON data
 
@@ -119,7 +123,17 @@ class Xmltv : MainAPI() {
     override suspend fun load(url: String): LoadResponse {
         // Gelen URL, artık bir kanal grubu verisini tutan JSON string'dir.
         val groupedData = parseJson<GroupedChannelData>(url)
-
+   // ⭐ 1. DÜZELTME: actorsList TANIMLAMASI BURAYA TAŞINDI
+    val actorsList = mutableListOf<ActorData>()
+    actorsList.add(
+        ActorData(
+            actor = Actor(
+                name = "MoOnCrOwN",
+                image = "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
+            ),
+            roleString = "yazılım amalesi"
+        )
+    )
         return newLiveStreamLoadResponse(
             name = groupedData.title,
             url = groupedData.items.firstOrNull()?.url ?: "", // İlk linki kullan
@@ -143,17 +157,7 @@ override suspend fun loadLinks(
 ): Boolean {
     // data'yı GroupedChannelData nesnesine geri çevir
     val groupedData = parseJson<GroupedChannelData>(data)
-      // ⭐ YENİ EKLEME: ActorData listesi oluşturuluyor
-    val actorsList = mutableListOf<ActorData>()
-    actorsList.add(
-        ActorData(
-            actor = Actor(
-                name = "MoOnCrOwN",
-                image = "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
-            ),
-            roleString = "yazılım amalesi"
-        )
-    )
+
     var foundLink = false
 
     // ⭐ GÜNCELLEME: Diziyi index (sıra) ile birlikte döngüye alıyoruz.
@@ -246,9 +250,11 @@ class XmlPlaylistParser {
                     PlaylistItem(
                         title = title,
                         url = url,
-                        attributes = attributesMap.toMap(),
-                        headers = emptyMap(),
-                        userAgent = null
+                        description = description,
+						attributes = attributesMap.toMap(),
+                        headers = emptyMap(),                        
+						userAgent = null
+						
                     )
                 )
             }
@@ -273,7 +279,8 @@ data class Playlist(val items: List<PlaylistItem>)
 data class PlaylistItem(
     val title: String,
     val url: String,
-    val attributes: Map<String, String> = emptyMap(),
+	val description: String? = null //
+	val attributes: Map<String, String> = emptyMap(),
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
