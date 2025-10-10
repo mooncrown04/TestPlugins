@@ -10,8 +10,7 @@ import kotlin.collections.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.ActorData
-import com.lagradost.cloudstream3.LiveStreamSearchResponse // Import LiveStreamSearchResponse sınıfını kullanmak için
-
+// import com.lagradost.cloudstream3.LiveStreamSearchResponse // Hata verdiği için kaldırıldı
 
 /**
  * CloudStream için XMLTV tabanlı IPTV eklentisi
@@ -36,7 +35,6 @@ class Xmltv : MainAPI() {
     private var allChannelsCache: List<SearchResponse> = emptyList()
 
     // Aynı isme sahip tüm kaynakları ve ortak meta veriyi tutar.
-    // NeonSpor'daki LoadData mantığına uygun olarak tüm kanalların verisini tutar.
     data class GroupedChannelData(
         val title: String,
         val posterUrl: String,
@@ -67,12 +65,14 @@ class Xmltv : MainAPI() {
             )
             val dataUrl = groupedData.toJson()
 
-            // ⭐ DÜZELTME 1: NeonSpor örneğindeki gibi newLiveSearchResponse kullanıldı.
-            // Bu, newSearchResponse/newMovieSearchResponse parametre hatalarını çözer.
-            newLiveSearchResponse(
+            // ⭐ DÜZELTME 1: newSearchResponse/newLiveSearchResponse yerine, 
+            // CloudStream'in en basit ve en genel yardımcı fonksiyonu olan 
+            // newSearchResponse kullanıldı. Bu, MovieSearchResponse'un karmaşık 
+            // parametrelerinden kaçınır.
+            newSearchResponse(
                 title,
-                dataUrl, // Veri URL'si (JSON)
-                type = TvType.Live
+                dataUrl, // url
+                TvType.Live
             ) {
                 this.posterUrl = logoUrl
             }
@@ -93,7 +93,6 @@ class Xmltv : MainAPI() {
             emptyList()
         }
         if (primaryItems.isNotEmpty()) {
-            // isHorizontalImages = true NeonSpor'dan esinlenilmiştir.
             homepageLists.add(HomePageList(primaryGroupName, primaryItems, isHorizontalImages = true))
             allItems.addAll(primaryItems)
         }
@@ -148,10 +147,10 @@ class Xmltv : MainAPI() {
 
         Log.d("Xmltv", "Arama sonuçlandı: ${searchResult.size} kanal bulundu.")
         
-        // SearchResponseList çağrısı basitleştirildi.
+        // ⭐ DÜZELTME 2: SearchResponseList'in parametre adları değişti, 'list' yerine 'items' kullanıldı.
         return SearchResponseList(
-            list = searchResult,
-            hasNext = false // Tek sayfada tüm sonuçlar döndürülüyor.
+            items = searchResult,
+            hasNext = false 
         )
     }
     
@@ -169,12 +168,12 @@ class Xmltv : MainAPI() {
             )
         )
         
-        // ⭐ DÜZELTME 2: newLiveStreamLoadResponse'da optional olan 'horizontalImages' null olarak geçirildi.
+        // ⭐ DÜZELTME 3: newLiveStreamLoadResponse'dan 'horizontalImages' parametresi kaldırıldı.
         return newLiveStreamLoadResponse(
             name = groupedData.title,
             url = groupedData.items.firstOrNull()?.url ?: "",
-            dataUrl = groupedData.toJson(),
-            horizontalImages = null
+            dataUrl = groupedData.toJson()
+            // horizontalImages parametresi kaldırıldı.
         ) {
             this.posterUrl = groupedData.posterUrl
             this.plot = groupedData.description
@@ -184,7 +183,7 @@ class Xmltv : MainAPI() {
             groupedData.nation?.let { tagsList.add(it) } 
             this.tags = tagsList
             this.actors = actorsList
-            this.recommendations = allChannelsCache.filter { it.name != groupedData.title } // Tavsiye ekle
+            this.recommendations = allChannelsCache.filter { it.name != groupedData.title }
         }
     }
 
@@ -232,11 +231,10 @@ class Xmltv : MainAPI() {
         return foundLink
     }
 }
+
 // -------------------------------------------------------------
 // --- XML Ayrıştırıcı ve Veri Modeli ---
 // -------------------------------------------------------------
-
-// Bu kısım daha önceki hataları vermediği için aynı bırakılmıştır.
 
 class XmlPlaylistParser {
     private val nationRegex = Regex(
