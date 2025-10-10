@@ -120,25 +120,29 @@ class Xmltv : MainAPI() {
         return newHomePageResponse(homepageLists, hasNext = false) // Burada eksik parametreler eklendi
     }
 
-    override suspend fun search(query: String, page: Int): SearchResponseList? {
-        if (page != 1) return SearchResponseList(emptyList(), false)
-        if (query.isBlank()) return SearchResponseList(emptyList(), false)
-
-        if (allChannelsCache.isEmpty()) {
-            getMainPage(1, MainPageRequest()) 
-        }
-
-        val searchResult = allChannelsCache.filter {
-            it.name.contains(query.trim(), ignoreCase = true)
-        } 
-
-        Log.d("Xmltv", "Arama sonuçlandı: ${searchResult.size} kanal bulundu.")
-        
-        return SearchResponseList(
-            items = searchResult,
-            hasNext = false 
-        )
+override suspend fun search(query: String, page: Int): SearchResponseList? {
+    // Sadece ilk sayfa ve boş olmayan sorgular için arama yapılır
+    if (page != 1 || query.isBlank()) {
+        return SearchResponseList(emptyList(), hasNext = false)
     }
+
+    // Kanal önbelleği boşsa ana sayfa verilerini yükle
+    if (allChannelsCache.isEmpty()) {
+        getMainPage(1, MainPageRequest())
+    }
+
+    // Sorguya uygun kanalları filtrele
+    val searchResult = allChannelsCache.filter { channel ->
+        channel.name.contains(query.trim(), ignoreCase = true)
+    }
+
+    Log.d("Xmltv", "Arama sonuçlandı: ${searchResult.size} kanal bulundu.")
+
+    return SearchResponseList(
+        items = searchResult,
+        hasNext = false
+    )
+}
     
     override suspend fun load(url: String): LoadResponse {
         val groupedData = parseJson<GroupedChannelData>(url)
