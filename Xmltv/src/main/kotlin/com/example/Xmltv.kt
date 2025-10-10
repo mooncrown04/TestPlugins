@@ -167,6 +167,7 @@ class Xmltv : MainAPI() {
             name = groupedData.title,
             url = groupedData.items.firstOrNull()?.url ?: "",
             dataUrl = groupedData.toJson(),
+			horizontalImages = false
         ) {
             this.posterUrl = groupedData.posterUrl
             this.plot = groupedData.description
