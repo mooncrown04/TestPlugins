@@ -74,11 +74,9 @@ class Xmltv : MainAPI() {
                 name = title,
                 url = dataUrl, // url
                 type = TvType.Live,
-                fix = false // Tip uyuşmazlığını gidermek için Boolean değer.
             ) {
                 this.posterUrl = logoUrl // Lambda içinde posterUrl ayarlandı.
-                this.year = null
-                this.rating = null
+                
             }
         }
     }
