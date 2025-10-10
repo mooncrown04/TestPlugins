@@ -10,8 +10,7 @@ import kotlin.collections.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.ActorData
-// ⭐ DÜZELTME: Gerekli Cloudstream3 modellerini açıkça veya * ile ekleyin.
-// Unresolved reference 'Program' hatasını bu giderir.
+// ⭐ KRİTİK DÜZELTME: Program modelini CloudStream3'ten açıkça içe aktarın.
 import com.lagradost.cloudstream3.Program 
 import java.util.Calendar 
 
@@ -200,11 +199,10 @@ class Xmltv : MainAPI() {
         val epgData = loadEpgData()
         val channelTvgId = groupedData.items.firstOrNull()?.attributes?.get("tvg-id")
 
-        // ⭐ DÜZELTME: Hata veren map ve sortedBy ifadeleri düzeltildi.
-        // Tip çıkarımını kolaylaştırmak için null-check'ler daha belirgin yapıldı.
+        // ⭐ DÜZELTME: Tip çıkarımı hatalarını gidermek için EpgProgram tipi açıkça belirtildi ve zincirleme sadeleştirildi.
         val programs: List<Program> = if (channelTvgId != null && epgData != null) {
             epgData.programs[channelTvgId]
-                ?.map { epgProgram: EpgProgram -> // 'map' içinde tipi açıkça belirttik
+                ?.map { epgProgram: EpgProgram -> 
                     Program(
                         name = epgProgram.title,
                         description = epgProgram.description,
@@ -212,7 +210,7 @@ class Xmltv : MainAPI() {
                         end = epgProgram.stop
                     )
                 }
-                ?.sortedBy { it.start } // 'sortedBy' zaten Program.start'ı algılayacak
+                ?.sortedBy { it.start } 
                 ?: emptyList()
         } else {
             emptyList()
