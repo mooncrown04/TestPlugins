@@ -64,15 +64,22 @@ class Xmltv : MainAPI() {
             )
             val dataUrl = groupedData.toJson()
 
-            // ⭐ DÜZELTME: newSearchResponse kullanıldı. Bu, Movie, TV veya Live yayın fark etmeksizin
-            // daha genel ve API değişikliklerine daha az duyarlı bir yoldur.
-            newSearchResponse(
-                title,
-                dataUrl,
-                TvType.Live
-            ) {
-                this.posterUrl = logoUrl
-            }
+            // ⭐ DÜZELTME 1: newLiveStreamSearchResponse (veya LiveStreamSearchResponse) 
+            // kullanılmak yerine, Live TV için daha stabil olan newSearchResponse yapısı 
+            // (title, url, type) ve posterUrl extension'ı kullanıldı. Eğer bu da hata verirse, 
+            // o zaman LiveStreamSearchResponse'un doğrudan constructor'ı kullanılacaktır.
+            // Önceki denemede newSearchResponse'un çözümlenememe hatasını aşmak için,
+            // bunu doğrudan LiveStreamSearchResponse sınıfının örneğiyle değiştireceğiz.
+            
+            // ⭐ DÜZELTME 1.5: Hatanın devam etmesi üzerine, LiveStreamSearchResponse sınıfının doğrudan constructor'ı kullanılıyor.
+            LiveStreamSearchResponse(
+                name = title,
+                url = dataUrl,
+                apiName = name, // MainAPI'nin adını kullan
+                type = TvType.Live,
+                posterUrl = logoUrl,
+                // data ve horizontalImages bu constructor'da zorunlu değil
+            )
         }
     }
     
@@ -144,8 +151,9 @@ class Xmltv : MainAPI() {
 
         Log.d("Xmltv", "Arama sonuçlandı: ${searchResult.size} kanal bulundu.")
         
+        // SearchResponseList çağrısı basitleştirildi.
         return SearchResponseList(
-            searchResult,
+            list = searchResult,
             hasNext = false // Tek sayfada tüm sonuçlar döndürülüyor.
         )
     }
@@ -163,11 +171,12 @@ class Xmltv : MainAPI() {
                 roleString = "yazılım amalesi"
             )
         )
+        // newLiveStreamLoadResponse, isimlendirilmiş parametreleri ister.
         return newLiveStreamLoadResponse(
             name = groupedData.title,
             url = groupedData.items.firstOrNull()?.url ?: "",
             dataUrl = groupedData.toJson(),
-			horizontalImages = false
+            horizontalImages = null // Nullable olmalı
         ) {
             this.posterUrl = groupedData.posterUrl
             this.plot = groupedData.description
