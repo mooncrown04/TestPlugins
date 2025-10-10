@@ -151,8 +151,9 @@ class Xmltv : MainAPI() {
             tagsList.add("${groupedData.items.size} adet yayın kaynağı bulundu")
             
             // ⭐ GÜNCELLEME: nation bilgisini tags'e ekle
-            groupedData.nation?.let { tagsList.add(it) } 
-            // ❌ HATA DÜZELTME: Bu alanda 'this.lang' bulunmaz. Önceki konuşmadaki hata giderildi.
+            groupedData.nation?.let { tagsList.add(it) }
+            
+            // Hata veren satır kalıcı olarak silinmiştir.
             
             this.tags = tagsList
             this.actors = actorsList
@@ -180,10 +181,10 @@ override suspend fun loadLinks(
         val linkName = groupedData.title + " Kaynak ${index + 1}"
         
         // 1. URL uzantısına göre en uygun tip belirlenir.
-        // ❌ HATA DÜZELTME: Koşullar arasında virgül yerine '||' kullanıldı.
+        // ❌ HATA DÜZELTME: Koşullar arasında VİRGÜL yerine '||' kullanıldı.
         val linkType = when {
-            videoUrl.endsWith(".mp4", ignoreCase = true) || 
-            videoUrl.endsWith(".ts", ignoreCase = true) || 
+            videoUrl.endsWith(".mp4", ignoreCase = true) || 
+            videoUrl.endsWith(".ts", ignoreCase = true) || 
             videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.VIDEO // İndirilebilir medya tipleri
             
             videoUrl.endsWith(".m3u8", ignoreCase = true) -> ExtractorLinkType.M3U8
