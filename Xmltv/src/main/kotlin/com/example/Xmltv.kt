@@ -116,7 +116,7 @@ class Xmltv : MainAPI() {
 
         allChannelsCache = allItems.distinctBy { it.name }
         
-        return newHomePageResponse(homepageLists, hasNext = false)
+        return newHomePageResponse(homepageLists, hasNext = false) // 'name' ve 'data' parametreleri burada yok
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList? {
@@ -219,7 +219,7 @@ class XmlPlaylistParser {
     )
 
     fun parseXML(content: String): Playlist {
-        val playlistItems: MutableList<PlaylistItem>
+        val playlistItems: MutableList<PlaylistItem> = mutableListOf() // Değişkeni burada tanımlıyoruz
 
         val channelRegex = Regex(
             "<channel>(.*?)</channel>",
