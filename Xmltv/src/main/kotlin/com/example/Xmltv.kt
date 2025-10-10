@@ -10,7 +10,7 @@ import kotlin.collections.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.ActorData
-import com.lagradost.cloudstream3.LiveStreamSearchResponse // Can't be 'unresolved' if we use it directly
+// import com.lagradost.cloudstream3.LiveStreamSearchResponse // Hata verdiği için kaldırıldı
 
 /**
  * CloudStream için XMLTV tabanlı IPTV eklentisi
@@ -65,16 +65,17 @@ class Xmltv : MainAPI() {
             )
             val dataUrl = groupedData.toJson()
 
-            // ⭐ DÜZELTME 1 & 2: newSearchResponse ve posterUrl extension hatası çözüldü.
-            // LiveStreamSearchResponse sınıfının constructor'ı doğrudan kullanıldı.
-            // Bu, 'newSearchResponse' ve 'posterUrl' hatasını çözer ve Live TV için uygundur.
-            LiveStreamSearchResponse(
+            // ⭐ DÜZELTME 1: newSearchResponse/LiveStreamSearchResponse hataları yerine, 
+            // TvSeriesSearchResponse'un basitleştirilmiş Live TV için kullanımı:
+            TvSeriesSearchResponse(
                 name = title,
-                url = dataUrl, // url: JSON verisini tutar
+                url = dataUrl, // JSON verisini tutar
                 apiName = name,
                 type = TvType.Live,
-                posterUrl = logoUrl
-                // data, horizontalImages, dataUrl gibi diğer parametreler bu constructor'da genellikle opsiyoneldir.
+                posterUrl = logoUrl,
+                // Diğer parametreler (posterHeader, rating, vb.) varsayılan değerleri alır.
+                posterHeader = null,
+                year = null
             )
         }
     }
@@ -148,7 +149,7 @@ class Xmltv : MainAPI() {
 
         Log.d("Xmltv", "Arama sonuçlandı: ${searchResult.size} kanal bulundu.")
         
-        // SearchResponseList constructor'ının items parametresi ile çağrılması, önceki hatayı çözdü.
+        // SearchResponseList constructor'ının items parametresi ile çağrılması doğru.
         return SearchResponseList(
             items = searchResult,
             hasNext = false 
@@ -169,11 +170,11 @@ class Xmltv : MainAPI() {
             )
         )
         
-        // newLiveStreamLoadResponse çağrısında gereksiz parametreler kaldırıldı.
+        // ⭐ DÜZELTME 2: newLiveStreamLoadResponse çağrısında sadece zorunlu 3 string parametresi kullanıldı.
         return newLiveStreamLoadResponse(
-            name = groupedData.title,
-            url = groupedData.items.firstOrNull()?.url ?: "",
-            dataUrl = groupedData.toJson()
+            groupedData.title,
+            groupedData.items.firstOrNull()?.url ?: "",
+            groupedData.toJson()
         ) {
             this.posterUrl = groupedData.posterUrl
             this.plot = groupedData.description
@@ -285,8 +286,8 @@ class XmlPlaylistParser {
 
                 playlistItems.add(
                     PlaylistItem(
-                        title = title,
-                        url = url,
+                        title = title!!, // title'ın null olmadığı garanti edildi
+                        url = url!!, // url'nin null olmadığı garanti edildi
                         description = description,
                         nation = nation,
                         attributes = attributesMap.toMap(),
