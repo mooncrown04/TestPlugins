@@ -64,10 +64,12 @@ class Xmltv : MainAPI() {
             )
             val dataUrl = groupedData.toJson()
 
-            // ⭐ DÜZELTME 1: newMovieSearchResponse en basit aşırı yüklemesine göre güncellendi.
+            // ⭐ DÜZELTME: newMovieSearchResponse'a eksik parametreler (data ve horizontalImages) null olarak eklendi.
             newMovieSearchResponse(
                 name = title,
                 url = dataUrl,
+                data = null, // Hatanın çözümü
+                horizontalImages = null // Hatanın çözümü
             ) {
                 this.posterUrl = logoUrl
                 this.type = TvType.Live
@@ -143,7 +145,7 @@ class Xmltv : MainAPI() {
 
         Log.d("Xmltv", "Arama sonuçlandı: ${searchResult.size} kanal bulundu.")
         
-        // ⭐ DÜZELTME 2: SearchResponseList çağrısı basitleştirildi.
+        // SearchResponseList çağrısı doğru.
         return SearchResponseList(
             searchResult,
             hasNext = false // Tek sayfada tüm sonuçlar döndürülüyor.
