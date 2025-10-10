@@ -142,7 +142,6 @@ class Xmltv : MainAPI() {
             dataUrl = groupedData.toJson(), // loadLinks'in kullanması için tüm listeyi dataUrl'de tut
         ) {
             this.posterUrl = groupedData.posterUrl
-          //  this.plot = "Bu kanal için ${groupedData.items.size} adet yayın kaynağı bulundu. En iyi kalite otomatik olarak seçilecektir."
               this.plot = groupedData.description
               this.type = TvType.Live
               val tagsList = mutableListOf<String>()
@@ -150,7 +149,7 @@ class Xmltv : MainAPI() {
               
               // ⭐ GÜNCELLEME: nation bilgisini tags'e ekle
               groupedData.nation?.let { tagsList.add(it) } 
-              
+              this.lang = groupedData.nation
               this.tags = tagsList
               this.actors = actorsList
      }
