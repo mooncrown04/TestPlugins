@@ -193,8 +193,9 @@ class Xmltv : MainAPI() {
                         end = epgProgram.end
                     )
                 }
-                ?.sortedBy { it.start } 
-                ?: emptyList()
+              // it: Program ile sortedBy içindeki tipi netleştiriyoruz
+            ?.sortedBy { it: Program -> it.start } 
+            ?: emptyList()
         } else {
             emptyList()
         }
@@ -252,4 +253,5 @@ class Xmltv : MainAPI() {
         return foundLink
     }
 }
+
 
