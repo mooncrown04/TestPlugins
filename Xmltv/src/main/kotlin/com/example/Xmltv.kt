@@ -10,11 +10,6 @@ import kotlin.collections.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.ActorData
-// LiveStreamSearchResponse ve LiveStreamSearchResponse'u çağıran helper fonksiyonları güvenilmez olduğu için kaldırıldı.
-
-/**
- * CloudStream için XMLTV tabanlı IPTV eklentisi
- */
 
 class Xmltv : MainAPI() {
     override var mainUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b.xml"
@@ -34,7 +29,6 @@ class Xmltv : MainAPI() {
     @Volatile 
     private var allChannelsCache: List<SearchResponse> = emptyList()
 
-    // Aynı isme sahip tüm kaynakları ve ortak meta veriyi tutar.
     data class GroupedChannelData(
         val title: String,
         val posterUrl: String,
@@ -43,7 +37,6 @@ class Xmltv : MainAPI() {
         val items: List<PlaylistItem> 
     )
 
-    // Helper fonksiyon: Kanal listesini oluşturur ve aynı isme sahip kanalları gruplar.
     private fun createGroupedChannelItems(playlist: Playlist): List<SearchResponse> {
         val groupedByTitle = playlist.items.groupBy { it.title }
 
@@ -65,23 +58,16 @@ class Xmltv : MainAPI() {
             )
             val dataUrl = groupedData.toJson()
 
-            // ⭐ DÜZELTME 1: newTvSeriesSearchResponse hataları çözüldü.
-            // 1. 'fix' parametresi için true değeri (Boolean) verildi.
-            // 2. Lambda (initializer) null yerine boş bir lambda olarak verildi.
-            // 3. name, url, type, posterUrl, year ve rating parametreleri kaldırıldı,
-            //    çünkü bunlar lambda yerine ana fonksiyonda bekleniyordu ve hata veriyordu.
             newTvSeriesSearchResponse(
                 name = title,
-                url = dataUrl, // url
+                url = dataUrl,
                 type = TvType.Live,
             ) {
-                this.posterUrl = logoUrl // Lambda içinde posterUrl ayarlandı.
-                
+                this.posterUrl = logoUrl 
             }
         }
     }
     
-    // --- MAIN PAGE ---
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val homepageLists = mutableListOf<HomePageList>()
         val allItems = mutableListOf<SearchResponse>() 
@@ -96,7 +82,7 @@ class Xmltv : MainAPI() {
             emptyList()
         }
         if (primaryItems.isNotEmpty()) {
-            homepageLists.add(HomePageList(name, list, data, horizontalImages))
+            homepageLists.add(HomePageList(primaryGroupName, primaryItems, isHorizontalImages = true))
             allItems.addAll(primaryItems)
         }
 
@@ -128,18 +114,15 @@ class Xmltv : MainAPI() {
             allItems.addAll(tertiaryItems)
         }
 
-        // Arama için cache'i doldur
         allChannelsCache = allItems.distinctBy { it.name }
         
-        return newHomePageResponse(homepageLists)
+        return newHomePageResponse(homepageLists, hasNext = false)
     }
 
-    // --- SEARCH ---
     override suspend fun search(query: String, page: Int): SearchResponseList? {
         if (page != 1) return SearchResponseList(emptyList(), false)
         if (query.isBlank()) return SearchResponseList(emptyList(), false)
 
-        // Cache boşsa, kanalları yükle.
         if (allChannelsCache.isEmpty()) {
             getMainPage(1, MainPageRequest()) 
         }
@@ -150,14 +133,12 @@ class Xmltv : MainAPI() {
 
         Log.d("Xmltv", "Arama sonuçlandı: ${searchResult.size} kanal bulundu.")
         
-        // SearchResponseList constructor'ının items parametresi ile çağrılması doğru.
         return SearchResponseList(
             items = searchResult,
             hasNext = false 
         )
     }
     
-    // --- LOAD FONKSİYONU ---
     override suspend fun load(url: String): LoadResponse {
         val groupedData = parseJson<GroupedChannelData>(url)
         val actorsList = mutableListOf<ActorData>()
@@ -171,13 +152,10 @@ class Xmltv : MainAPI() {
             )
         )
         
-        // ⭐ DÜZELTME 2: newLiveStreamLoadResponse'un parametreleri isimlendirildi ve 
-        // eksik olan 'dataUrl' parametresi (data ile aynı değer) eklendi.
         return newLiveStreamLoadResponse(
             name = groupedData.title,
             url = groupedData.items.firstOrNull()?.url ?: "",
-            dataUrl = groupedData.toJson(), // dataUrl parametresi eklendi
-            type = TvType.Live // type parametresi eklendi
+            dataUrl = groupedData.toJson()
         ) {
             this.posterUrl = groupedData.posterUrl
             this.plot = groupedData.description
@@ -190,7 +168,6 @@ class Xmltv : MainAPI() {
         }
     }
 
-    // --- LOADLINKS FONKSİYONU ---
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -235,10 +212,6 @@ class Xmltv : MainAPI() {
     }
 }
 
-// -------------------------------------------------------------
-// --- XML Ayrıştırıcı ve Veri Modeli ---
-// -------------------------------------------------------------
-
 class XmlPlaylistParser {
     private val nationRegex = Regex(
         "nation\\s*:\\s*(.*)",
@@ -255,7 +228,6 @@ class XmlPlaylistParser {
 
         val titleRegex = Regex(
             "<title>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</title>",
-            RegexOption.DOT_MATCHES_ALL
         )
         val logoRegex = Regex(
             "<logo_30x30>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</logo_30x30>",
