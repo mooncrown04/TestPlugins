@@ -9,7 +9,7 @@ import kotlin.text.*
 import kotlin.collections.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
-
+import com.lagradost.cloudstream3.ActorData
 /**
  * CloudStream için XMLTV tabanlı IPTV eklentisi
  */
@@ -17,8 +17,14 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 class Xmltv : MainAPI() {
     override var mainUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b.xml"
     private val secondaryXmlUrl = "https://dl.dropbox.com/scl/fi/emegyd857cyocpk94w5lr/xmltv.xml?rlkey=kuyabjk4a8t65xvcob3cpidab"
-    private val primaryGroupName = "Favori Listem"
+    private val tertiaryXmlUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b-2.xml" 
+    private val tertiaryGroupName = "Favori Listem 2" //   
+	private val primaryGroupName = "Favori Listem"
     private val secondaryGroupName = "Diğer Kanallar"
+    // ⭐ YENİ: SABİT YEDEK POSTER
+    private val defaultPosterUrl = "https://www.shutterstock.com/shutterstock/photos/2174119547/display_1500/stock-vector-mount-ararat-rises-above-the-clouds-dawn-panoramic-view-vector-illustration-2174119547.jpg
+" 
+
 
     override var name = "35 Xmltv"
     override var lang = "tr"
@@ -43,7 +49,9 @@ class Xmltv : MainAPI() {
 
             // Grubun ilk öğesini kullanarak ortak meta veriyi (poster vb.) al.
             val firstItem = items.first()
-            val logoUrl = firstItem.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: ""
+            // Poster URL'sini al, eğer boşsa veya yoksa 'defaultPosterUrl'i kullan.
+        val logoUrl = firstItem.attributes["tvg-logo"]?.takeIf { it.isNotBlank() }
+            ?: defaultPosterUrl // ⭐ BURASI GÜNCELLENDİ
 
             // YENİ: Grup verisini modelle ve JSON'a dönüştür.
             val groupedData = GroupedChannelData(
@@ -91,7 +99,19 @@ class Xmltv : MainAPI() {
         } catch (e: Exception) {
             Log.e("Xmltv", "İkincil URL yüklenemedi veya ayrıştırılamadı: ${e.message}")
         }
+  // ⭐ 3. ÜÇÜNCÜ XML'i Çek ve İşle (Gruplayarak)
+        try {
+            val tertiaryResponse = app.get(tertiaryXmlUrl).text
+            val tertiaryPlaylist = XmlPlaylistParser().parseXML(tertiaryResponse)
+            val tertiaryItems = createGroupedChannelItems(tertiaryPlaylist)
 
+            if (tertiaryItems.isNotEmpty()) {
+                // Yeni grup adını kullanarak listeyi ekle
+                homepageLists.add(HomePageList(tertiaryGroupName, tertiaryItems))
+            }
+        } catch (e: Exception) {
+            Log.e("Xmltv", "Üçüncü URL yüklenemedi veya ayrıştırılamadı: ${e.message}")
+        }
         return newHomePageResponse(homepageLists)
     }
 
@@ -106,9 +126,12 @@ class Xmltv : MainAPI() {
             dataUrl = groupedData.toJson(), // loadLinks'in kullanması için tüm listeyi dataUrl'de tut
         ) {
             this.posterUrl = groupedData.posterUrl
-            this.plot = "Bu kanal için ${groupedData.items.size} adet yayın kaynağı bulundu. En iyi kalite otomatik olarak seçilecektir."
-            this.type = TvType.Live
-        }
+          //  this.plot = "Bu kanal için ${groupedData.items.size} adet yayın kaynağı bulundu. En iyi kalite otomatik olarak seçilecektir."
+              this.plot = groupedData.description
+			  this.type = TvType.Live
+              this.tags = listOf("${groupedData.items.size} adet yayın kaynağı bulundu") 
+              this.actorData = actorsList
+	 }
     }
 
     // --- GÜNCELLENMİŞ LOADLINKS FONKSİYONU ---
@@ -120,7 +143,17 @@ override suspend fun loadLinks(
 ): Boolean {
     // data'yı GroupedChannelData nesnesine geri çevir
     val groupedData = parseJson<GroupedChannelData>(data)
-    
+      // ⭐ YENİ EKLEME: ActorData listesi oluşturuluyor
+    val actorsList = mutableListOf<ActorData>()
+    actorsList.add(
+        ActorData(
+            actor = Actor(
+                name = "MoOnCrOwN",
+                image = "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
+            ),
+            roleString = "yazılım amalesi"
+        )
+    )
     var foundLink = false
 
     // ⭐ GÜNCELLEME: Diziyi index (sıra) ile birlikte döngüye alıyoruz.
@@ -191,15 +224,20 @@ class XmlPlaylistParser {
             "<stream_url>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</stream_url>",
             RegexOption.DOT_MATCHES_ALL
         )
-        
+          val descriptionRegex = Regex(
+            "<description>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</description>",
+            RegexOption.DOT_MATCHES_ALL
+        )
+		
         for (channelMatch in channelRegex.findAll(content)) {
             val channelBlock = channelMatch.groupValues.getOrNull(1) ?: continue
 
             val title = titleRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
             val logo = logoRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
             val url = streamUrlRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
-
-            if (!title.isNullOrBlank() && !url.isNullOrBlank()) {
+            val description = descriptionRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
+            
+			if (!title.isNullOrBlank() && !url.isNullOrBlank()) {
                 val attributesMap = mutableMapOf<String, String>()
                 attributesMap["tvg-logo"] = logo ?: ""
                 attributesMap["group-title"] = "XML Kanalları"
