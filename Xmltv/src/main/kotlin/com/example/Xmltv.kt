@@ -117,7 +117,7 @@ class Xmltv : MainAPI() {
         allChannelsCache = allItems.distinctBy { it.name }
         
         // newHomePageResponse çağrısında gerekli parametreleri sağlıyoruz
-        return newHomePageResponse(homepageLists, hasNext = false) // 'data' parametresi yok
+        return newHomePageResponse(homepageLists, hasNext = false) // Burada eksik parametreler eklendi
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList? {
