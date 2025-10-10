@@ -10,6 +10,8 @@ import kotlin.collections.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.ActorData
+import com.lagradost.cloudstream3.LiveStreamSearchResponse // Import LiveStreamSearchResponse sınıfını kullanmak için
+
 
 /**
  * CloudStream için XMLTV tabanlı IPTV eklentisi
@@ -34,6 +36,7 @@ class Xmltv : MainAPI() {
     private var allChannelsCache: List<SearchResponse> = emptyList()
 
     // Aynı isme sahip tüm kaynakları ve ortak meta veriyi tutar.
+    // NeonSpor'daki LoadData mantığına uygun olarak tüm kanalların verisini tutar.
     data class GroupedChannelData(
         val title: String,
         val posterUrl: String,
@@ -64,22 +67,15 @@ class Xmltv : MainAPI() {
             )
             val dataUrl = groupedData.toJson()
 
-            // ⭐ DÜZELTME 1: newLiveStreamSearchResponse (veya LiveStreamSearchResponse) 
-            // kullanılmak yerine, Live TV için daha stabil olan newSearchResponse yapısı 
-            // (title, url, type) ve posterUrl extension'ı kullanıldı. Eğer bu da hata verirse, 
-            // o zaman LiveStreamSearchResponse'un doğrudan constructor'ı kullanılacaktır.
-            // Önceki denemede newSearchResponse'un çözümlenememe hatasını aşmak için,
-            // bunu doğrudan LiveStreamSearchResponse sınıfının örneğiyle değiştireceğiz.
-            
-            // ⭐ DÜZELTME 1.5: Hatanın devam etmesi üzerine, LiveStreamSearchResponse sınıfının doğrudan constructor'ı kullanılıyor.
-            LiveStreamSearchResponse(
-                name = title,
-                url = dataUrl,
-                apiName = name, // MainAPI'nin adını kullan
-                type = TvType.Live,
-                posterUrl = logoUrl,
-                // data ve horizontalImages bu constructor'da zorunlu değil
-            )
+            // ⭐ DÜZELTME 1: NeonSpor örneğindeki gibi newLiveSearchResponse kullanıldı.
+            // Bu, newSearchResponse/newMovieSearchResponse parametre hatalarını çözer.
+            newLiveSearchResponse(
+                title,
+                dataUrl, // Veri URL'si (JSON)
+                type = TvType.Live
+            ) {
+                this.posterUrl = logoUrl
+            }
         }
     }
     
@@ -97,7 +93,8 @@ class Xmltv : MainAPI() {
             emptyList()
         }
         if (primaryItems.isNotEmpty()) {
-            homepageLists.add(HomePageList(primaryGroupName, primaryItems))
+            // isHorizontalImages = true NeonSpor'dan esinlenilmiştir.
+            homepageLists.add(HomePageList(primaryGroupName, primaryItems, isHorizontalImages = true))
             allItems.addAll(primaryItems)
         }
 
@@ -111,7 +108,7 @@ class Xmltv : MainAPI() {
             emptyList()
         }
         if (secondaryItems.isNotEmpty()) {
-            homepageLists.add(HomePageList(secondaryGroupName, secondaryItems))
+            homepageLists.add(HomePageList(secondaryGroupName, secondaryItems, isHorizontalImages = true))
             allItems.addAll(secondaryItems)
         }
         
@@ -125,7 +122,7 @@ class Xmltv : MainAPI() {
             emptyList()
         }
         if (tertiaryItems.isNotEmpty()) {
-            homepageLists.add(HomePageList(tertiaryGroupName, tertiaryItems))
+            homepageLists.add(HomePageList(tertiaryGroupName, tertiaryItems, isHorizontalImages = true))
             allItems.addAll(tertiaryItems)
         }
 
@@ -171,12 +168,13 @@ class Xmltv : MainAPI() {
                 roleString = "yazılım amalesi"
             )
         )
-        // newLiveStreamLoadResponse, isimlendirilmiş parametreleri ister.
+        
+        // ⭐ DÜZELTME 2: newLiveStreamLoadResponse'da optional olan 'horizontalImages' null olarak geçirildi.
         return newLiveStreamLoadResponse(
             name = groupedData.title,
             url = groupedData.items.firstOrNull()?.url ?: "",
             dataUrl = groupedData.toJson(),
-            horizontalImages = null // Nullable olmalı
+            horizontalImages = null
         ) {
             this.posterUrl = groupedData.posterUrl
             this.plot = groupedData.description
@@ -186,6 +184,7 @@ class Xmltv : MainAPI() {
             groupedData.nation?.let { tagsList.add(it) } 
             this.tags = tagsList
             this.actors = actorsList
+            this.recommendations = allChannelsCache.filter { it.name != groupedData.title } // Tavsiye ekle
         }
     }
 
@@ -236,6 +235,8 @@ class Xmltv : MainAPI() {
 // -------------------------------------------------------------
 // --- XML Ayrıştırıcı ve Veri Modeli ---
 // -------------------------------------------------------------
+
+// Bu kısım daha önceki hataları vermediği için aynı bırakılmıştır.
 
 class XmlPlaylistParser {
     private val nationRegex = Regex(
