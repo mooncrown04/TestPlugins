@@ -10,7 +10,7 @@ import kotlin.collections.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.ActorData
-// import com.lagradost.cloudstream3.LiveStreamSearchResponse // Hata verdiği için kaldırıldı
+import com.lagradost.cloudstream3.LiveStreamSearchResponse // Can't be 'unresolved' if we use it directly
 
 /**
  * CloudStream için XMLTV tabanlı IPTV eklentisi
@@ -65,20 +65,21 @@ class Xmltv : MainAPI() {
             )
             val dataUrl = groupedData.toJson()
 
-            // ⭐ DÜZELTME 1: newSearchResponse/newLiveSearchResponse yerine, 
-            // CloudStream'in en basit ve en genel yardımcı fonksiyonu olan 
-            // newSearchResponse kullanıldı. Bu, MovieSearchResponse'un karmaşık 
-            // parametrelerinden kaçınır.
-            newSearchResponse(
-                title,
-                dataUrl, // url
-                TvType.Live
-            ) {
-                this.posterUrl = logoUrl
-            }
+            // ⭐ DÜZELTME 1 & 2: newSearchResponse ve posterUrl extension hatası çözüldü.
+            // LiveStreamSearchResponse sınıfının constructor'ı doğrudan kullanıldı.
+            // Bu, 'newSearchResponse' ve 'posterUrl' hatasını çözer ve Live TV için uygundur.
+            LiveStreamSearchResponse(
+                name = title,
+                url = dataUrl, // url: JSON verisini tutar
+                apiName = name,
+                type = TvType.Live,
+                posterUrl = logoUrl
+                // data, horizontalImages, dataUrl gibi diğer parametreler bu constructor'da genellikle opsiyoneldir.
+            )
         }
     }
     
+    // --- MAIN PAGE ---
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val homepageLists = mutableListOf<HomePageList>()
         val allItems = mutableListOf<SearchResponse>() 
@@ -131,7 +132,7 @@ class Xmltv : MainAPI() {
         return newHomePageResponse(homepageLists)
     }
 
-    // Arama fonksiyonu
+    // --- SEARCH ---
     override suspend fun search(query: String, page: Int): SearchResponseList? {
         if (page != 1) return SearchResponseList(emptyList(), false)
         if (query.isBlank()) return SearchResponseList(emptyList(), false)
@@ -147,7 +148,7 @@ class Xmltv : MainAPI() {
 
         Log.d("Xmltv", "Arama sonuçlandı: ${searchResult.size} kanal bulundu.")
         
-        // ⭐ DÜZELTME 2: SearchResponseList'in parametre adları değişti, 'list' yerine 'items' kullanıldı.
+        // SearchResponseList constructor'ının items parametresi ile çağrılması, önceki hatayı çözdü.
         return SearchResponseList(
             items = searchResult,
             hasNext = false 
@@ -168,12 +169,11 @@ class Xmltv : MainAPI() {
             )
         )
         
-        // ⭐ DÜZELTME 3: newLiveStreamLoadResponse'dan 'horizontalImages' parametresi kaldırıldı.
+        // newLiveStreamLoadResponse çağrısında gereksiz parametreler kaldırıldı.
         return newLiveStreamLoadResponse(
             name = groupedData.title,
             url = groupedData.items.firstOrNull()?.url ?: "",
             dataUrl = groupedData.toJson()
-            // horizontalImages parametresi kaldırıldı.
         ) {
             this.posterUrl = groupedData.posterUrl
             this.plot = groupedData.description
