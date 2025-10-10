@@ -30,7 +30,6 @@ class Xmltv : MainAPI() {
     override val hasMainPage = true
     override val supportedTypes = setOf(TvType.Live)
     
-    // Arama için tüm kanalları tutacak önbellek
     @Volatile 
     private var allChannelsCache: List<SearchResponse> = emptyList()
 
@@ -65,6 +64,7 @@ class Xmltv : MainAPI() {
             )
             val dataUrl = groupedData.toJson()
 
+            // ⭐ DÜZELTME 1: newMovieSearchResponse en basit aşırı yüklemesine göre güncellendi.
             newMovieSearchResponse(
                 name = title,
                 url = dataUrl,
@@ -77,7 +77,7 @@ class Xmltv : MainAPI() {
     
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val homepageLists = mutableListOf<HomePageList>()
-        val allItems = mutableListOf<SearchResponse>() // Cache'i doldurmak için
+        val allItems = mutableListOf<SearchResponse>() 
 
         // 1. Birincil XML
         val primaryItems = try {
@@ -129,10 +129,7 @@ class Xmltv : MainAPI() {
 
     // Arama fonksiyonu: CloudStream API'sine uygun imza kullanıldı.
     override suspend fun search(query: String, page: Int): SearchResponseList? {
-        // Sayfalama yapılmadığı için sadece ilk sayfayı (page 1) kabul ediyoruz.
         if (page != 1) return SearchResponseList(emptyList(), false)
-
-        // Arama sorgusu boşsa, boş liste döndür
         if (query.isBlank()) return SearchResponseList(emptyList(), false)
 
         // Cache boşsa, kanalları yükle.
@@ -141,15 +138,14 @@ class Xmltv : MainAPI() {
         }
 
         val searchResult = allChannelsCache.filter {
-            // Kanal adını küçük/büyük harf duyarlılığı olmadan sorgu ile karşılaştır
             it.name.contains(query.trim(), ignoreCase = true)
         } 
 
         Log.d("Xmltv", "Arama sonuçlandı: ${searchResult.size} kanal bulundu.")
         
-        // Sonuçları SearchResponseList içine sarmala
+        // ⭐ DÜZELTME 2: SearchResponseList çağrısı basitleştirildi.
         return SearchResponseList(
-            list = searchResult,
+            searchResult,
             hasNext = false // Tek sayfada tüm sonuçlar döndürülüyor.
         )
     }
@@ -232,7 +228,6 @@ class Xmltv : MainAPI() {
 // -------------------------------------------------------------
 
 class XmlPlaylistParser {
-    // Description içindeki "nation : [değer]" kalıbını bulur.
     private val nationRegex = Regex(
         "nation\\s*:\\s*(.*)",
         RegexOption.IGNORE_CASE 
