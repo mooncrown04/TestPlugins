@@ -160,7 +160,7 @@ class XmlPlaylistParser {
 
 class Xmltv : MainAPI() {
     override var mainUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b.xml"
-    private val secondaryXmlUrl = "https://dl.dropbox.com/scl/fi/emegyd857cyocpk94w5lr/xmltv.xml?rlkey=kuyabjk4a8t65xvcob3cpidab"
+    private val secondaryXmlUrl = "https://dl.dropbox.com/scl/fi/vg40bpys8ym1jjrcuv1wp/XMLTvcs.xml?rlkey=7g2chxiol35z6kg6b36c4nyv8"
     private val tertiaryXmlUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b-2.xml"
     private val tertiaryGroupName = "Favori Listem 2"
     private val primaryGroupName = "Favori Listem"
@@ -325,3 +325,4 @@ class Xmltv : MainAPI() {
         return foundLink
     }
 }
+
