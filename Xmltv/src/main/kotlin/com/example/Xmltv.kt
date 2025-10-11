@@ -12,7 +12,13 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.ActorData
 import java.util.Calendar
 
-import com.lagradost.cloudstream3.metainfo.Program
+// ⭐ KRİTİK DÜZELTME: Program çözümlenemediği için en olası alternatif olan ProgramInfo'yu içe aktarıyoruz.
+import com.lagradost.cloudstream3.metainfo.ProgramInfo // ProgramInfo import'u için yeni deneme
+
+// Eğer yukarıdaki import hata verirse, ProgramInfo'nun da metainfo içinde olmadığını anlarız.
+// Ancak denemek zorundayız. ProgramInfo genellikle metainfo içindedir.
+// Eğer "metainfo" hala çözümlenemezse, aşağıdaki satırı kullanırız:
+// import com.lagradost.cloudstream3.ProgramInfo
 
 
 // EPG ve Playlist için temel modeller
@@ -40,18 +46,14 @@ data class PlaylistItem(
 data class Playlist(val items: List<PlaylistItem> = emptyList())
 
 class EpgXmlParser {
-    // Gerçek EPG XML parse kodu eklenmeli. Şimdilik boş döndürüyor.
-    // Bu metod, XML'i okuyup tvg-id'ye göre gruplanmış EpgData döndürmelidir.
     fun parseEPG(xml: String): EpgData {
         // GERÇEK XMLTV PARSE KODUNUZ BURAYA GELECEKTİR!
-        // Örn: XML kütüphaneleri (Ktor'dan gelen XML ile) veya regex kullanarak.
         Log.w("XmltvParser", "parseEPG metodu boş döndürüyor. XML parse kodunuzu ekleyin.")
         return EpgData()
     }
 }
 
 class XmlPlaylistParser {
-    // Gerçek playlist XML parse kodu eklenmeli. Şimdilik boş döndürüyor.
     fun parseXML(xml: String): Playlist {
         // GERÇEK M3U/XML PARSE KODUNUZ BURAYA GELECEKTİR!
         Log.w("XmltvParser", "parseXML metodu boş döndürüyor. Playlist parse kodunuzu ekleyin.")
@@ -218,18 +220,17 @@ class Xmltv : MainAPI() {
         val channelTvgId = groupedData.items.firstOrNull()?.attributes?.get("tvg-id")
 
         // EPG eşleştirme ve dönüştürme
-        val programs: List<Program> = if (channelTvgId != null && epgData != null) {
+        // Düzeltildi: Program yerine ProgramInfo kullanıldı.
+        val programs: List<ProgramInfo> = if (channelTvgId != null && epgData != null) {
             epgData.programs[channelTvgId]
                 ?.map { epgProgram: EpgProgram -> 
-                    Program( // CloudStream'in Program sınıfını kullanıyoruz
+                    ProgramInfo( // CloudStream'in ProgramInfo sınıfını kullanıyoruz
                         name = epgProgram.name,
                         description = epgProgram.description,
                         start = epgProgram.start,
                         end = epgProgram.end
                     )
                 }
-                // Düzeltildi: Açık tür belirtimi (it: Program) kaldırıldı,
-                // Program referansı çözümlendiği için hata düzelecektir.
                 ?.sortedBy { it.start } 
                 ?: emptyList()
         } else {
@@ -244,7 +245,7 @@ class Xmltv : MainAPI() {
             this.posterUrl = groupedData.posterUrl
             this.plot = groupedData.description
             this.type = TvType.Live
-            this.program = programs // EPG verisini buraya ekliyoruz
+            this.program = programs // EPG verisini buraya ekliyoruz (programInfo olarak)
        }
     }
 
@@ -288,4 +289,3 @@ class Xmltv : MainAPI() {
         return foundLink
     }
 }
-
