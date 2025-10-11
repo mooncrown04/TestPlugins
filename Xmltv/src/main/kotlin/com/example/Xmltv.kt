@@ -15,7 +15,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock 
 
 // ***************************************************************
-// 1. VERİ MODELLERİ (EKSİK OLANLAR EKLENDİ)
+// 1. VERİ MODELLERİ
 // ***************************************************************
 data class ProgramInfo(
     val name: String,
@@ -33,7 +33,6 @@ data class PlaylistItem(
     val url: String,
     val description: String? = null,
     val nation: String? = null,
-    // attributes alanı, hata veren kısım için kritik
     val attributes: Map<String, String> = emptyMap(),
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
@@ -42,7 +41,7 @@ data class Playlist(val items: List<PlaylistItem> = emptyList())
 
 
 // ***************************************************************
-// 2. PARSER SINIFLARI (EKSİK OLANLAR EKLENDİ)
+// 2. PARSER SINIFLARI
 // ***************************************************************
 
 class EpgXmlParser { 
@@ -148,7 +147,7 @@ class XmlPlaylistParser {
 
 
 // ***************************************************************
-// 3. ANA API SINIFI
+// 3. ANA API SINIFI (MUTEX VE OOM KORUMASI İLE)
 // ***************************************************************
 
 class Xmltv : MainAPI() {
@@ -160,7 +159,7 @@ class Xmltv : MainAPI() {
     // EPG Önbellekleme değişkenleri
     @Volatile
     private var cachedEpgData: EpgData? = null 
-    // Mutex tanımlaması
+    // Mutex tanımlaması (Coroutine uyumlu kilit)
     private val epgMutex = Mutex() 
 
     override var name = "35 Xmltv"
@@ -177,24 +176,38 @@ class Xmltv : MainAPI() {
         val items: List<PlaylistItem>
     )
 
-    // CRITICAL FIX: Mutex ile coroutine uyumlu kilitleme kullanılır.
+    // ⭐ KRİTİK EPG YÜKLEME FONKSİYONU (Mutex ve OOM Korumalı)
     private suspend fun loadEpgData(): EpgData? {
         if (cachedEpgData != null) return cachedEpgData
         
         return epgMutex.withLock {
             if (cachedEpgData != null) return cachedEpgData
 
-            runCatching {
-                Log.d("Xmltv", "EPG verisi ilk kez yükleniyor...")
-                
-                val epgResponse = app.get(epgUrl).text 
-                val epgData = EpgXmlParser().parseEPG(epgResponse)
-                
-                cachedEpgData = epgData
-                epgData
-            }.getOrElse { e ->
-                Log.e("Xmltv", "EPG yüklenirken KRİTİK HATA oluştu: ${e.message}", e)
-                null
+            try {
+                // runCatching ile ağ hatalarını yakala
+                val result = runCatching {
+                    Log.d("Xmltv", "EPG verisi ilk kez yükleniyor...")
+                    val epgResponse = app.get(epgUrl).text 
+                    val epgData = EpgXmlParser().parseEPG(epgResponse)
+                    epgData
+                }.getOrElse { e ->
+                    Log.e("Xmltv", "EPG yüklenirken veya parse edilirken HATA oluştu: ${e.message}", e)
+                    null
+                }
+
+                if (result != null) {
+                    cachedEpgData = result
+                }
+                return result
+
+            } catch (e: OutOfMemoryError) {
+                // ⭐ JVM düzeyinde Bellek Yetersizliği hatasını özel olarak yakala
+                Log.e("Xmltv", "!!! KRİTİK HATA: Bellek Yetersizliği (OOM) !!! Uygulama bu yüzden çöküyor olabilir. ${e.message}", e)
+                return null // OOM durumunda null döndürerek uygulamanın çökmesini engelle.
+            } catch (e: Exception) {
+                 // Genel hata yakalama (ek güvenlik)
+                Log.e("Xmltv", "EPG yüklenirken beklenmedik genel hata: ${e.message}", e)
+                return null
             }
         }
     }
@@ -263,11 +276,10 @@ class Xmltv : MainAPI() {
         return allResults.distinctBy { it.name }
     }
     
-    // LOAD FONKSİYONU: SADECE PLOT ATAMASI YAPILIYOR
+    // LOAD FONKSİYONU: EPG'yi PLOT alanına atıyor
     override suspend fun load(url: String): LoadResponse {
         val groupedData = parseJson<GroupedChannelData>(url)
         
-        // EPG KODU BAŞLANGIÇ
         val epgData = loadEpgData() 
         val channelTvgId = groupedData.items.firstOrNull()?.attributes?.get("tvg-id")
 
@@ -311,7 +323,6 @@ class Xmltv : MainAPI() {
 
         val originalPlot = groupedData.description ?: ""
         val finalPlot = originalPlot + epgPlotText
-        // EPG KODU BİTİŞ
 
         return newLiveStreamLoadResponse(
             name = groupedData.title,
