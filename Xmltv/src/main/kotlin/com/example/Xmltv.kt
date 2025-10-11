@@ -12,8 +12,8 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.ActorData
 import java.util.Calendar
 
-// ⭐ KRİTİK DÜZELTME 1: Program/ProgramInfo referansı çözümlenemediği için
-// CloudStream'in beklediği ProgramInfo data sınıfını yerel olarak tanımlıyoruz.
+// ⭐ KRİTİK DÜZELTME: Program/ProgramInfo referansı çözümlenemediği için
+// CloudStream'in beklediği data sınıfını yerel olarak tanımlıyoruz.
 data class ProgramInfo(
     val name: String,
     val description: String? = null,
@@ -249,9 +249,8 @@ class Xmltv : MainAPI() {
             this.plot = groupedData.description
             this.type = TvType.Live
             
-            // ⭐ KRİTİK DÜZELTME 2: 'program' yerine 'programInfo' kullanıldı.
-            // Bu, "Unresolved reference 'program'" hatasını çözmelidir.
-            this.programInfo = programs 
+            // ⭐ KRİTİK DÜZELTME 2: Alan adı 'program' veya 'programInfo' değil, 'programs' olarak değiştirildi.
+            this.programs = programs 
        }
     }
 
