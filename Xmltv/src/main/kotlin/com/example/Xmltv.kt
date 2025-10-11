@@ -87,7 +87,7 @@ class Xmltv : MainAPI() {
             }
         
         // Karıştır ve sadece ilk 6 tanesini öneri olarak al
-        return allGroupedItems.shuffled().take(6)
+        return allGroupedItems.shuffled().take(16)
     }
 
     private suspend fun loadEpgData(): EpgData {
@@ -498,3 +498,4 @@ class XmlPlaylistParser {
         return foundLink
     }
 }
+
