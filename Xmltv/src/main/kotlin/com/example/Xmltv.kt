@@ -11,8 +11,8 @@ import java.util.Calendar
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.TimeZone
-import java.text.SimpleDateFormat 
-import java.util.Locale 
+import java.text.SimpleDateFormat 
+import java.util.Locale 
 
 // ***************************************************************
 // 1. VERİ MODELLERİ
@@ -32,7 +32,7 @@ data class PlaylistItem(
     val title: String,
     val url: String,
     val description: String? = null,
-    val nation: String? = null,
+    val nation: String? = null, // Burası artık direkt <nation> etiketinden doldurulacak
     val attributes: Map<String, String> = emptyMap(),
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
@@ -46,38 +46,25 @@ data class Playlist(val items: List<PlaylistItem> = emptyList())
 
 class EpgXmlParser {
     
-    // ⭐ EPG zaman damgasını kesinlikle UTC olarak ayrıştırır ve doğru milisaniyeyi kaydeder.
-    private fun parseXmlTvDate(dateString: String): Long {
-        // XMLTV formatı: YYYYMMDDhhmmss +0000
-        
-        // Sadece YYYYMMDDhhmmss kısmını alıyoruz (İlk 14 karakter)
+    private fun parseXmlTvDate(dateString: String): Long {         
         val dateOnlyString = if (dateString.length >= 14) dateString.substring(0, 14) else return 0L
 
-        // Format: YılAyGünSaatDakikaSaniye
         val format = "yyyyMMddHHmmss"
 
         return try {
-            val sdf = SimpleDateFormat(format, Locale.ENGLISH)
-            
-            // ZORLAMA: Gelen zamanın UTC olduğunu varsayıyoruz. 
-            // Bu, milisaniye damgasının doğru olmasını sağlar (3 saat fazlalığı çözmüştük).
+            val sdf = SimpleDateFormat(format, Locale.ENGLISH)            
             sdf.timeZone = TimeZone.getTimeZone("UTC")
-
             val date = sdf.parse(dateOnlyString)
-
             date?.time ?: 0L
-
         } catch (e: Exception) {
             Log.e("EpgXmlParser", "KRİTİK HATA: SimpleDateFormat ile tarih ayrıştırma başarısız: $dateString - ${e.message}")
             return 0L
         }
     }
 
-
     fun parseEPG(xml: String): EpgData {
         if (xml.isBlank()) return EpgData(errorMessage = "XML içeriği boş.")
         val programs = mutableListOf<EpgProgram>()
-
         val programmeRegex = Regex("<programme\\s+[^>]*>", RegexOption.DOT_MATCHES_ALL)
         val channelRegex = Regex("channel=\"([^\"]+)\"")
         val startRegex = Regex("start=\"([^\"]+)\"")
@@ -125,9 +112,13 @@ class EpgXmlParser {
 
 
 class XmlPlaylistParser {
-    private val nationRegex = Regex("nation\\s*:\\s*(.*)", RegexOption.IGNORE_CASE)
+    // nationRegex kaldırıldı, çünkü artık <description> içinden çekilmeyecek.
     private val channelRegex = Regex("<channel>(.*?)</channel>", RegexOption.DOT_MATCHES_ALL)
     private val titleRegex = Regex("<title>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</title>", RegexOption.DOT_MATCHES_ALL)
+    
+    // ⭐ YENİ REGEX: <nation> etiketini doğrudan yakalar
+    private val nationTagRegex = Regex("<nation>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</nation>", RegexOption.DOT_MATCHES_ALL)
+    
     private val logoRegex = Regex("<logo_30x30>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</logo_30x30>", RegexOption.DOT_MATCHES_ALL)
     private val streamUrlRegex = Regex("<stream_url>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</stream_url>", RegexOption.DOT_MATCHES_ALL)
     private val descriptionRegex = Regex("<description>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</description>", RegexOption.DOT_MATCHES_ALL)
@@ -143,8 +134,10 @@ class XmlPlaylistParser {
             val url = streamUrlRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
             val description = descriptionRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
             val tvgId = tvgIdRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
-            val nationMatch = description?.let { nationRegex.find(it) }
-            val nation = nationMatch?.groupValues?.getOrNull(1)?.trim()
+            
+            // ⭐ nation bilgisi artık doğrudan <nation> etiketinden çekiliyor
+            val nation = nationTagRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
+
 
             if (!title.isNullOrBlank() && !url.isNullOrBlank() && url.startsWith("http", ignoreCase = true)) {
                 val attributesMap = mutableMapOf<String, String>()
@@ -157,7 +150,7 @@ class XmlPlaylistParser {
                         title = title,
                         url = url,
                         description = description,
-                        nation = nation,
+                        nation = nation, // <nation> etiketinden gelen değer
                         attributes = attributesMap.toMap(),
                         headers = emptyMap(),
                         userAgent = null
@@ -178,7 +171,6 @@ class Xmltv : MainAPI() {
     override var mainUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b.xml"
     private val secondaryXmlUrl = "https://dl.dropbox.com/scl/fi/vg40bpys8ym1jjrcuv1wp/XMLTvcs.xml?rlkey=7g2chxiol35z6kg6b36c4nyv8"
     private val tertiaryXmlUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b-2.xml"
-    // Bu URL'de program akışı verisi bulunuyor
     private val epgUrl = "https://raw.githubusercontent.com/braveheart1983/tvg-macther/refs/heads/main/tr-epg.xml"
 
     @Volatile
@@ -208,7 +200,6 @@ class Xmltv : MainAPI() {
             var epgResponse: String? = null
 
             try {
-                // EPG dosyasını çekme
                 epgResponse = app.get(epgUrl).text
                 if (epgResponse.isNullOrBlank()) {
                     val error = "HATA: EPG URL'den çekildi ancak içerik boş."
@@ -222,7 +213,6 @@ class Xmltv : MainAPI() {
             }
 
             try {
-                // EPG dosyasını ayrıştırma
                 val epgData = EpgXmlParser().parseEPG(epgResponse!!)
 
                 if (epgData.errorMessage != null) {
@@ -260,7 +250,7 @@ class Xmltv : MainAPI() {
                 posterUrl = logoUrl,
                 items = items,
                 description = firstItem.description,
-                nation = firstItem.nation
+                nation = firstItem.nation // <nation> bilgisini buraya taşıdık
             )
             val dataUrl = groupedData.toJson()
             newLiveSearchResponse(
@@ -269,7 +259,10 @@ class Xmltv : MainAPI() {
                 type = TvType.Live
             ) {
                 this.posterUrl = logoUrl
-                groupedData.nation?.let { this.lang = it }
+                groupedData.nation?.let { 
+                    this.lang = it // Lang olarak kullanmaya devam
+                    this.tags = listOf(it.uppercase()) // ⭐ TAGS OLARAK EKLENDİ
+                }
             }
         }
     }
@@ -317,24 +310,20 @@ class Xmltv : MainAPI() {
         val epgData = loadEpgData()
 
         val channelTvgId = groupedData.items.firstOrNull()?.attributes?.get("tvg-id")
-        // Aranan ID'yi küçük harfe çevir
         val normalizedTvgId = channelTvgId?.lowercase()
 
         var epgPlotText: String
         var programs: List<ProgramInfo> = emptyList()
 
         if (epgData.errorMessage != null) {
-            // EPG yükleme/ayrıştırma hatası
-            epgPlotText = "\n\n--- YAYIN AKIŞI HATA RAPORU ---\n" +
+            epgPlotText = "\n\n--- EPG AKIŞI HATA RAPORU ---\n" +
                             "HATA: EPG yüklenirken/ayrıştırılırken sorun oluştu.\n" +
                             "Rapor: ${epgData.errorMessage}" +
                             "\n--- HATA SONU ---"
         } else if (normalizedTvgId == null) {
-            // Kanal listesinde tvg-id yok
-            epgPlotText = "\n\n--- YAYIN AKIŞI BİLGİSİ ---\n" +
+            epgPlotText = "\n\n--- EPG AKIŞI BİLGİSİ ---\n" +
                           "UYARI: Kanal listesinde 'tvg-id' bilgisi bulunamadı. EPG eşleştirilemiyor."
         } else {
-            // Eşleştirmeyi dene
             programs = epgData.programs[normalizedTvgId]
                 ?.map { epgProgram: EpgProgram ->
                     ProgramInfo(
@@ -348,14 +337,10 @@ class Xmltv : MainAPI() {
                 ?: emptyList()
 
             if (programs.isNotEmpty()) {
-                // Başarılı eşleşme
-                
-                // ⭐ 1. KRİTİK FİLTRELEME: Yalnızca şu anki milisaniye zamandan SONRA başlayan programları al
                 val currentTime = System.currentTimeMillis()
-
                 val localTimeZone = TimeZone.getDefault() 
                 
-                // ⭐ BAŞLIK İÇİN ANLIK SAATİ ALMA
+                // BAŞLIK İÇİN ANLIK SAATİ ALMA
                 val nowCal = Calendar.getInstance().apply { 
                     timeZone = localTimeZone 
                 }
@@ -363,14 +348,11 @@ class Xmltv : MainAPI() {
                 val nowMinute = String.format("%02d", nowCal.get(Calendar.MINUTE))
                 
                 val formattedPrograms = programs
-                    // Sadece başlangıç zamanı şu andan büyük veya eşit olan programları göster
                     .filter { it.start >= currentTime } 
-                    
                     .joinToString(separator = "\n") { program ->
-                        // Zaman damgasını UTC'den Yerel Saate (GMT+03:00) çevir
                         val startCal = Calendar.getInstance().apply {
                             timeInMillis = program.start 
-                            timeZone = localTimeZone // Cihazın yerel saatine göre gösterilir
+                            timeZone = localTimeZone 
                         }
                         val startHour = String.format("%02d", startCal.get(Calendar.HOUR_OF_DAY))
                         val startMinute = String.format("%02d", startCal.get(Calendar.MINUTE))
@@ -380,20 +362,17 @@ class Xmltv : MainAPI() {
                     }
 
                 // Başlığı anlık saat bilgisiyle oluştur
-                epgPlotText = "\n\n--- YAYIN AKIŞI (Cihaz Saati: $nowHour:$nowMinute) ---\n" + formattedPrograms
+                epgPlotText = "\n\n--- EPG YAYIN AKIŞI (Saat: $nowHour:$nowMinute) ---\n" + formattedPrograms
             } else {
-                // EPG'de program bulunamadı (ID Eşleşti ama Program Listesi Boş)
-
-                // Hata Raporu: EPG'de Bulunan İlk 5 Kanalı Raporla
                 val availableTvgIds = epgData.programs.keys.take(5).joinToString(", ")
                 val totalChannels = epgData.programs.size
 
-                epgPlotText = "\n\n--- YAYIN AKIŞI BİLGİSİ ---\n" +
+                epgPlotText = "\n\n--- EPG BİLGİSİ ---\n" +
                               "HATA KODU: EPG_ID_MISMATCH (PROGRAM BOŞ)\n" +
                               "Aranan ID: '${channelTvgId}' (Normalize: '${normalizedTvgId}')\n" +
                               "Sonuç: Bu ID için yayın akışı bulunamadı. Toplam $totalChannels kanal EPG'de yüklü.\n" +
                               "Örnek Bulunan ID'ler: ${availableTvgIds}... \n\n" +
-                              "Çözüm Önerisi: EPG dosyanızdaki '${normalizedTvgId}' program bloklarını kontrol edin, tarih ayrıştırma artık UTC'dir."
+                              "Çözüm Önerisi: XML kontrolü."
             }
         }
 
@@ -408,6 +387,11 @@ class Xmltv : MainAPI() {
             this.posterUrl = groupedData.posterUrl
             this.plot = finalPlot
             this.type = TvType.Live
+            
+            // groupedData'da saklanan <nation> bilgisi tags olarak eklendi
+            groupedData.nation?.let { 
+                this.tags = listOf(it.uppercase()) 
+            }
         }
     }
 
