@@ -15,7 +15,7 @@ import java.text.SimpleDateFormat
 import java.util.Locale 
 
 // ***************************************************************
-// 1. VERİ MODELLERİ (Top Level'da Tanımlanmalı)
+// 1. VERİ MODELLERİ
 // ***************************************************************
 data class ProgramInfo(
     val name: String,
@@ -40,19 +40,20 @@ data class PlaylistItem(
 data class Playlist(val items: List<PlaylistItem> = emptyList())
 
 // ***************************************************************
-// 2. PARSER SINIFLARI (Top Level'da Tanımlanmalı)
+// 2. PARSER SINIFLARI
 // ***************************************************************
 
 class EpgXmlParser {
     
-    private fun parseXmlTvDate(dateString: String): Long {         
+    // Hata veren satırlar temizlendi.
+    private fun parseXmlTvDate(dateString: String): Long {
         // XMLTV formatı: YYYYMMDDhhmmss +0000
         val dateOnlyString = if (dateString.length >= 14) dateString.substring(0, 14) else return 0L
 
         val format = "yyyyMMddHHmmss"
 
         return try {
-            val sdf = SimpleDateFormat(format, Locale.ENGLISH)            
+            val sdf = SimpleDateFormat(format, Locale.ENGLISH)
             sdf.timeZone = TimeZone.getTimeZone("UTC")
             val date = sdf.parse(dateOnlyString)
             date?.time ?: 0L
@@ -262,8 +263,7 @@ class Xmltv : MainAPI() {
                 this.posterUrl = logoUrl
                 groupedData.nation?.let { 
                     this.lang = it 
-                    // SearchResponse'ta tags yok, sadece lang var.
-                    // Tags, LoadResponse'ta kullanılır.
+                    // SearchResponse'ta tags alanı mevcut değil, lang yeterli.
                 }
             }
         }
@@ -379,6 +379,7 @@ class Xmltv : MainAPI() {
         }
 
         val originalPlot = groupedData.description ?: ""
+        // nation bilgisinin plot'a eklenmesi isteği iptal edildiği için sadece EPG ekleniyor.
         val finalPlot = originalPlot + epgPlotText
 
         return newLiveStreamLoadResponse(
@@ -390,7 +391,7 @@ class Xmltv : MainAPI() {
             this.plot = finalPlot
             this.type = TvType.Live
             
-            // ⭐ DÜZELTME: nation bilgisi LoadResponse'a (bu blok) tags olarak eklendi.
+            // İstenen nation bilgisini tags olarak ekliyoruz.
             groupedData.nation?.let { 
                 this.tags = listOf(it.uppercase()) 
             }
