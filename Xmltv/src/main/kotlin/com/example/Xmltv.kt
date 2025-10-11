@@ -49,7 +49,7 @@ data class Playlist(val items: List<PlaylistItem> = emptyList())
 
 
 // --------------------------------------------------------------------------------------------------
-// --- XML PARSER SINIFLARI (AYNI KALDI, HATA DÜZELTMELERİ YAPILMIŞTI) ---
+// --- XML PARSER SINIFLARI (AYNI KALDI) ---
 // --------------------------------------------------------------------------------------------------
 
 class EpgXmlParser {
@@ -98,6 +98,7 @@ class EpgXmlParser {
             val minute = (dateLong / 10000L) % 100
             val second = (dateLong / 100L) % 100
             val calendar = Calendar.getInstance().apply {
+                // Ay 0-tabanlı olduğu için -1
                 set(year.toInt(), month.toInt() - 1, day.toInt(), hour.toInt(), minute.toInt(), second.toInt())
                 set(Calendar.MILLISECOND, 0)
             }
@@ -155,7 +156,7 @@ class XmlPlaylistParser {
 }
 
 // --------------------------------------------------------------------------------------------------
-// --- ANA API SINIFI (LOAD FONKSİYONU GÜNCELLENDİ) ---
+// --- ANA API SINIFI (LOAD FONKSİYONU PLOT İLE GÜNCELLENDİ) ---
 // --------------------------------------------------------------------------------------------------
 
 class Xmltv : MainAPI() {
@@ -167,7 +168,7 @@ class Xmltv : MainAPI() {
     private val secondaryGroupName = "Diğer Kanallar"
     private val defaultPosterUrl = "https://www.shutterstock.com/shutterstock/photos/2174119547/display_1500/stock-vector-mount-ararat-rises-above-the-clouds-dawn-panoramic-view-vector-illustration-2174119547.jpg"
 
-    // EPG URL'si ve Önbellekleme (loadEpgData() içinde kullanılacak)
+    // EPG URL'si ve Önbellekleme
     private val epgUrl = "https://raw.githubusercontent.com/braveheart1983/tvg-macther/refs/heads/main/tr-epg.xml"
     private var cachedEpgData: EpgData? = null
 
@@ -186,7 +187,6 @@ class Xmltv : MainAPI() {
     )
 
     private suspend fun loadEpgData(): EpgData? {
-        // EPG verisini çekmek için bu fonksiyonu tutuyoruz, ancak şimdilik load içinde kullanmayacağız.
         if (cachedEpgData != null) return cachedEpgData
         return try {
             val epgResponse = app.get(epgUrl).text
@@ -229,7 +229,6 @@ class Xmltv : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val homepageLists = mutableListOf<HomePageList>()
-        // ... (getMainPage içeriği aynı kaldı) ...
         try {
             val primaryResponse = app.get(mainUrl).text
             val primaryPlaylist = XmlPlaylistParser().parseXML(primaryResponse)
@@ -266,13 +265,62 @@ class Xmltv : MainAPI() {
         return allResults.distinctBy { it.name }
     }
     
-    // ⭐ KRİTİK DÜZELTME: load FONKSİYONU SADELEŞTİRİLDİ
-    // EPG verisi çekme ve atama işlemi, derleme hatası nedeniyle geçici olarak kaldırıldı.
+    // ⭐ KRİTİK GÜNCELLEME: load FONKSİYONU EPG'yi PLOT alanına atıyor
     override suspend fun load(url: String): LoadResponse {
         val groupedData = parseJson<GroupedChannelData>(url)
         
-        // EPG İLE İLGİLİ TÜM KOD ÇIKARILDI VEYA YORUM SATIRI YAPILDI!
-        // loadEpgData() çağrılmıyor. programs listesi oluşturulmuyor.
+        // EPG KODU BAŞLANGIÇ
+        val epgData = loadEpgData() // EPG verisini çek
+        val channelTvgId = groupedData.items.firstOrNull()?.attributes?.get("tvg-id")
+
+        // EPG verisini işleme (ProgramInfo listesi oluşturuluyor)
+        val programs: List<ProgramInfo> = if (channelTvgId != null && epgData != null) {
+            epgData.programs[channelTvgId]
+                ?.map { epgProgram: EpgProgram -> 
+                    ProgramInfo( 
+                        name = epgProgram.name,
+                        description = epgProgram.description,
+                        posterUrl = null, 
+                        rating = null, 
+                        start = epgProgram.start,
+                        end = epgProgram.end
+                    )
+                }
+                ?.sortedBy { it.start } 
+                ?: emptyList()
+        } else {
+            emptyList()
+        }
+        
+        // ⭐ YENİ MANTIK: EPG verisini PLOT (Açıklama) metnine dönüştürme ⭐
+        val epgPlotText = if (programs.isNotEmpty()) {
+            val today = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
+            
+            // EPG listesini formatla (Sadece bugün ve yarınki programları alıyoruz)
+            val formattedPrograms = programs
+                .filter { Calendar.getInstance().apply { timeInMillis = it.start }.get(Calendar.DAY_OF_YEAR) in (today)..(today + 1) }
+                .joinToString(separator = "\n") { program ->
+                    val startCal = Calendar.getInstance().apply { timeInMillis = program.start }
+                    val startHour = String.format("%02d", startCal.get(Calendar.HOUR_OF_DAY))
+                    val startMinute = String.format("%02d", startCal.get(Calendar.MINUTE))
+                    
+                    // Açıklaması varsa, başlık ve açıklamayı birleştir
+                    val descriptionText = program.description?.takeIf { it.isNotBlank() }?.let { " - $it" } ?: ""
+                    
+                    "[$startHour:$startMinute] ${program.name}$descriptionText"
+                }
+            
+            "\n\n--- YAYIN AKIŞI ---\n" + formattedPrograms
+        } else {
+            "\n\n--- Yayın Akışı Bulunamadı ---"
+        }
+
+        // Orijinal Açıklama (Plot)
+        val originalPlot = groupedData.description ?: ""
+        
+        // EPG verisini orijinal açıklama ile birleştir
+        val finalPlot = originalPlot + epgPlotText
+        // EPG KODU BİTİŞ
 
         return newLiveStreamLoadResponse(
             name = groupedData.title,
@@ -280,13 +328,11 @@ class Xmltv : MainAPI() {
             dataUrl = groupedData.toJson(), 
         ) {
             this.posterUrl = groupedData.posterUrl
-            this.plot = groupedData.description
+            // ⭐ ATAMA BURADA YAPILIYOR: EPG ve orijinal açıklama birleştirilip plot alanına yazılıyor. ⭐
+            this.plot = finalPlot
             this.type = TvType.Live
             
-            // Eğer isterseniz, bu satırları tekrar ekleyerek EPG denemesi yapabilirsiniz:
-            // if (programs.isNotEmpty()) {
-            //     this.programs = programs 
-            // }
+            // this.programs ataması derleme hatasını önlemek için kullanılmıyor.
        }
     }
 
@@ -325,4 +371,3 @@ class Xmltv : MainAPI() {
         return foundLink
     }
 }
-
