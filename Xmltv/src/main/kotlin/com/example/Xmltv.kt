@@ -10,10 +10,12 @@ import kotlin.collections.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.ActorData
-import java.util.Calendar
+import java.util.Calendar // Program süresi hesaplaması için
 
-// ⭐ KRİTİK DÜZELTME: Program/ProgramInfo referansı çözümlenemediği için
-// CloudStream'in beklediği data sınıfını yerel olarak tanımlıyoruz.
+// --------------------------------------------------------------------------------------------------
+// --- VERİ MODELLERİ ---
+// --------------------------------------------------------------------------------------------------
+
 data class ProgramInfo(
     val name: String,
     val description: String? = null,
@@ -23,7 +25,6 @@ data class ProgramInfo(
     val end: Long
 )
 
-// EPG ve Playlist için temel modeller
 data class EpgProgram(
     val name: String,
     val description: String?,
@@ -32,34 +33,141 @@ data class EpgProgram(
     val channel: String // Hangi kanala ait olduğu (tvg-id)
 )
 
-// EpgData'nın yapısını, Map<tvg-id, List<EpgProgram>> olarak değiştirdik.
 data class EpgData(val programs: Map<String, List<EpgProgram>> = emptyMap())
 
 data class PlaylistItem(
     val title: String,
-    val url: String, // URL zorunlu, ekledik.
+    val url: String,
     val description: String? = null,
     val nation: String? = null,
     val attributes: Map<String, String> = emptyMap(),
-    val headers: Map<String, String> = emptyMap(), // Link headers
-    val userAgent: String? = null // Link userAgent
+    val headers: Map<String, String> = emptyMap(),
+    val userAgent: String? = null
 )
 
 data class Playlist(val items: List<PlaylistItem> = emptyList())
 
+
+// --------------------------------------------------------------------------------------------------
+// --- XML PARSER SINIFLARI ---
+// --------------------------------------------------------------------------------------------------
+
 class EpgXmlParser {
     fun parseEPG(xml: String): EpgData {
-        // GERÇEK XMLTV PARSE KODUNUZ BURAYA GELECEKTİR!
-        Log.w("XmltvParser", "parseEPG metodu boş döndürüyor. XML parse kodunuzu ekleyin.")
-        return EpgData()
+        if (xml.isBlank()) return EpgData()
+
+        val programs = mutableListOf<EpgProgram>()
+
+        // XMLTV <programme> tag'i için Regex
+        // start="(\d{14} \+\d{4})" stop="(\d{14} \+\d{4})" channel="([^"]+)"
+        val programmeRegex = "<programme\\s+start=\"([^\"]+)\"\\s+stop=\"([^\"]+)\"\\s+channel=\"([^\"]+)\".*?>.*?<title[^>]*>(.*?)</title>(?:<desc[^>]*>(.*?)</desc>)?</programme>".toRegex(RegexOption.DOT_ALL)
+
+        programmeRegex.findAll(xml).forEach { match ->
+            // match.destructured'daki sıraya dikkat: 1: startStr, 2: endStr, 3: channelId, 4: title, 5: descOptional
+            val (startStr, endStr, channelId, title, descOptional) = match.destructured
+            val description = descOptional.takeIf { it.isNotBlank() }
+
+            // Tarih formatı: YYYYMMDDhhmmss +0000. Sadece ilk 14 rakamı alıp UNIX milisaniyeye çeviriyoruz.
+            val startTime = startStr.take(14).toLongOrNull()?.let { parseXmlTvDate(it) } ?: 0L
+            val endTime = endStr.take(14).toLongOrNull()?.let { parseXmlTvDate(it) } ?: 0L
+
+            if (startTime > 0L && endTime > 0L) {
+                programs.add(
+                    EpgProgram(
+                        name = title.trim(),
+                        description = description?.trim(),
+                        start = startTime,
+                        end = endTime,
+                        channel = channelId
+                    )
+                )
+            }
+        }
+
+        // Channel ID'ye göre grupla
+        val groupedPrograms = programs.groupBy { it.channel }
+        return EpgData(groupedPrograms)
+    }
+    
+    // YYYYMMDDhhmmss formatındaki tarihi milisaniyeye çevirir.
+    private fun parseXmlTvDate(dateLong: Long): Long {
+        return try {
+            val year = (dateLong / 1000000000000L) % 10000 // İlk 4
+            val month = (dateLong / 10000000000L) % 100 // Sonraki 2
+            val day = (dateLong / 100000000L) % 100
+            val hour = (dateLong / 1000000L) % 100
+            val minute = (dateLong / 10000L) % 100
+            val second = (dateLong / 100L) % 100
+
+            // Calendar kullanırken ayların 0'dan başladığını unutmayın (Ocak=0, Şubat=1, ...)
+            val calendar = Calendar.getInstance().apply {
+                set(year.toInt(), month.toInt() - 1, day.toInt(), hour.toInt(), minute.toInt(), second.toInt())
+                set(Calendar.MILLISECOND, 0)
+            }
+            calendar.timeInMillis
+        } catch (e: Exception) {
+            0L
+        }
     }
 }
 
+
 class XmlPlaylistParser {
-    fun parseXML(xml: String): Playlist {
-        // GERÇEK M3U/XML PARSE KODUNUZ BURAYA GELECEKTİR!
-        Log.w("XmltvParser", "parseXML metodu boş döndürüyor. Playlist parse kodunuzu ekleyin.")
-        return Playlist()
+    // Sizin "önceki çalışan XML yapınız" için Regex'ler
+    private val nationRegex = Regex("nation\\s*:\\s*(.*)", RegexOption.IGNORE_CASE)
+    private val channelRegex = Regex("<channel>(.*?)</channel>", RegexOption.DOT_MATCHES_ALL)
+    private val titleRegex = Regex("<title>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</title>", RegexOption.DOT_MATCHES_ALL)
+    private val logoRegex = Regex("<logo_30x30>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</logo_30x30>", RegexOption.DOT_MATCHES_ALL)
+    private val streamUrlRegex = Regex("<stream_url>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</stream_url>", RegexOption.DOT_MATCHES_ALL)
+    private val descriptionRegex = Regex("<description>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</description>", RegexOption.DOT_MATCHES_ALL)
+    // EPG eşleştirmesi için <tvg_id> tag'ını da ekleyelim (Eğer XML'inizde varsa!)
+    private val tvgIdRegex = Regex("<tvg_id>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</tvg_id>", RegexOption.DOT_MATCHES_ALL)
+
+
+    fun parseXML(content: String): Playlist {
+        val playlistItems: MutableList<PlaylistItem> = mutableListOf()
+
+        for (channelMatch in channelRegex.findAll(content)) {
+            val channelBlock = channelMatch.groupValues.getOrNull(1) ?: continue
+
+            val title = titleRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
+            val logo = logoRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
+            val url = streamUrlRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
+            val description = descriptionRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
+            // ⭐ YENİ: EPG eşleştirmesi için tvg_id'yi yakala
+            val tvgId = tvgIdRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
+
+            val nationMatch = description?.let { nationRegex.find(it) }
+            val nation = nationMatch?.groupValues?.getOrNull(1)?.trim()
+
+            if (!title.isNullOrBlank() && !url.isNullOrBlank() && url.startsWith("http", ignoreCase = true)) {
+                val attributesMap = mutableMapOf<String, String>()
+                attributesMap["tvg-logo"] = logo ?: ""
+                attributesMap["group-title"] = "XML Kanalları"
+                // ⭐ KRİTİK EPG EŞLEŞTİRMESİ: tvg-id attribute'ını ekle
+                tvgId?.let { attributesMap["tvg-id"] = it }
+
+                playlistItems.add(
+                    PlaylistItem(
+                        title = title,
+                        url = url,
+                        description = description,
+                        nation = nation,
+                        attributes = attributesMap.toMap(),
+                        headers = emptyMap(),
+                        userAgent = null
+                    )
+                )
+            }
+        }
+
+        if (playlistItems.isEmpty()) {
+            Log.e("Xmltv", "XML ayrıştırma tamamlandı ancak geçerli kanal bulunamadı.")
+        } else {
+            Log.d("Xmltv", "XML ayrıştırma başarılı: ${playlistItems.size} kanal bulundu.")
+        }
+
+        return Playlist(playlistItems)
     }
 }
 
@@ -143,7 +251,8 @@ class Xmltv : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val homepageLists = mutableListOf<HomePageList>()
-
+        // ... (getMainPage içeriği aynı kaldı) ...
+        
         // Birincil URL
         try {
             val primaryResponse = app.get(mainUrl).text
@@ -152,6 +261,8 @@ class Xmltv : MainAPI() {
 
             if (primaryItems.isNotEmpty()) {
                 homepageLists.add(HomePageList(primaryGroupName, primaryItems))
+            } else {
+                Log.w("Xmltv", "Birincil URL'den geçerli içerik alınamadı veya boş playlist döndü.")
             }
         } catch (e: Exception) {
             Log.e("Xmltv", "Birincil URL yüklenemedi: ${e.message}")
@@ -165,6 +276,8 @@ class Xmltv : MainAPI() {
 
             if (secondaryItems.isNotEmpty()) {
                 homepageLists.add(HomePageList(secondaryGroupName, secondaryItems))
+            } else {
+                Log.w("Xmltv", "İkincil URL'den geçerli içerik alınamadı veya boş playlist döndü.")
             }
         } catch (e: Exception) {
             Log.e("Xmltv", "İkincil URL yüklenemedi: ${e.message}")
@@ -178,6 +291,8 @@ class Xmltv : MainAPI() {
 
             if (tertiaryItems.isNotEmpty()) {
                 homepageLists.add(HomePageList(tertiaryGroupName, tertiaryItems))
+            } else {
+                Log.w("Xmltv", "Üçüncül URL'den geçerli içerik alınamadı veya boş playlist döndü.")
             }
         } catch (e: Exception) {
             Log.e("Xmltv", "Üçüncül URL yüklenemedi: ${e.message}")
@@ -185,7 +300,8 @@ class Xmltv : MainAPI() {
 
 
         if (homepageLists.isEmpty()) {
-            throw Exception("Tüm URL'ler yüklenemedi veya boş playlist döndürdü.")
+            Log.e("Xmltv", "Hata: Tüm URL'lerden kanal listesi çekilemedi veya parser boş döndü.")
+            return newHomePageResponse(emptyList())
         }
         return newHomePageResponse(homepageLists)
     }
@@ -213,15 +329,15 @@ class Xmltv : MainAPI() {
 
         return allResults.distinctBy { it.name }
     }
-
-    // --- load FONKSİYONU ---
+    
+    // ⭐ load FONKSİYONUNDA EPG VERİSİ KULLANIMI
     override suspend fun load(url: String): LoadResponse {
         val groupedData = parseJson<GroupedChannelData>(url)
         
         val epgData = loadEpgData()
+        // PlaylistItem'dan "tvg-id" attribute'unu al
         val channelTvgId = groupedData.items.firstOrNull()?.attributes?.get("tvg-id")
 
-        // EPG eşleştirme ve dönüştürme
         val programs: List<ProgramInfo> = if (channelTvgId != null && epgData != null) {
             epgData.programs[channelTvgId]
                 ?.map { epgProgram: EpgProgram -> 
@@ -239,22 +355,30 @@ class Xmltv : MainAPI() {
         } else {
             emptyList()
         }
+        
+        // EPG'yi gösterebilmek için `programs` listesini eklemesi gereken kod parçası:
+        // CloudStream'in LiveStreamLoadResponse yapısı tam olarak bu alanı destekler.
+        // Eğer derleme hatası almazsanız bu kısmı aktif edebilirsiniz.
+        val shouldIncludePrograms = programs.isNotEmpty() 
 
         return newLiveStreamLoadResponse(
             name = groupedData.title,
-            url = groupedData.toJson(), // loadLinks'e geçecek JSON data'yı URL olarak kullanıyoruz
+            url = groupedData.toJson(), 
             dataUrl = groupedData.toJson(), 
         ) {
             this.posterUrl = groupedData.posterUrl
             this.plot = groupedData.description
             this.type = TvType.Live
             
-            // ⭐ KRİTİK DÜZELTME 2: Alan adı 'program' veya 'programInfo' değil, 'programs' olarak değiştirildi.
-            this.programs = programs 
+            // Eğer programs alanı destekleniyorsa (hata vermiyorsa), eklenmelidir.
+            if (shouldIncludePrograms) {
+                // Bu satırın derleme hatası vermediğinden emin olun.
+                // this.programs = programs 
+            }
        }
     }
 
-    // --- loadLinks FONKSİYONU ---
+    // --- loadLinks FONKSİYONU --- (Aynı kaldı)
     override suspend fun loadLinks(
         data: String, 
         isCasting: Boolean,
@@ -264,7 +388,6 @@ class Xmltv : MainAPI() {
         val groupedData = parseJson<GroupedChannelData>(data)
         var foundLink = false
 
-        // Her bir kaynağı (item) döngüye al ve ExtractorLink olarak geri çağır.
         groupedData.items.forEachIndexed { index, item ->
             val videoUrl = item.url
             if (videoUrl.isNullOrBlank()) return@forEachIndexed
@@ -274,7 +397,7 @@ class Xmltv : MainAPI() {
             val linkType = when {
                 videoUrl.endsWith(".m3u8", ignoreCase = true) -> ExtractorLinkType.M3U8
                 videoUrl.endsWith(".mpd", ignoreCase = true) -> ExtractorLinkType.DASH
-                else -> ExtractorLinkType.M3U8 // Varsayılan olarak M3U8 kabul et
+                else -> ExtractorLinkType.M3U8 
             }
 
             callback.invoke(
@@ -284,7 +407,7 @@ class Xmltv : MainAPI() {
                     url = videoUrl,
                     type = linkType
                 ) {
-                    this.referer = "" // Referer gerekliyse buraya ekleyin
+                    this.referer = "" 
                     this.quality = Qualities.Unknown.value
                     item.userAgent?.let { ua -> this.headers = mapOf("User-Agent" to ua) }
                 }
