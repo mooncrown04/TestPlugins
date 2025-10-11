@@ -45,6 +45,7 @@ data class Playlist(val items: List<PlaylistItem> = emptyList())
 // ***************************************************************
 
 class EpgXmlParser { 
+    // ⭐ parseEPG FONKSİYONU: EPG'den gelen tüm Channel ID'leri küçük harfe çevirir.
     fun parseEPG(xml: String): EpgData {
         if (xml.isBlank()) return EpgData(errorMessage = "XML içeriği boş.")
         val programs = mutableListOf<EpgProgram>()
@@ -69,6 +70,9 @@ class EpgXmlParser {
 
             if (startStr == null || endStr == null || channelId == null) continue
 
+            // 1. KRİTİK NORMALLEŞTİRME: EPG'den gelen ID'yi küçük harfe çevir
+            val normalizedChannelId = channelId.lowercase()
+
             val title = titleRegex.find(block)?.groupValues?.getOrNull(1)?.trim()?.replace("<![CDATA[", "")?.replace("]]>", "")
             val description = descRegex.find(block)?.groupValues?.getOrNull(1)?.trim()?.replace("<![CDATA[", "")?.replace("]]>", "")
 
@@ -82,7 +86,7 @@ class EpgXmlParser {
                         description = description,
                         start = startTime,
                         end = endTime,
-                        channel = channelId
+                        channel = normalizedChannelId // Küçük harfli ID kullanıldı
                     )
                 )
             }
@@ -185,7 +189,6 @@ class Xmltv : MainAPI() {
         val items: List<PlaylistItem>
     )
 
-    // ⭐ loadEpgData'yı EPGData objesinde hata mesajı döndürecek şekilde güncelledik
     private suspend fun loadEpgData(): EpgData {
         if (cachedEpgData != null) return cachedEpgData!!
         
@@ -194,7 +197,6 @@ class Xmltv : MainAPI() {
             
             var epgResponse: String? = null
             
-            // ADIM 1: Ağ isteğini dene
             try {
                 epgResponse = app.get(epgUrl).text 
                 if (epgResponse.isNullOrBlank()) {
@@ -208,7 +210,6 @@ class Xmltv : MainAPI() {
                 return@withLock EpgData(errorMessage = error)
             }
             
-            // ADIM 2: Parser işlemini dene
             try {
                 val epgData = EpgXmlParser().parseEPG(epgResponse!!) 
                 
@@ -297,29 +298,30 @@ class Xmltv : MainAPI() {
         return allResults.distinctBy { it.name }
     }
     
-    // ⭐ LOAD FONKSİYONU: Hata mesajını Açıklama kısmına yazdıracak şekilde güncellendi
+    // ⭐ LOAD FONKSİYONU: Hata raporlama ve ID normalleştirmesi yapılmış son versiyon
     override suspend fun load(url: String): LoadResponse {
         val groupedData = parseJson<GroupedChannelData>(url)
         
         val epgData = loadEpgData() 
+        
         val channelTvgId = groupedData.items.firstOrNull()?.attributes?.get("tvg-id")
+        // 2. KRİTİK NORMALLEŞTİRME: Aranan ID'yi küçük harfe çevir
+        val normalizedTvgId = channelTvgId?.lowercase() 
 
         var epgPlotText: String 
         var programs: List<ProgramInfo> = emptyList()
 
         if (epgData.errorMessage != null) {
-            // EPG yüklenirken veya parse edilirken hata oluştuysa, hatayı göster
             epgPlotText = "\n\n--- YAYIN AKIŞI HATA RAPORU ---\n" + 
                            "HATA: EPG yüklenirken/ayrıştırılırken sorun oluştu.\n" +
                            "Rapor: ${epgData.errorMessage}" +
                            "\n--- HATA SONU ---"
-        } else if (channelTvgId == null) {
-            // tvg-id bulunamadıysa uyarıyı göster
+        } else if (normalizedTvgId == null) {
             epgPlotText = "\n\n--- YAYIN AKIŞI BİLGİSİ ---\n" +
                           "UYARI: Kanal listesinde 'tvg-id' bilgisi bulunamadı. EPG eşleştirilemiyor."
         } else {
-            // EPG verisi yüklü ve tvg-id var, şimdi eşleştirmeyi dene
-            programs = epgData.programs[channelTvgId]
+            // Eşleştirmede normalize edilmiş ID kullanıldı
+            programs = epgData.programs[normalizedTvgId] 
                 ?.map { epgProgram: EpgProgram -> 
                     ProgramInfo( 
                         name = epgProgram.name,
@@ -349,8 +351,16 @@ class Xmltv : MainAPI() {
                 epgPlotText = "\n\n--- YAYIN AKIŞI ---\n" + formattedPrograms
             } else {
                 // EPG yüklü ama bu TVG-ID için program bulunamadı
+                
+                // Hata Raporu: EPG'de Bulunan İlk 5 Kanalı Raporla
+                val availableTvgIds = epgData.programs.keys.take(5).joinToString(", ")
+                val totalChannels = epgData.programs.size
+                
                 epgPlotText = "\n\n--- YAYIN AKIŞI BİLGİSİ ---\n" +
-                              "UYARI: EPG verisi yüklendi ancak '${channelTvgId}' ID'li kanala ait yayın akışı bulunamadı. ID hatası olabilir."
+                              "HATA KODU: EPG_ID_MISMATCH\n" +
+                              "Aranan ID: '${channelTvgId}' (Normalize: '${normalizedTvgId}')\n" +
+                              "Sonuç: Bu ID için yayın akışı bulunamadı. Toplam $totalChannels kanal EPG'de yüklü.\n" +
+                              "Örnek Bulunan ID'ler: ${availableTvgIds}..." 
             }
         }
 
