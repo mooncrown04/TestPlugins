@@ -14,7 +14,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock 
 
 // ***************************************************************
-// 1. VERİ MODELLERİ
+// 1. VERİ MODELLERİ (AYNI)
 // ***************************************************************
 data class ProgramInfo(
     val name: String,
@@ -40,25 +40,40 @@ data class Playlist(val items: List<PlaylistItem> = emptyList())
 
 
 // ***************************************************************
-// 2. PARSER SINIFLARI
+// 2. PARSER SINIFLARI (EPG PARSER İYİLEŞTİRİLDİ)
 // ***************************************************************
 
 class EpgXmlParser { 
+    // Daha güvenli ve hata yakalaması kolay regex'ler kullanıldı
     fun parseEPG(xml: String): EpgData {
         if (xml.isBlank()) return EpgData()
         val programs = mutableListOf<EpgProgram>()
-        val programmeBlockRegex = Regex("<programme\\s+start=\"([^\"]+)\"\\s+stop=\"([^\"]+)\"\\s+channel=\"([^\"]+)\".*?</programme>", RegexOption.DOT_MATCHES_ALL)
+        
+        // programme etiketini güvenle yakalama
+        val programmeRegex = Regex("<programme\\s+[^>]*>", RegexOption.DOT_MATCHES_ALL) 
+        val channelRegex = Regex("channel=\"([^\"]+)\"")
+        val startRegex = Regex("start=\"([^\"]+)\"")
+        val stopRegex = Regex("stop=\"([^\"]+)\"")
+
+        // İçerik etiketlerini yakalama
         val titleRegex = Regex("<title[^>]*>(.*?)</title>", RegexOption.DOT_MATCHES_ALL)
         val descRegex = Regex("<desc[^>]*>(.*?)</desc>", RegexOption.DOT_MATCHES_ALL)
         
-        programmeBlockRegex.findAll(xml).forEach { match ->
-            val startStr = match.groupValues.getOrNull(1)?.trim() ?: return@forEach
-            val endStr = match.groupValues.getOrNull(2)?.trim() ?: return@forEach
-            val channelId = match.groupValues.getOrNull(3)?.trim() ?: return@forEach
-            val programmeBlock = match.groupValues.getOrNull(0) ?: return@forEach
+        // EPG dosyasını programme bloklarına ayır
+        val blocks = xml.split("</programme>")
 
-            val title = titleRegex.find(programmeBlock)?.groupValues?.getOrNull(1)?.trim()?.replace("<![CDATA[", "")?.replace("]]>", "")
-            val description = descRegex.find(programmeBlock)?.groupValues?.getOrNull(1)?.trim()?.replace("<![CDATA[", "")?.replace("]]>", "")
+        for (block in blocks) {
+            val programmeMatch = programmeRegex.find(block) ?: continue
+            val attributesString = programmeMatch.value
+
+            val startStr = startRegex.find(attributesString)?.groupValues?.getOrNull(1)?.trim()
+            val endStr = stopRegex.find(attributesString)?.groupValues?.getOrNull(1)?.trim()
+            val channelId = channelRegex.find(attributesString)?.groupValues?.getOrNull(1)?.trim()
+
+            if (startStr == null || endStr == null || channelId == null) continue
+
+            val title = titleRegex.find(block)?.groupValues?.getOrNull(1)?.trim()?.replace("<![CDATA[", "")?.replace("]]>", "")
+            val description = descRegex.find(block)?.groupValues?.getOrNull(1)?.trim()?.replace("<![CDATA[", "")?.replace("]]>", "")
 
             val startTime = startStr.take(14).toLongOrNull()?.let { parseXmlTvDate(it) } ?: 0L
             val endTime = endStr.take(14).toLongOrNull()?.let { parseXmlTvDate(it) } ?: 0L
@@ -146,7 +161,7 @@ class XmlPlaylistParser {
 
 
 // ***************************************************************
-// 3. ANA API SINIFI (EPG YÜKLEMESİ DEVRE DIŞI)
+// 3. ANA API SINIFI (EPG TEKRAR AKTİF VE GÜVENLİ)
 // ***************************************************************
 
 class Xmltv : MainAPI() {
@@ -174,10 +189,46 @@ class Xmltv : MainAPI() {
         val items: List<PlaylistItem>
     )
 
-    // ⭐ EPG YÜKLEMEYİ TAMAMEN DEVRE DIŞI BIRAKAN FONKSİYON
+    // ⭐ EPG YÜKLEME TEKRAR AKTİF VE GÜVENLİ
     private suspend fun loadEpgData(): EpgData? {
-        Log.d("Xmltv", "EPG yükleme geçici olarak devre dışı bırakıldı. Çökme testi yapılıyor.")
-        return null // Doğrudan null döndürülüyor.
+        if (cachedEpgData != null) return cachedEpgData
+        
+        return epgMutex.withLock {
+            if (cachedEpgData != null) return cachedEpgData
+            
+            var epgResponse: String? = null
+            var epgData: EpgData? = null
+
+            // ADIM 1: Ağ isteğini dene
+            try {
+                Log.d("Xmltv", "EPG verisi çekiliyor...")
+                epgResponse = app.get(epgUrl).text 
+                if (epgResponse.isNullOrBlank()) {
+                    Log.e("Xmltv", "EPG çekildi ancak boş geldi.")
+                    return@withLock null
+                }
+            } catch (e: Exception) {
+                Log.e("Xmltv", "HATA 1: EPG URL'den çekilemedi: ${e.message}", e)
+                return@withLock null
+            }
+            
+            // ADIM 2: Parser işlemini dene (XML format veya parse etme hatası)
+            try {
+                Log.d("Xmltv", "EPG verisi ayrıştırılıyor (parse ediliyor)...")
+                epgData = EpgXmlParser().parseEPG(epgResponse!!) 
+                
+                cachedEpgData = epgData
+                Log.d("Xmltv", "EPG başarılı: ${epgData.programs.size} kanal için program bulundu.")
+                return@withLock epgData
+                
+            } catch (e: OutOfMemoryError) {
+                Log.e("Xmltv", "HATA 2A: Parser sırasında Bellek Yetersizliği! ${e.message}", e)
+                return@withLock null 
+            } catch (e: Exception) {
+                Log.e("Xmltv", "HATA 2B: EPG Parser hatası! (XML formatı hatalı olabilir): ${e.message}", e)
+                return@withLock null
+            }
+        }
     }
 
     private fun createGroupedChannelItems(playlist: Playlist, query: String? = null): List<SearchResponse> {
@@ -244,18 +295,52 @@ class Xmltv : MainAPI() {
         return allResults.distinctBy { it.name }
     }
     
-    // LOAD FONKSİYONU
+    // LOAD FONKSİYONU: EPG'yi PLOT alanına atıyor (Aktif)
     override suspend fun load(url: String): LoadResponse {
         val groupedData = parseJson<GroupedChannelData>(url)
         
         val epgData = loadEpgData() 
         val channelTvgId = groupedData.items.firstOrNull()?.attributes?.get("tvg-id")
 
-        val programs: List<ProgramInfo> = emptyList()
-
-        // Hata düzeltilmiş hali.
-        val epgPlotText = "\n\n--- Yayın Akışı Bulunamadı (Çökme Testi) ---" 
+        val programs: List<ProgramInfo> = if (channelTvgId != null && epgData != null) {
+            epgData.programs[channelTvgId]
+                ?.map { epgProgram: EpgProgram -> 
+                    ProgramInfo( 
+                        name = epgProgram.name,
+                        description = epgProgram.description,
+                        posterUrl = null, 
+                        rating = null, 
+                        start = epgProgram.start,
+                        end = epgProgram.end
+                    )
+                }
+                ?.sortedBy { it.start } 
+                ?: emptyList() 
+        } else {
+            emptyList()
+        }
         
+        // EPG verisini PLOT (Açıklama) metnine dönüştürme
+        val epgPlotText = if (programs.isNotEmpty()) {
+            val today = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
+            
+            val formattedPrograms = programs
+                .filter { Calendar.getInstance().apply { timeInMillis = it.start }.get(Calendar.DAY_OF_YEAR) in (today)..(today + 1) }
+                .joinToString(separator = "\n") { program ->
+                    val startCal = Calendar.getInstance().apply { timeInMillis = program.start }
+                    val startHour = String.format("%02d", startCal.get(Calendar.HOUR_OF_DAY))
+                    val startMinute = String.format("%02d", startCal.get(Calendar.MINUTE))
+                    val descriptionText = program.description?.takeIf { it.isNotBlank() }?.let { " - $it" } ?: ""
+                    
+                    "[$startHour:$startMinute] ${program.name}$descriptionText"
+                }
+            
+            "\n\n--- YAYIN AKIŞI ---\n" + formattedPrograms
+        } else {
+            // EPG verisi bulunamadı mesajı
+            "\n\n--- Yayın Akışı Bulunamadı ---"
+        }
+
         val originalPlot = groupedData.description ?: ""
         val finalPlot = originalPlot + epgPlotText
 
