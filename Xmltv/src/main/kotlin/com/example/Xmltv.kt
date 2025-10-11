@@ -12,9 +12,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.ActorData
 import java.util.Calendar
 
-// ⭐ KRİTİK DÜZELTME: CloudStream'in Program sınıfını doğru yerde içe aktarıyoruz.
-// Bu, "Unresolved reference 'Program'" hatasını çözecektir.
-import com.lagradost.cloudstream3.Program
+import com.lagradost.cloudstream3.metainfo.Program
 
 
 // EPG ve Playlist için temel modeller
@@ -290,3 +288,4 @@ class Xmltv : MainAPI() {
         return foundLink
     }
 }
+
