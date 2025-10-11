@@ -46,8 +46,7 @@ data class Playlist(val items: List<PlaylistItem> = emptyList())
 
 class EpgXmlParser {
     
-    // ⭐ KRİTİK DÜZELTME: EPG verisi zaten Yerel Saate göre kodlanmışsa, 
-    // ayrıştırmayı Yerel Saate (Local Time) göre yapıyoruz. Bu, 3 saat fazlalığı çözer.
+    // ⭐ EPG zaman damgasını kesinlikle UTC olarak ayrıştırır ve doğru milisaniyeyi kaydeder.
     private fun parseXmlTvDate(dateString: String): Long {
         // XMLTV formatı: YYYYMMDDhhmmss +0000
         
@@ -60,10 +59,9 @@ class EpgXmlParser {
         return try {
             val sdf = SimpleDateFormat(format, Locale.ENGLISH)
             
-            // KRİTİK DEĞİŞİKLİK: UTC ZORLAMASI KALDIRILDI. 
-            // sdf.timeZone = TimeZone.getTimeZone("UTC") // Bu satır artık yok!
-            // Ayrıştırıcı, cihazın yerel saat dilimini (TR ise GMT+03:00) kullanarak 
-            // zamanı doğru milisaniyeye çevirir.
+            // ZORLAMA: Gelen zamanın UTC olduğunu varsayıyoruz. 
+            // Bu, milisaniye damgasının doğru olmasını sağlar (3 saat fazlalığı çözmüştük).
+            sdf.timeZone = TimeZone.getTimeZone("UTC")
 
             val date = sdf.parse(dateOnlyString)
 
@@ -76,7 +74,6 @@ class EpgXmlParser {
     }
 
 
-    // parseEPG fonksiyonu aynı kalır, ancak yeni parseXmlTvDate'i kullanır.
     fun parseEPG(xml: String): EpgData {
         if (xml.isBlank()) return EpgData(errorMessage = "XML içeriği boş.")
         val programs = mutableListOf<EpgProgram>()
@@ -313,7 +310,7 @@ class Xmltv : MainAPI() {
         return allResults.distinctBy { it.name }
     }
 
-    // ⭐ LOAD FONKSİYONU: EPG'yi Yerel Saate göre gösterir (Android Box saati ile uyumlu hale getirildi)
+    // ⭐ LOAD FONKSİYONU: EPG'yi anlık cihaz saatinden sonrasını gösterecek şekilde filtrelenir.
     override suspend fun load(url: String): LoadResponse {
         val groupedData = parseJson<GroupedChannelData>(url)
 
@@ -352,15 +349,18 @@ class Xmltv : MainAPI() {
 
             if (programs.isNotEmpty()) {
                 // Başarılı eşleşme
-                val today = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
+                
+                // ⭐ KRİTİK FİLTRELEME: Yalnızca şu anki milisaniye zamandan SONRA başlayan programları al
+                val currentTime = System.currentTimeMillis()
 
-                // ⭐ KRİTİK DEĞİŞİKLİK: Saati, Android Box'ın Yerel Saatine göre gösteriyoruz.
                 val localTimeZone = TimeZone.getDefault() 
 
                 val formattedPrograms = programs
-                    .filter { Calendar.getInstance().apply { timeInMillis = it.start }.get(Calendar.DAY_OF_YEAR) in (today)..(today + 1) }
+                    // Sadece başlangıç zamanı şu andan büyük veya eşit olan programları göster
+                    .filter { it.start >= currentTime } 
+                    
                     .joinToString(separator = "\n") { program ->
-                        // Zaman damgasını yerel saate göre formatla
+                        // Zaman damgasını UTC'den Yerel Saate (GMT+03:00) çevir
                         val startCal = Calendar.getInstance().apply {
                             timeInMillis = program.start 
                             timeZone = localTimeZone // Cihazın yerel saatine göre gösterilir
@@ -385,7 +385,7 @@ class Xmltv : MainAPI() {
                               "Aranan ID: '${channelTvgId}' (Normalize: '${normalizedTvgId}')\n" +
                               "Sonuç: Bu ID için yayın akışı bulunamadı. Toplam $totalChannels kanal EPG'de yüklü.\n" +
                               "Örnek Bulunan ID'ler: ${availableTvgIds}... \n\n" +
-                              "Çözüm Önerisi: EPG dosyanızdaki '${normalizedTvgId}' program bloklarını kontrol edin, başlık veya zaman damgası bozuk olabilir."
+                              "Çözüm Önerisi: EPG dosyanızdaki '${normalizedTvgId}' program bloklarını kontrol edin, tarih ayrıştırma artık UTC'dir."
             }
         }
 
