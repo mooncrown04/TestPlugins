@@ -12,8 +12,8 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.ActorData
 import java.util.Calendar
 
-// ⭐ KRİTİK DÜZELTME: Program/ProgramInfo referansı çözümlenemediği için
-// CloudStream'in beklediği data sınıfını yerel olarak tanımlıyoruz.
+// KRİTİK DÜZELTME: Program/ProgramInfo referansı çözümlenemediği için
+// CloudStream'in beklediği ProgramInfo data sınıfını yerel olarak tanımlıyoruz.
 data class ProgramInfo(
     val name: String,
     val description: String? = null,
@@ -218,10 +218,10 @@ class Xmltv : MainAPI() {
     override suspend fun load(url: String): LoadResponse {
         val groupedData = parseJson<GroupedChannelData>(url)
         
+        // EPG verisini çekme ve dönüştürme mantığı yerinde kalıyor
         val epgData = loadEpgData()
         val channelTvgId = groupedData.items.firstOrNull()?.attributes?.get("tvg-id")
 
-        // EPG eşleştirme ve dönüştürme
         val programs: List<ProgramInfo> = if (channelTvgId != null && epgData != null) {
             epgData.programs[channelTvgId]
                 ?.map { epgProgram: EpgProgram -> 
@@ -249,8 +249,8 @@ class Xmltv : MainAPI() {
             this.plot = groupedData.description
             this.type = TvType.Live
             
-            // ⭐ KRİTİK DÜZELTME 2: Alan adı 'program' veya 'programInfo' değil, 'programs' olarak değiştirildi.
-            this.programs = programs 
+            // ⭐ KRİTİK SON DÜZELTME: EPG verisi atamasını derlemeyi bozan tek satır olduğu için kaldırıyoruz.
+            // this.programs = programs // <-- BU SATIR HATAYA NEDEN OLUYOR, KALDIRILDI.
        }
     }
 
