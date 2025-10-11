@@ -12,9 +12,8 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.ActorData
 import java.util.Calendar
 
-// ⭐ KRİTİK DÜZELTME: ProgramInfo referansı çözümlenemediği için
-// CloudStream'in beklediği data sınıfını yerel olarak tanımlıyoruz.
-// Bu, derleyici hatasını giderecektir.
+// ⭐ KRİTİK DÜZELTME 1: Program/ProgramInfo referansı çözümlenemediği için
+// CloudStream'in beklediği ProgramInfo data sınıfını yerel olarak tanımlıyoruz.
 data class ProgramInfo(
     val name: String,
     val description: String? = null,
@@ -223,14 +222,12 @@ class Xmltv : MainAPI() {
         val channelTvgId = groupedData.items.firstOrNull()?.attributes?.get("tvg-id")
 
         // EPG eşleştirme ve dönüştürme
-        // Yerel olarak tanımlanan ProgramInfo tipi kullanıldı.
         val programs: List<ProgramInfo> = if (channelTvgId != null && epgData != null) {
             epgData.programs[channelTvgId]
                 ?.map { epgProgram: EpgProgram -> 
                     ProgramInfo( 
                         name = epgProgram.name,
                         description = epgProgram.description,
-                        // posterUrl ve rating bilgisi EpgProgram içinde yok, null geçiliyor
                         posterUrl = null, 
                         rating = null, 
                         start = epgProgram.start,
@@ -251,7 +248,10 @@ class Xmltv : MainAPI() {
             this.posterUrl = groupedData.posterUrl
             this.plot = groupedData.description
             this.type = TvType.Live
-            this.program = programs // EPG verisini buraya atıyoruz
+            
+            // ⭐ KRİTİK DÜZELTME 2: 'program' yerine 'programInfo' kullanıldı.
+            // Bu, "Unresolved reference 'program'" hatasını çözmelidir.
+            this.programInfo = programs 
        }
     }
 
