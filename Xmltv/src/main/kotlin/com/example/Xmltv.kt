@@ -10,7 +10,6 @@ import kotlin.collections.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import java.util.Calendar
-// Mutex için gerekli importlar gereksiz hale geldi ama tutmak derlemeyi bozmaz.
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock 
 
@@ -43,7 +42,6 @@ data class Playlist(val items: List<PlaylistItem> = emptyList())
 // ***************************************************************
 // 2. PARSER SINIFLARI
 // ***************************************************************
-// EPG artık yüklenmediği için bu sınıflar teknik olarak kullanılmayacak ancak derleyiciye lazım olabilir.
 
 class EpgXmlParser { 
     fun parseEPG(xml: String): EpgData {
@@ -160,7 +158,6 @@ class Xmltv : MainAPI() {
     // EPG Önbellekleme değişkenleri
     @Volatile
     private var cachedEpgData: EpgData? = null 
-    // Mutex tanımlaması (EPG devre dışı olduğu için artık kullanılmayacak)
     private val epgMutex = Mutex() 
 
     override var name = "35 Xmltv"
@@ -180,7 +177,7 @@ class Xmltv : MainAPI() {
     // ⭐ EPG YÜKLEMEYİ TAMAMEN DEVRE DIŞI BIRAKAN FONKSİYON
     private suspend fun loadEpgData(): EpgData? {
         Log.d("Xmltv", "EPG yükleme geçici olarak devre dışı bırakıldı. Çökme testi yapılıyor.")
-        return null // Doğrudan null döndürerek EPG verisini çekmeyi ve parse etmeyi engeller.
+        return null // Doğrudan null döndürülüyor.
     }
 
     private fun createGroupedChannelItems(playlist: Playlist, query: String? = null): List<SearchResponse> {
@@ -222,4 +219,89 @@ class Xmltv : MainAPI() {
         try {
             val secondaryResponse = app.get(secondaryXmlUrl).text
             homepageLists.add(HomePageList("Diğer Kanallar", createGroupedChannelItems(XmlPlaylistParser().parseXML(secondaryResponse))))
-        } catch (e: Exception) { Log.e("Xmltv", "İkincil URL yüklenem
+        } catch (e: Exception) { Log.e("Xmltv", "İkincil URL yüklenemedi: ${e.message}") }
+        
+        try {
+            val tertiaryResponse = app.get(tertiaryXmlUrl).text
+            homepageLists.add(HomePageList("Favori Listem 2", createGroupedChannelItems(XmlPlaylistParser().parseXML(tertiaryResponse))))
+        } catch (e: Exception) { Log.e("Xmltv", "Üçüncül URL yüklenemedi: ${e.message}") }
+
+        return newHomePageResponse(homepageLists)
+    }
+
+    override suspend fun search(query: String): List<SearchResponse> {
+        val allResults = mutableListOf<SearchResponse>()
+        try {
+            val primaryResponse = app.get(mainUrl).text
+            allResults.addAll(createGroupedChannelItems(XmlPlaylistParser().parseXML(primaryResponse), query))
+        } catch (e: Exception) { Log.e("Xmltv", "Arama için birincil URL yüklenemedi: ${e.message}") }
+
+        try {
+            val secondaryResponse = app.get(secondaryXmlUrl).text
+            allResults.addAll(createGroupedChannelItems(XmlPlaylistParser().parseXML(secondaryResponse), query))
+        } catch (e: Exception) { Log.e("Xmltv", "Arama için ikincil URL yüklenemedi: ${e.message}") }
+
+        return allResults.distinctBy { it.name }
+    }
+    
+    // LOAD FONKSİYONU
+    override suspend fun load(url: String): LoadResponse {
+        val groupedData = parseJson<GroupedChannelData>(url)
+        
+        val epgData = loadEpgData() 
+        val channelTvgId = groupedData.items.firstOrNull()?.attributes?.get("tvg-id")
+
+        val programs: List<ProgramInfo> = emptyList()
+
+        // Hata düzeltilmiş hali.
+        val epgPlotText = "\n\n--- Yayın Akışı Bulunamadı (Çökme Testi) ---" 
+        
+        val originalPlot = groupedData.description ?: ""
+        val finalPlot = originalPlot + epgPlotText
+
+        return newLiveStreamLoadResponse(
+            name = groupedData.title,
+            url = groupedData.toJson(), 
+            dataUrl = groupedData.toJson(), 
+        ) {
+            this.posterUrl = groupedData.posterUrl
+            this.plot = finalPlot
+            this.type = TvType.Live
+       }
+    }
+
+    // loadLinks fonksiyonu
+    override suspend fun loadLinks(
+        data: String, 
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val groupedData = parseJson<GroupedChannelData>(data)
+        var foundLink = false
+        groupedData.items.forEachIndexed { index, item ->
+            val videoUrl = item.url
+            if (videoUrl.isNullOrBlank()) return@forEachIndexed
+            val linkName = groupedData.title + " Kaynak ${index + 1}"
+            val linkType = when {
+                videoUrl.endsWith(".m3u8", ignoreCase = true) -> ExtractorLinkType.M3U8
+                videoUrl.endsWith(".mpd", ignoreCase = true) -> ExtractorLinkType.DASH
+                else -> ExtractorLinkType.M3U8 
+            }
+            callback.invoke(
+                newExtractorLink(
+                    source = linkName,
+                    name = groupedData.title,
+                    url = videoUrl,
+                    type = linkType
+                ) {
+                    this.referer = "" 
+                    this.quality = Qualities.Unknown.value
+                    item.userAgent?.let { ua -> this.headers = mapOf("User-Agent" to ua) }
+                }
+            )
+            foundLink = true
+        }
+        return foundLink
+    }
+}
