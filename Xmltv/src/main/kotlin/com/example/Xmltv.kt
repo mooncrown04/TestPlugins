@@ -12,12 +12,12 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.ActorData
 import java.util.Calendar
 
-// ⭐ KRİTİK DÜZELTME: CloudStream'in Program sınıfını kullanmak için içe aktarıyoruz.
+// ⭐ KRİTİK DÜZELTME: CloudStream'in Program sınıfını doğru yerde içe aktarıyoruz.
+// Bu, "Unresolved reference 'Program'" hatasını çözecektir.
 import com.lagradost.cloudstream3.Program
 
 
-// EPG ve Playlist için temel modeller (Kendi Program tanımınızı sildik)
-// EpgProgram, kendi EPG parse'ınızın çıktısıdır.
+// EPG ve Playlist için temel modeller
 data class EpgProgram(
     val name: String,
     val description: String?,
@@ -27,7 +27,6 @@ data class EpgProgram(
 )
 
 // EpgData'nın yapısını, Map<tvg-id, List<EpgProgram>> olarak değiştirdik.
-// Bu, EPG eşleştirmesini kolaylaştırır.
 data class EpgData(val programs: Map<String, List<EpgProgram>> = emptyMap())
 
 data class PlaylistItem(
@@ -43,18 +42,21 @@ data class PlaylistItem(
 data class Playlist(val items: List<PlaylistItem> = emptyList())
 
 class EpgXmlParser {
-    // Gerçek EPG XML parse kodu eklenmeli
+    // Gerçek EPG XML parse kodu eklenmeli. Şimdilik boş döndürüyor.
     // Bu metod, XML'i okuyup tvg-id'ye göre gruplanmış EpgData döndürmelidir.
     fun parseEPG(xml: String): EpgData {
-        // Örnek: Basit bir EPG parser eklenmeli (Gerçek kod için bu kısmı doldurun)
+        // GERÇEK XMLTV PARSE KODUNUZ BURAYA GELECEKTİR!
+        // Örn: XML kütüphaneleri (Ktor'dan gelen XML ile) veya regex kullanarak.
+        Log.w("XmltvParser", "parseEPG metodu boş döndürüyor. XML parse kodunuzu ekleyin.")
         return EpgData()
     }
 }
 
 class XmlPlaylistParser {
-    // Gerçek playlist XML parse kodu eklenmeli
+    // Gerçek playlist XML parse kodu eklenmeli. Şimdilik boş döndürüyor.
     fun parseXML(xml: String): Playlist {
-        // Örnek: Basit bir Playlist parser eklenmeli (Gerçek kod için bu kısmı doldurun)
+        // GERÇEK M3U/XML PARSE KODUNUZ BURAYA GELECEKTİR!
+        Log.w("XmltvParser", "parseXML metodu boş döndürüyor. Playlist parse kodunuzu ekleyin.")
         return Playlist()
     }
 }
@@ -72,7 +74,6 @@ class Xmltv : MainAPI() {
     private val secondaryGroupName = "Diğer Kanallar"
     private val defaultPosterUrl = "https://www.shutterstock.com/shutterstock/photos/2174119547/display_1500/stock-vector-mount-ararat-rises-above-the-clouds-dawn-panoramic-view-vector-illustration-2174119547.jpg"
 
-    // URL'yi güncelledik (kullanıcı tarafından sağlanmış)
     private val epgUrl = "https://raw.githubusercontent.com/braveheart1983/tvg-macther/refs/heads/main/tr-epg.xml"
     private var cachedEpgData: EpgData? = null
 
@@ -92,13 +93,11 @@ class Xmltv : MainAPI() {
 
     private suspend fun loadEpgData(): EpgData? {
         if (cachedEpgData != null) return cachedEpgData
-        // EPG URL kontrolü gereksiz, kullanıcı tarafından zaten verilmiş.
-        
+
         return try {
             val epgResponse = app.get(epgUrl).text
             val epgData = EpgXmlParser().parseEPG(epgResponse)
             cachedEpgData = epgData
-            // programs artık Map olduğu için boyutu doğru almalıyız
             Log.d("Xmltv", "EPG verisi başarıyla yüklendi. ${epgData.programs.size} kanal için program bulundu.")
             epgData
         } catch (e: Exception) {
@@ -108,13 +107,14 @@ class Xmltv : MainAPI() {
     }
 
     private fun createGroupedChannelItems(playlist: Playlist, query: String? = null): List<SearchResponse> {
-        // ... (Bu kısım sorunsuz)
         val groupedByTitle = playlist.items.groupBy { it.title }
         return groupedByTitle.mapNotNull { (title, items) ->
             if (items.isEmpty()) return@mapNotNull null
+            // Arama sorgusu varsa filtrele
             if (query != null && !title.contains(query, ignoreCase = true)) {
                 return@mapNotNull null
             }
+
             val firstItem = items.first()
             val logoUrl = firstItem.attributes["tvg-logo"]?.takeIf { it.isNotBlank() }
                 ?: defaultPosterUrl
@@ -140,42 +140,79 @@ class Xmltv : MainAPI() {
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        // ... (Bu kısım sorunsuz)
         val homepageLists = mutableListOf<HomePageList>()
-        // ... (URL'lerden playlist okuma ve homepageList'e ekleme mantığı)
-        
-        // ÖNEMLİ: Playlist parser'ınız boş döndürüyorsa, buraya hiçbir şey eklenmez.
-        // Bu yüzden "anasayfada hiçbir şey yok" hatası alırsınız.
-        // parseXML metodunuzu doğru şekilde doldurduğunuzdan emin olun.
-        
+
+        // Birincil URL
         try {
             val primaryResponse = app.get(mainUrl).text
             val primaryPlaylist = XmlPlaylistParser().parseXML(primaryResponse)
             val primaryItems = createGroupedChannelItems(primaryPlaylist)
-            
+
             if (primaryItems.isNotEmpty()) {
                 homepageLists.add(HomePageList(primaryGroupName, primaryItems))
             }
         } catch (e: Exception) {
             Log.e("Xmltv", "Birincil URL yüklenemedi: ${e.message}")
         }
-        
-        // Diğer URL'ler için de benzer try-catch blokları
-        
+
+        // İkincil URL
+        try {
+            val secondaryResponse = app.get(secondaryXmlUrl).text
+            val secondaryPlaylist = XmlPlaylistParser().parseXML(secondaryResponse)
+            val secondaryItems = createGroupedChannelItems(secondaryPlaylist)
+
+            if (secondaryItems.isNotEmpty()) {
+                homepageLists.add(HomePageList(secondaryGroupName, secondaryItems))
+            }
+        } catch (e: Exception) {
+            Log.e("Xmltv", "İkincil URL yüklenemedi: ${e.message}")
+        }
+
+        // Üçüncül URL
+        try {
+            val tertiaryResponse = app.get(tertiaryXmlUrl).text
+            val tertiaryPlaylist = XmlPlaylistParser().parseXML(tertiaryResponse)
+            val tertiaryItems = createGroupedChannelItems(tertiaryPlaylist)
+
+            if (tertiaryItems.isNotEmpty()) {
+                homepageLists.add(HomePageList(tertiaryGroupName, tertiaryItems))
+            }
+        } catch (e: Exception) {
+            Log.e("Xmltv", "Üçüncül URL yüklenemedi: ${e.message}")
+        }
+
+
+        if (homepageLists.isEmpty()) {
+            throw Exception("Tüm URL'ler yüklenemedi veya boş playlist döndürdü.")
+        }
         return newHomePageResponse(homepageLists)
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        // ... (Bu kısım sorunsuz, Main Page mantığına benzer olmalı)
         val allResults = mutableListOf<SearchResponse>()
-        val lowerCaseQuery = query.lowercase()
-        // ... (URL'lerden playlist okuma ve allResults'a ekleme mantığı)
+        
+        // Birincil URL'den arama
+        try {
+            val primaryResponse = app.get(mainUrl).text
+            val primaryPlaylist = XmlPlaylistParser().parseXML(primaryResponse)
+            allResults.addAll(createGroupedChannelItems(primaryPlaylist, query))
+        } catch (e: Exception) {
+            Log.e("Xmltv", "Arama için birincil URL yüklenemedi: ${e.message}")
+        }
+
+        // İkincil URL'den arama
+        try {
+            val secondaryResponse = app.get(secondaryXmlUrl).text
+            val secondaryPlaylist = XmlPlaylistParser().parseXML(secondaryResponse)
+            allResults.addAll(createGroupedChannelItems(secondaryPlaylist, query))
+        } catch (e: Exception) {
+            Log.e("Xmltv", "Arama için ikincil URL yüklenemedi: ${e.message}")
+        }
+
         return allResults.distinctBy { it.name }
     }
 
-    // --- KRİTİK EKSİK: load FONKSİYONU ---
-    // CloudStream, bir öğeye tıklandığında bu fonksiyonu çağırır. 
-    // Bu fonksiyonda Program akışı (EPG) ayarlanır.
+    // --- load FONKSİYONU ---
     override suspend fun load(url: String): LoadResponse {
         val groupedData = parseJson<GroupedChannelData>(url)
         
@@ -193,9 +230,10 @@ class Xmltv : MainAPI() {
                         end = epgProgram.end
                     )
                 }
-              // it: Program ile sortedBy içindeki tipi netleştiriyoruz
-            ?.sortedBy { it: Program -> it.start } 
-            ?: emptyList()
+                // Düzeltildi: Açık tür belirtimi (it: Program) kaldırıldı,
+                // Program referansı çözümlendiği için hata düzelecektir.
+                ?.sortedBy { it.start } 
+                ?: emptyList()
         } else {
             emptyList()
         }
@@ -203,17 +241,16 @@ class Xmltv : MainAPI() {
         return newLiveStreamLoadResponse(
             name = groupedData.title,
             url = groupedData.toJson(), // loadLinks'e geçecek JSON data'yı URL olarak kullanıyoruz
-            dataUrl = groupedData.toJson(), // Tekrar dataUrl olarak da geçebilir
+            dataUrl = groupedData.toJson(), 
         ) {
             this.posterUrl = groupedData.posterUrl
             this.plot = groupedData.description
             this.type = TvType.Live
             this.program = programs // EPG verisini buraya ekliyoruz
-     }
+       }
     }
 
-    // --- KRİTİK EKSİK: loadLinks FONKSİYONU ---
-    // CloudStream, bir yayını oynatmak için bu fonksiyonu çağırır.
+    // --- loadLinks FONKSİYONU ---
     override suspend fun loadLinks(
         data: String, 
         isCasting: Boolean,
@@ -253,5 +290,3 @@ class Xmltv : MainAPI() {
         return foundLink
     }
 }
-
-
