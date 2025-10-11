@@ -5,13 +5,12 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
-import kotlin.text.*
-import kotlin.collections.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import java.util.Calendar
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock 
+import java.util.TimeZone
 
 // ***************************************************************
 // 1. VERİ MODELLERİ
@@ -25,7 +24,6 @@ data class ProgramInfo(
     val end: Long
 )
 data class EpgProgram(val name: String, val description: String?, val start: Long, val end: Long, val channel: String)
-// EpgData artık bir hata mesajı da taşıyacak
 data class EpgData(val programs: Map<String, List<EpgProgram>> = emptyMap(), val errorMessage: String? = null)
 
 data class PlaylistItem(
@@ -45,11 +43,46 @@ data class Playlist(val items: List<PlaylistItem> = emptyList())
 // ***************************************************************
 
 class EpgXmlParser { 
+    // ⭐ KRİTİK GÜNCELLEME: Zaman damgası ayrıştırma fonksiyonu
+    private fun parseXmlTvDate(dateString: String): Long {
+        return try {
+            // Örnek format: 20251010213000 +0000 (14 hane tarih/saat + 5 hane zaman dilimi)
+            
+            // Tarih ve saat hanesini (ilk 14 hane) al
+            val datePart = dateString.take(14)
+            val dateLong = datePart.toLongOrNull() ?: return 0L
+
+            val year = (dateLong / 1000000000000L) % 10000
+            val month = (dateLong / 10000000000L) % 100
+            val day = (dateLong / 100000000L) % 100
+            val hour = (dateLong / 1000000L) % 100
+            val minute = (dateLong / 10000L) % 100
+            val second = (dateLong / 100L) % 100
+            
+            val calendar = Calendar.getInstance().apply {
+                // XMLTV'nin zaman damgası genellikle UTC'dir. 
+                // Bunu kullanarak doğru zamanı hesaplayalım.
+                timeZone = TimeZone.getTimeZone("UTC") 
+                
+                // Ay sıfırdan başladığı için month.toInt() - 1
+                set(year.toInt(), month.toInt() - 1, day.toInt(), hour.toInt(), minute.toInt(), second.toInt())
+                set(Calendar.MILLISECOND, 0)
+            }
+            return calendar.timeInMillis
+        } catch (e: Exception) {
+            // Hata ayıklama için Log kaydı ekliyoruz
+            Log.e("EpgXmlParser", "Tarih ayrıştırma hatası: $dateString - ${e.message}")
+            return 0L
+        }
+    }
+
+
     // ⭐ parseEPG FONKSİYONU: EPG'den gelen tüm Channel ID'leri küçük harfe çevirir.
     fun parseEPG(xml: String): EpgData {
         if (xml.isBlank()) return EpgData(errorMessage = "XML içeriği boş.")
         val programs = mutableListOf<EpgProgram>()
         
+        // Regex'ler aynı kaldı
         val programmeRegex = Regex("<programme\\s+[^>]*>", RegexOption.DOT_MATCHES_ALL) 
         val channelRegex = Regex("channel=\"([^\"]+)\"")
         val startRegex = Regex("start=\"([^\"]+)\"")
@@ -76,9 +109,11 @@ class EpgXmlParser {
             val title = titleRegex.find(block)?.groupValues?.getOrNull(1)?.trim()?.replace("<![CDATA[", "")?.replace("]]>", "")
             val description = descRegex.find(block)?.groupValues?.getOrNull(1)?.trim()?.replace("<![CDATA[", "")?.replace("]]>", "")
 
-            val startTime = startStr.take(14).toLongOrNull()?.let { parseXmlTvDate(it) } ?: 0L
-            val endTime = endStr.take(14).toLongOrNull()?.let { parseXmlTvDate(it) } ?: 0L
+            // ⭐ KRİTİK GÜNCELLEME: Zaman damgasının tamamını gönderiyoruz.
+            val startTime = parseXmlTvDate(startStr) 
+            val endTime = parseXmlTvDate(endStr)
 
+            // Programı listeye ekleme koşulu: Start ve End > 0L olmalı
             if (startTime > 0L && endTime > 0L && !title.isNullOrBlank()) {
                 programs.add(
                     EpgProgram(
@@ -93,24 +128,6 @@ class EpgXmlParser {
         }
         val groupedPrograms = programs.groupBy { it.channel }
         return EpgData(groupedPrograms)
-    }
-
-    private fun parseXmlTvDate(dateLong: Long): Long {
-        return try {
-            val year = (dateLong / 1000000000000L) % 10000
-            val month = (dateLong / 10000000000L) % 100
-            val day = (dateLong / 100000000L) % 100
-            val hour = (dateLong / 1000000L) % 100
-            val minute = (dateLong / 10000L) % 100
-            val second = (dateLong / 100L) % 100
-            val calendar = Calendar.getInstance().apply {
-                set(year.toInt(), month.toInt() - 1, day.toInt(), hour.toInt(), minute.toInt(), second.toInt())
-                set(Calendar.MILLISECOND, 0)
-            }
-            calendar.timeInMillis
-        } catch (e: Exception) {
-            0L
-        }
     }
 }
 
@@ -169,7 +186,8 @@ class Xmltv : MainAPI() {
     override var mainUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b.xml"
     private val secondaryXmlUrl = "https://dl.dropbox.com/scl/fi/vg40bpys8ym1jjrcuv1wp/XMLTvcs.xml?rlkey=7g2chxiol35z6kg6b36c4nyv8"
     private val tertiaryXmlUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b-2.xml"
-    private val epgUrl = "https://raw.githubusercontent.com/braveheart1983/tvg-macther/refs/heads/main/tr-epg.xml"
+    // Bu URL'de program akışı verisi bulunuyor
+    private val epgUrl = "https://raw.githubusercontent.com/braveheart1983/tvg-macther/refs/heads/main/tr-epg.xml" 
     
     @Volatile
     private var cachedEpgData: EpgData? = null 
@@ -198,6 +216,7 @@ class Xmltv : MainAPI() {
             var epgResponse: String? = null
             
             try {
+                // EPG dosyasını çekme
                 epgResponse = app.get(epgUrl).text 
                 if (epgResponse.isNullOrBlank()) {
                     val error = "HATA: EPG URL'den çekildi ancak içerik boş."
@@ -211,6 +230,7 @@ class Xmltv : MainAPI() {
             }
             
             try {
+                // EPG dosyasını ayrıştırma
                 val epgData = EpgXmlParser().parseEPG(epgResponse!!) 
                 
                 if (epgData.errorMessage != null) {
@@ -305,22 +325,24 @@ class Xmltv : MainAPI() {
         val epgData = loadEpgData() 
         
         val channelTvgId = groupedData.items.firstOrNull()?.attributes?.get("tvg-id")
-        // 2. KRİTİK NORMALLEŞTİRME: Aranan ID'yi küçük harfe çevir
+        // Aranan ID'yi küçük harfe çevir
         val normalizedTvgId = channelTvgId?.lowercase() 
 
         var epgPlotText: String 
         var programs: List<ProgramInfo> = emptyList()
 
         if (epgData.errorMessage != null) {
+            // EPG yükleme/ayrıştırma hatası
             epgPlotText = "\n\n--- YAYIN AKIŞI HATA RAPORU ---\n" + 
                            "HATA: EPG yüklenirken/ayrıştırılırken sorun oluştu.\n" +
                            "Rapor: ${epgData.errorMessage}" +
                            "\n--- HATA SONU ---"
         } else if (normalizedTvgId == null) {
+            // Kanal listesinde tvg-id yok
             epgPlotText = "\n\n--- YAYIN AKIŞI BİLGİSİ ---\n" +
                           "UYARI: Kanal listesinde 'tvg-id' bilgisi bulunamadı. EPG eşleştirilemiyor."
         } else {
-            // Eşleştirmede normalize edilmiş ID kullanıldı
+            // Eşleştirmeyi dene
             programs = epgData.programs[normalizedTvgId] 
                 ?.map { epgProgram: EpgProgram -> 
                     ProgramInfo( 
@@ -340,7 +362,11 @@ class Xmltv : MainAPI() {
                 val formattedPrograms = programs
                     .filter { Calendar.getInstance().apply { timeInMillis = it.start }.get(Calendar.DAY_OF_YEAR) in (today)..(today + 1) }
                     .joinToString(separator = "\n") { program ->
-                        val startCal = Calendar.getInstance().apply { timeInMillis = program.start }
+                        // Zaman damgasını yerel saate göre formatla
+                        val startCal = Calendar.getInstance().apply { 
+                            timeInMillis = program.start 
+                            timeZone = TimeZone.getDefault() // Yerel zaman dilimine çevir
+                        }
                         val startHour = String.format("%02d", startCal.get(Calendar.HOUR_OF_DAY))
                         val startMinute = String.format("%02d", startCal.get(Calendar.MINUTE))
                         val descriptionText = program.description?.takeIf { it.isNotBlank() }?.let { " - $it" } ?: ""
@@ -350,17 +376,18 @@ class Xmltv : MainAPI() {
                 
                 epgPlotText = "\n\n--- YAYIN AKIŞI ---\n" + formattedPrograms
             } else {
-                // EPG yüklü ama bu TVG-ID için program bulunamadı
+                // EPG'de program bulunamadı (ID Eşleşti ama Program Listesi Boş)
                 
                 // Hata Raporu: EPG'de Bulunan İlk 5 Kanalı Raporla
                 val availableTvgIds = epgData.programs.keys.take(5).joinToString(", ")
                 val totalChannels = epgData.programs.size
                 
                 epgPlotText = "\n\n--- YAYIN AKIŞI BİLGİSİ ---\n" +
-                              "HATA KODU: EPG_ID_MISMATCH\n" +
+                              "HATA KODU: EPG_ID_MISMATCH (PROGRAM BOŞ)\n" +
                               "Aranan ID: '${channelTvgId}' (Normalize: '${normalizedTvgId}')\n" +
                               "Sonuç: Bu ID için yayın akışı bulunamadı. Toplam $totalChannels kanal EPG'de yüklü.\n" +
-                              "Örnek Bulunan ID'ler: ${availableTvgIds}..." 
+                              "Örnek Bulunan ID'ler: ${availableTvgIds}... (a2tv.tr bu listede görünmeli)\n\n" +
+                              "Çözüm Önerisi: EPG dosyanızdaki 'a2tv.tr' program bloklarını kontrol edin, başlık veya zaman damgası bozuk olabilir." 
             }
         }
 
