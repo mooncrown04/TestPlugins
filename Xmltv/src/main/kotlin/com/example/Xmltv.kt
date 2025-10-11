@@ -13,6 +13,83 @@ import kotlinx.coroutines.sync.withLock
 import java.util.TimeZone
 import java.text.SimpleDateFormat 
 import java.util.Locale 
+import com.lagradost.cloudstream3.ActorData
+
+
+// ***************************************************************
+// ANA API SINIFI
+// ***************************************************************
+
+class Xmltv : MainAPI() {
+    override var mainUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b.xml"
+    private val secondaryXmlUrl = "https://dl.dropbox.com/scl/fi/vg40bpys8ym1jjrcuv1wp/XMLTvcs.xml?rlkey=7g2chxiol35z6kg6b36c4nyv8"
+    private val tertiaryXmlUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b-2.xml"
+    private val epgUrl = "https://raw.githubusercontent.com/braveheart1983/tvg-macther/refs/heads/main/tr-epg.xml"
+
+    @Volatile
+    private var cachedEpgData: EpgData? = null
+    private val epgMutex = Mutex()
+
+    override var name = "35 Xmltv"
+    override var lang = "tr"
+    override val hasMainPage = true
+    override val hasQuickSearch = true
+    override val supportedTypes = setOf(TvType.Live)
+
+    data class GroupedChannelData(
+        val title: String,
+        val posterUrl: String,
+        val description: String? = null,
+        val nation: String? = null,
+        val items: List<PlaylistItem>
+    )
+
+    private suspend fun loadEpgData(): EpgData {
+        if (cachedEpgData != null) return cachedEpgData!!
+
+        return epgMutex.withLock {
+            if (cachedEpgData != null) return cachedEpgData!!
+
+            var epgResponse: String? = null
+
+            try {
+                epgResponse = app.get(epgUrl).text
+                if (epgResponse.isNullOrBlank()) {
+                    val error = "HATA: EPG URL'den çekildi ancak içerik boş."
+                    Log.e("Xmltv", error)
+                    return@withLock EpgData(errorMessage = error)
+                }
+            } catch (e: Exception) {
+                val error = "HATA: EPG URL'den çekilemedi. Bağlantı veya sunucu hatası: ${e.message}"
+                Log.e("Xmltv", error, e)
+                return@withLock EpgData(errorMessage = error)
+            }
+
+            try {
+                val epgData = EpgXmlParser().parseEPG(epgResponse!!)
+
+                if (epgData.errorMessage != null) {
+                    val error = "HATA: EPG Parser hatası. ${epgData.errorMessage}"
+                    Log.e("Xmltv", error)
+                    return@withLock EpgData(errorMessage = error)
+                }
+
+                cachedEpgData = epgData
+                return@withLock epgData
+
+            } catch (e: OutOfMemoryError) {
+                val error = "KRİTİK HATA: Bellek Yetersizliği! XML dosyası cihaz için çok büyük. Boyut: ${epgResponse?.length ?: 0} bayt."
+                Log.e("Xmltv", error, e)
+                return@withLock EpgData(errorMessage = error)
+            } catch (e: Exception) {
+                val error = "HATA: EPG Parser hatası! XML formatı bozuk veya eksik: ${e.message}"
+                Log.e("Xmltv", error, e)
+                return@withLock EpgData(errorMessage = error)
+            }
+        }
+    }
+
+
 
 // ***************************************************************
 // 1. VERİ MODELLERİ
@@ -165,78 +242,6 @@ class XmlPlaylistParser {
 }
 
 
-// ***************************************************************
-// 3. ANA API SINIFI
-// ***************************************************************
-
-class Xmltv : MainAPI() {
-    override var mainUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b.xml"
-    private val secondaryXmlUrl = "https://dl.dropbox.com/scl/fi/vg40bpys8ym1jjrcuv1wp/XMLTvcs.xml?rlkey=7g2chxiol35z6kg6b36c4nyv8"
-    private val tertiaryXmlUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b-2.xml"
-    private val epgUrl = "https://raw.githubusercontent.com/braveheart1983/tvg-macther/refs/heads/main/tr-epg.xml"
-
-    @Volatile
-    private var cachedEpgData: EpgData? = null
-    private val epgMutex = Mutex()
-
-    override var name = "35 Xmltv"
-    override var lang = "tr"
-    override val hasMainPage = true
-    override val hasQuickSearch = true
-    override val supportedTypes = setOf(TvType.Live)
-
-    data class GroupedChannelData(
-        val title: String,
-        val posterUrl: String,
-        val description: String? = null,
-        val nation: String? = null,
-        val items: List<PlaylistItem>
-    )
-
-    private suspend fun loadEpgData(): EpgData {
-        if (cachedEpgData != null) return cachedEpgData!!
-
-        return epgMutex.withLock {
-            if (cachedEpgData != null) return cachedEpgData!!
-
-            var epgResponse: String? = null
-
-            try {
-                epgResponse = app.get(epgUrl).text
-                if (epgResponse.isNullOrBlank()) {
-                    val error = "HATA: EPG URL'den çekildi ancak içerik boş."
-                    Log.e("Xmltv", error)
-                    return@withLock EpgData(errorMessage = error)
-                }
-            } catch (e: Exception) {
-                val error = "HATA: EPG URL'den çekilemedi. Bağlantı veya sunucu hatası: ${e.message}"
-                Log.e("Xmltv", error, e)
-                return@withLock EpgData(errorMessage = error)
-            }
-
-            try {
-                val epgData = EpgXmlParser().parseEPG(epgResponse!!)
-
-                if (epgData.errorMessage != null) {
-                    val error = "HATA: EPG Parser hatası. ${epgData.errorMessage}"
-                    Log.e("Xmltv", error)
-                    return@withLock EpgData(errorMessage = error)
-                }
-
-                cachedEpgData = epgData
-                return@withLock epgData
-
-            } catch (e: OutOfMemoryError) {
-                val error = "KRİTİK HATA: Bellek Yetersizliği! XML dosyası cihaz için çok büyük. Boyut: ${epgResponse?.length ?: 0} bayt."
-                Log.e("Xmltv", error, e)
-                return@withLock EpgData(errorMessage = error)
-            } catch (e: Exception) {
-                val error = "HATA: EPG Parser hatası! XML formatı bozuk veya eksik: ${e.message}"
-                Log.e("Xmltv", error, e)
-                return@withLock EpgData(errorMessage = error)
-            }
-        }
-    }
 
     private fun createGroupedChannelItems(playlist: Playlist, query: String? = null): List<SearchResponse> {
         val groupedByTitle = playlist.items.groupBy { it.title }
@@ -378,6 +383,18 @@ class Xmltv : MainAPI() {
             }
         }
 
+		  val actorsList = mutableListOf<ActorData>()
+    actorsList.add(
+        ActorData(
+            actor = Actor(
+                name = "MoOnCrOwN",
+                image = "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
+            ),
+            roleString = "yazılım amalesi"
+        )
+    )
+
+
         val originalPlot = groupedData.description ?: ""
         // nation bilgisinin plot'a eklenmesi isteği iptal edildiği için sadece EPG ekleniyor.
         val finalPlot = originalPlot + epgPlotText
@@ -390,10 +407,11 @@ class Xmltv : MainAPI() {
             this.posterUrl = groupedData.posterUrl
             this.plot = finalPlot
             this.type = TvType.Live
-            
+            this.actors = actorsList
             // İstenen nation bilgisini tags olarak ekliyoruz.
             groupedData.nation?.let { 
                 this.tags = listOf(it.uppercase()) 
+				
             }
         }
     }
