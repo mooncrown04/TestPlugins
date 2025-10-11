@@ -310,7 +310,7 @@ class Xmltv : MainAPI() {
         return allResults.distinctBy { it.name }
     }
 
-    // ⭐ LOAD FONKSİYONU: EPG'yi anlık cihaz saatinden sonrasını gösterecek şekilde filtrelenir.
+    // ⭐ LOAD FONKSİYONU: EPG'yi anlık cihaz saatinden sonrasını gösterecek şekilde filtrelenir ve başlığa anlık saat eklenir.
     override suspend fun load(url: String): LoadResponse {
         val groupedData = parseJson<GroupedChannelData>(url)
 
@@ -350,11 +350,18 @@ class Xmltv : MainAPI() {
             if (programs.isNotEmpty()) {
                 // Başarılı eşleşme
                 
-                // ⭐ KRİTİK FİLTRELEME: Yalnızca şu anki milisaniye zamandan SONRA başlayan programları al
+                // ⭐ 1. KRİTİK FİLTRELEME: Yalnızca şu anki milisaniye zamandan SONRA başlayan programları al
                 val currentTime = System.currentTimeMillis()
 
                 val localTimeZone = TimeZone.getDefault() 
-
+                
+                // ⭐ BAŞLIK İÇİN ANLIK SAATİ ALMA
+                val nowCal = Calendar.getInstance().apply { 
+                    timeZone = localTimeZone 
+                }
+                val nowHour = String.format("%02d", nowCal.get(Calendar.HOUR_OF_DAY))
+                val nowMinute = String.format("%02d", nowCal.get(Calendar.MINUTE))
+                
                 val formattedPrograms = programs
                     // Sadece başlangıç zamanı şu andan büyük veya eşit olan programları göster
                     .filter { it.start >= currentTime } 
@@ -372,7 +379,8 @@ class Xmltv : MainAPI() {
                         "[$startHour:$startMinute] ${program.name}$descriptionText"
                     }
 
-                epgPlotText = "\n\n--- YAYIN AKIŞI (Yerel Cihaz Saati) ---\n" + formattedPrograms
+                // Başlığı anlık saat bilgisiyle oluştur
+                epgPlotText = "\n\n--- YAYIN AKIŞI (Cihaz Saati: $nowHour:$nowMinute) ---\n" + formattedPrograms
             } else {
                 // EPG'de program bulunamadı (ID Eşleşti ama Program Listesi Boş)
 
