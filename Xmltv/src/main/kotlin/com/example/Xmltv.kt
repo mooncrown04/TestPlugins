@@ -358,14 +358,15 @@ class Xmltv : MainAPI() {
             if (programs.isNotEmpty()) {
                 // Başarılı eşleşme
                 val today = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
-
+  val turkeyTimeZone = TimeZone.getTimeZone("GMT+03:00")
+                
                 val formattedPrograms = programs
                     .filter { Calendar.getInstance().apply { timeInMillis = it.start }.get(Calendar.DAY_OF_YEAR) in (today)..(today + 1) }
                     .joinToString(separator = "\n") { program ->
                         // Zaman damgasını yerel saate göre formatla
                         val startCal = Calendar.getInstance().apply {
                             timeInMillis = program.start
-                            timeZone = TimeZone.getDefault() // Yerel zaman dilimine çevir
+                            timeZone = turkeyTimeZone  // Yerel zaman dilimine çevir
                         }
                         val startHour = String.format("%02d", startCal.get(Calendar.HOUR_OF_DAY))
                         val startMinute = String.format("%02d", startCal.get(Calendar.MINUTE))
