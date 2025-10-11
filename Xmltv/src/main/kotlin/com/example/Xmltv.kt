@@ -11,11 +11,11 @@ import java.util.Calendar
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.TimeZone
-import java.text.SimpleDateFormat 
-import java.util.Locale 
+import java.text.SimpleDateFormat 
+import java.util.Locale 
 
 // ***************************************************************
-// 1. VERİ MODELLERİ
+// 1. VERİ MODELLERİ (Top Level'da Tanımlanmalı)
 // ***************************************************************
 data class ProgramInfo(
     val name: String,
@@ -32,21 +32,21 @@ data class PlaylistItem(
     val title: String,
     val url: String,
     val description: String? = null,
-    val nation: String? = null, // Burası artık direkt <nation> etiketinden doldurulacak
+    val nation: String? = null,
     val attributes: Map<String, String> = emptyMap(),
     val headers: Map<String, String> = emptyMap(),
     val userAgent: String? = null
 )
 data class Playlist(val items: List<PlaylistItem> = emptyList())
 
-
 // ***************************************************************
-// 2. PARSER SINIFLARI
+// 2. PARSER SINIFLARI (Top Level'da Tanımlanmalı)
 // ***************************************************************
 
 class EpgXmlParser {
     
     private fun parseXmlTvDate(dateString: String): Long {         
+        // XMLTV formatı: YYYYMMDDhhmmss +0000
         val dateOnlyString = if (dateString.length >= 14) dateString.substring(0, 14) else return 0L
 
         val format = "yyyyMMddHHmmss"
@@ -62,9 +62,11 @@ class EpgXmlParser {
         }
     }
 
+
     fun parseEPG(xml: String): EpgData {
         if (xml.isBlank()) return EpgData(errorMessage = "XML içeriği boş.")
         val programs = mutableListOf<EpgProgram>()
+
         val programmeRegex = Regex("<programme\\s+[^>]*>", RegexOption.DOT_MATCHES_ALL)
         val channelRegex = Regex("channel=\"([^\"]+)\"")
         val startRegex = Regex("start=\"([^\"]+)\"")
@@ -112,11 +114,10 @@ class EpgXmlParser {
 
 
 class XmlPlaylistParser {
-    // nationRegex kaldırıldı, çünkü artık <description> içinden çekilmeyecek.
     private val channelRegex = Regex("<channel>(.*?)</channel>", RegexOption.DOT_MATCHES_ALL)
     private val titleRegex = Regex("<title>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</title>", RegexOption.DOT_MATCHES_ALL)
     
-    // ⭐ YENİ REGEX: <nation> etiketini doğrudan yakalar
+    // <nation> etiketini doğrudan yakalar
     private val nationTagRegex = Regex("<nation>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</nation>", RegexOption.DOT_MATCHES_ALL)
     
     private val logoRegex = Regex("<logo_30x30>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</logo_30x30>", RegexOption.DOT_MATCHES_ALL)
@@ -135,7 +136,7 @@ class XmlPlaylistParser {
             val description = descriptionRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
             val tvgId = tvgIdRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
             
-            // ⭐ nation bilgisi artık doğrudan <nation> etiketinden çekiliyor
+            // nation bilgisi artık doğrudan <nation> etiketinden çekiliyor
             val nation = nationTagRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
 
 
@@ -250,7 +251,7 @@ class Xmltv : MainAPI() {
                 posterUrl = logoUrl,
                 items = items,
                 description = firstItem.description,
-                nation = firstItem.nation // <nation> bilgisini buraya taşıdık
+                nation = firstItem.nation
             )
             val dataUrl = groupedData.toJson()
             newLiveSearchResponse(
@@ -260,8 +261,9 @@ class Xmltv : MainAPI() {
             ) {
                 this.posterUrl = logoUrl
                 groupedData.nation?.let { 
-                    this.lang = it // Lang olarak kullanmaya devam
-                    this.tags = listOf(it.uppercase()) // ⭐ TAGS OLARAK EKLENDİ
+                    this.lang = it 
+                    // SearchResponse'ta tags yok, sadece lang var.
+                    // Tags, LoadResponse'ta kullanılır.
                 }
             }
         }
@@ -303,7 +305,7 @@ class Xmltv : MainAPI() {
         return allResults.distinctBy { it.name }
     }
 
-    // ⭐ LOAD FONKSİYONU: EPG'yi anlık cihaz saatinden sonrasını gösterecek şekilde filtrelenir ve başlığa anlık saat eklenir.
+    
     override suspend fun load(url: String): LoadResponse {
         val groupedData = parseJson<GroupedChannelData>(url)
 
@@ -388,14 +390,14 @@ class Xmltv : MainAPI() {
             this.plot = finalPlot
             this.type = TvType.Live
             
-            // groupedData'da saklanan <nation> bilgisi tags olarak eklendi
+            // ⭐ DÜZELTME: nation bilgisi LoadResponse'a (bu blok) tags olarak eklendi.
             groupedData.nation?.let { 
                 this.tags = listOf(it.uppercase()) 
             }
         }
     }
 
-    // loadLinks fonksiyonu (Aynı)
+    
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
