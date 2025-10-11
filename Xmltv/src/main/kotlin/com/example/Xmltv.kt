@@ -10,7 +10,7 @@ import kotlin.collections.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.ActorData
-import java.util.Calendar // Program süresi hesaplaması için
+import java.util.Calendar
 
 // --------------------------------------------------------------------------------------------------
 // --- VERİ MODELLERİ ---
@@ -49,7 +49,7 @@ data class Playlist(val items: List<PlaylistItem> = emptyList())
 
 
 // --------------------------------------------------------------------------------------------------
-// --- XML PARSER SINIFLARI ---
+// --- XML PARSER SINIFLARI (HATA DÜZELTME YAPILDI) ---
 // --------------------------------------------------------------------------------------------------
 
 class EpgXmlParser {
@@ -58,24 +58,32 @@ class EpgXmlParser {
 
         val programs = mutableListOf<EpgProgram>()
 
-        // XMLTV <programme> tag'i için Regex
-        // start="(\d{14} \+\d{4})" stop="(\d{14} \+\d{4})" channel="([^"]+)"
-        val programmeRegex = "<programme\\s+start=\"([^\"]+)\"\\s+stop=\"([^\"]+)\"\\s+channel=\"([^\"]+)\".*?>.*?<title[^>]*>(.*?)</title>(?:<desc[^>]*>(.*?)</desc>)?</programme>".toRegex(RegexOption.DOT_ALL)
+        // 1. Programme bloğunu yakala
+        val programmeBlockRegex = Regex("<programme\\s+start=\"([^\"]+)\"\\s+stop=\"([^\"]+)\"\\s+channel=\"([^\"]+)\".*?</programme>", RegexOption.DOT_MATCHES_ALL)
+        
+        // 2. İçerik Regex'leri (Blok içinden çekilecek)
+        val titleRegex = Regex("<title[^>]*>(.*?)</title>", RegexOption.DOT_MATCHES_ALL)
+        val descRegex = Regex("<desc[^>]*>(.*?)</desc>", RegexOption.DOT_MATCHES_ALL)
 
-        programmeRegex.findAll(xml).forEach { match ->
-            // match.destructured'daki sıraya dikkat: 1: startStr, 2: endStr, 3: channelId, 4: title, 5: descOptional
-            val (startStr, endStr, channelId, title, descOptional) = match.destructured
-            val description = descOptional.takeIf { it.isNotBlank() }
+        programmeBlockRegex.findAll(xml).forEach { match ->
+            // match.groupValues[0] tüm eşleşme. match.groupValues[1/2/3] yakalanan gruplar.
+            val startStr = match.groupValues.getOrNull(1)?.trim() ?: return@forEach
+            val endStr = match.groupValues.getOrNull(2)?.trim() ?: return@forEach
+            val channelId = match.groupValues.getOrNull(3)?.trim() ?: return@forEach
+            val programmeBlock = match.groupValues.getOrNull(0) ?: return@forEach
 
-            // Tarih formatı: YYYYMMDDhhmmss +0000. Sadece ilk 14 rakamı alıp UNIX milisaniyeye çeviriyoruz.
+            val title = titleRegex.find(programmeBlock)?.groupValues?.getOrNull(1)?.trim()
+            val description = descRegex.find(programmeBlock)?.groupValues?.getOrNull(1)?.trim()
+
+            // Zaman damgalarını milisaniyeye çevir
             val startTime = startStr.take(14).toLongOrNull()?.let { parseXmlTvDate(it) } ?: 0L
             val endTime = endStr.take(14).toLongOrNull()?.let { parseXmlTvDate(it) } ?: 0L
 
-            if (startTime > 0L && endTime > 0L) {
+            if (startTime > 0L && endTime > 0L && !title.isNullOrBlank()) {
                 programs.add(
                     EpgProgram(
-                        name = title.trim(),
-                        description = description?.trim(),
+                        name = title,
+                        description = description,
                         start = startTime,
                         end = endTime,
                         channel = channelId
@@ -84,11 +92,11 @@ class EpgXmlParser {
             }
         }
 
-        // Channel ID'ye göre grupla
         val groupedPrograms = programs.groupBy { it.channel }
+        Log.d("EpgXmlParser", "EPG ayrıştırma tamamlandı. ${groupedPrograms.size} kanal için program bulundu.")
         return EpgData(groupedPrograms)
     }
-    
+
     // YYYYMMDDhhmmss formatındaki tarihi milisaniyeye çevirir.
     private fun parseXmlTvDate(dateLong: Long): Long {
         return try {
@@ -99,7 +107,6 @@ class EpgXmlParser {
             val minute = (dateLong / 10000L) % 100
             val second = (dateLong / 100L) % 100
 
-            // Calendar kullanırken ayların 0'dan başladığını unutmayın (Ocak=0, Şubat=1, ...)
             val calendar = Calendar.getInstance().apply {
                 set(year.toInt(), month.toInt() - 1, day.toInt(), hour.toInt(), minute.toInt(), second.toInt())
                 set(Calendar.MILLISECOND, 0)
@@ -120,7 +127,6 @@ class XmlPlaylistParser {
     private val logoRegex = Regex("<logo_30x30>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</logo_30x30>", RegexOption.DOT_MATCHES_ALL)
     private val streamUrlRegex = Regex("<stream_url>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</stream_url>", RegexOption.DOT_MATCHES_ALL)
     private val descriptionRegex = Regex("<description>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</description>", RegexOption.DOT_MATCHES_ALL)
-    // EPG eşleştirmesi için <tvg_id> tag'ını da ekleyelim (Eğer XML'inizde varsa!)
     private val tvgIdRegex = Regex("<tvg_id>\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*</tvg_id>", RegexOption.DOT_MATCHES_ALL)
 
 
@@ -134,7 +140,6 @@ class XmlPlaylistParser {
             val logo = logoRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
             val url = streamUrlRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
             val description = descriptionRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
-            // ⭐ YENİ: EPG eşleştirmesi için tvg_id'yi yakala
             val tvgId = tvgIdRegex.find(channelBlock)?.groupValues?.getOrNull(1)?.trim()
 
             val nationMatch = description?.let { nationRegex.find(it) }
@@ -144,8 +149,7 @@ class XmlPlaylistParser {
                 val attributesMap = mutableMapOf<String, String>()
                 attributesMap["tvg-logo"] = logo ?: ""
                 attributesMap["group-title"] = "XML Kanalları"
-                // ⭐ KRİTİK EPG EŞLEŞTİRMESİ: tvg-id attribute'ını ekle
-                tvgId?.let { attributesMap["tvg-id"] = it }
+                tvgId?.let { attributesMap["tvg-id"] = it } // EPG eşleştirmesi için
 
                 playlistItems.add(
                     PlaylistItem(
@@ -208,7 +212,6 @@ class Xmltv : MainAPI() {
             val epgResponse = app.get(epgUrl).text
             val epgData = EpgXmlParser().parseEPG(epgResponse)
             cachedEpgData = epgData
-            Log.d("Xmltv", "EPG verisi başarıyla yüklendi. ${epgData.programs.size} kanal için program bulundu.")
             epgData
         } catch (e: Exception) {
             Log.e("Xmltv", "EPG verisi yüklenemedi: ${e.message}")
@@ -220,7 +223,7 @@ class Xmltv : MainAPI() {
         val groupedByTitle = playlist.items.groupBy { it.title }
         return groupedByTitle.mapNotNull { (title, items) ->
             if (items.isEmpty()) return@mapNotNull null
-            // Arama sorgusu varsa filtrele
+            
             if (query != null && !title.contains(query, ignoreCase = true)) {
                 return@mapNotNull null
             }
@@ -251,8 +254,7 @@ class Xmltv : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val homepageLists = mutableListOf<HomePageList>()
-        // ... (getMainPage içeriği aynı kaldı) ...
-        
+
         // Birincil URL
         try {
             val primaryResponse = app.get(mainUrl).text
@@ -300,7 +302,6 @@ class Xmltv : MainAPI() {
 
 
         if (homepageLists.isEmpty()) {
-            Log.e("Xmltv", "Hata: Tüm URL'lerden kanal listesi çekilemedi veya parser boş döndü.")
             return newHomePageResponse(emptyList())
         }
         return newHomePageResponse(homepageLists)
@@ -330,12 +331,11 @@ class Xmltv : MainAPI() {
         return allResults.distinctBy { it.name }
     }
     
-    // ⭐ load FONKSİYONUNDA EPG VERİSİ KULLANIMI
+    // load FONKSİYONU
     override suspend fun load(url: String): LoadResponse {
         val groupedData = parseJson<GroupedChannelData>(url)
         
         val epgData = loadEpgData()
-        // PlaylistItem'dan "tvg-id" attribute'unu al
         val channelTvgId = groupedData.items.firstOrNull()?.attributes?.get("tvg-id")
 
         val programs: List<ProgramInfo> = if (channelTvgId != null && epgData != null) {
@@ -357,8 +357,6 @@ class Xmltv : MainAPI() {
         }
         
         // EPG'yi gösterebilmek için `programs` listesini eklemesi gereken kod parçası:
-        // CloudStream'in LiveStreamLoadResponse yapısı tam olarak bu alanı destekler.
-        // Eğer derleme hatası almazsanız bu kısmı aktif edebilirsiniz.
         val shouldIncludePrograms = programs.isNotEmpty() 
 
         return newLiveStreamLoadResponse(
@@ -371,14 +369,14 @@ class Xmltv : MainAPI() {
             this.type = TvType.Live
             
             // Eğer programs alanı destekleniyorsa (hata vermiyorsa), eklenmelidir.
+            // CloudStream'in LiveStreamLoadResponse yapısında 'programs' alanı mevcuttur.
             if (shouldIncludePrograms) {
-                // Bu satırın derleme hatası vermediğinden emin olun.
-                // this.programs = programs 
+                this.programs = programs 
             }
        }
     }
 
-    // --- loadLinks FONKSİYONU --- (Aynı kaldı)
+    // loadLinks FONKSİYONU
     override suspend fun loadLinks(
         data: String, 
         isCasting: Boolean,
