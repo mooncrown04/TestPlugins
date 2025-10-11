@@ -13,7 +13,7 @@ import com.lagradost.cloudstream3.ActorData
 import java.util.Calendar
 
 // --------------------------------------------------------------------------------------------------
-// --- VERİ MODELLERİ (AYNI KALDI) ---
+// --- VERİ MODELLERİ ---
 // --------------------------------------------------------------------------------------------------
 
 data class ProgramInfo(
@@ -49,13 +49,14 @@ data class Playlist(val items: List<PlaylistItem> = emptyList())
 
 
 // --------------------------------------------------------------------------------------------------
-// --- XML PARSER SINIFLARI (AYNI KALDI) ---
+// --- XML PARSER SINIFLARI ---
 // --------------------------------------------------------------------------------------------------
 
 class EpgXmlParser {
     fun parseEPG(xml: String): EpgData {
         if (xml.isBlank()) return EpgData()
         val programs = mutableListOf<EpgProgram>()
+        // DOT_MATCHES_ALL büyük XML bloklarını okumak için kritik
         val programmeBlockRegex = Regex("<programme\\s+start=\"([^\"]+)\"\\s+stop=\"([^\"]+)\"\\s+channel=\"([^\"]+)\".*?</programme>", RegexOption.DOT_MATCHES_ALL)
         val titleRegex = Regex("<title[^>]*>(.*?)</title>", RegexOption.DOT_MATCHES_ALL)
         val descRegex = Regex("<desc[^>]*>(.*?)</desc>", RegexOption.DOT_MATCHES_ALL)
@@ -98,7 +99,6 @@ class EpgXmlParser {
             val minute = (dateLong / 10000L) % 100
             val second = (dateLong / 100L) % 100
             val calendar = Calendar.getInstance().apply {
-                // Ay 0-tabanlı olduğu için -1
                 set(year.toInt(), month.toInt() - 1, day.toInt(), hour.toInt(), minute.toInt(), second.toInt())
                 set(Calendar.MILLISECOND, 0)
             }
@@ -156,7 +156,7 @@ class XmlPlaylistParser {
 }
 
 // --------------------------------------------------------------------------------------------------
-// --- ANA API SINIFI (LOAD FONKSİYONU PLOT İLE GÜNCELLENDİ) ---
+// --- ANA API SINIFI ---
 // --------------------------------------------------------------------------------------------------
 
 class Xmltv : MainAPI() {
@@ -186,15 +186,20 @@ class Xmltv : MainAPI() {
         val items: List<PlaylistItem>
     )
 
+    // ⭐ GÜVENLİK DÜZELTMESİ: Kapsamlı Try-Catch ve null döndürme eklendi.
     private suspend fun loadEpgData(): EpgData? {
         if (cachedEpgData != null) return cachedEpgData
-        return try {
-            val epgResponse = app.get(epgUrl).text
+        
+        return runCatching {
+            val epgResponse = app.get(epgUrl).text 
+            Log.d("Xmltv", "EPG XML dosyası boyutu: ${epgResponse.length} karakter.") 
+
             val epgData = EpgXmlParser().parseEPG(epgResponse)
             cachedEpgData = epgData
             epgData
-        } catch (e: Exception) {
-            Log.e("Xmltv", "EPG verisi yüklenemedi: ${e.message}")
+        }.getOrElse { e ->
+            Log.e("Xmltv", "EPG verisi çekilirken veya parse edilirken KRİTİK HATA oluştu: ${e.message}")
+            // Hata durumunda null döndürerek uygulamanın çökmesini önle
             null
         }
     }
@@ -265,15 +270,14 @@ class Xmltv : MainAPI() {
         return allResults.distinctBy { it.name }
     }
     
-    // ⭐ KRİTİK GÜNCELLEME: load FONKSİYONU EPG'yi PLOT alanına atıyor
+    // ⭐ load FONKSİYONU: EPG'yi PLOT alanına güvenli bir şekilde atıyor
     override suspend fun load(url: String): LoadResponse {
         val groupedData = parseJson<GroupedChannelData>(url)
         
         // EPG KODU BAŞLANGIÇ
-        val epgData = loadEpgData() // EPG verisini çek
+        val epgData = loadEpgData() // Güvenli EPG yüklemesi
         val channelTvgId = groupedData.items.firstOrNull()?.attributes?.get("tvg-id")
 
-        // EPG verisini işleme (ProgramInfo listesi oluşturuluyor)
         val programs: List<ProgramInfo> = if (channelTvgId != null && epgData != null) {
             epgData.programs[channelTvgId]
                 ?.map { epgProgram: EpgProgram -> 
@@ -292,19 +296,18 @@ class Xmltv : MainAPI() {
             emptyList()
         }
         
-        // ⭐ YENİ MANTIK: EPG verisini PLOT (Açıklama) metnine dönüştürme ⭐
+        // EPG verisini PLOT metnine dönüştürme
         val epgPlotText = if (programs.isNotEmpty()) {
             val today = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
             
-            // EPG listesini formatla (Sadece bugün ve yarınki programları alıyoruz)
             val formattedPrograms = programs
+                // Bugün ve yarınki programları filtrele
                 .filter { Calendar.getInstance().apply { timeInMillis = it.start }.get(Calendar.DAY_OF_YEAR) in (today)..(today + 1) }
                 .joinToString(separator = "\n") { program ->
                     val startCal = Calendar.getInstance().apply { timeInMillis = program.start }
                     val startHour = String.format("%02d", startCal.get(Calendar.HOUR_OF_DAY))
                     val startMinute = String.format("%02d", startCal.get(Calendar.MINUTE))
                     
-                    // Açıklaması varsa, başlık ve açıklamayı birleştir
                     val descriptionText = program.description?.takeIf { it.isNotBlank() }?.let { " - $it" } ?: ""
                     
                     "[$startHour:$startMinute] ${program.name}$descriptionText"
@@ -315,10 +318,7 @@ class Xmltv : MainAPI() {
             "\n\n--- Yayın Akışı Bulunamadı ---"
         }
 
-        // Orijinal Açıklama (Plot)
         val originalPlot = groupedData.description ?: ""
-        
-        // EPG verisini orijinal açıklama ile birleştir
         val finalPlot = originalPlot + epgPlotText
         // EPG KODU BİTİŞ
 
@@ -328,15 +328,13 @@ class Xmltv : MainAPI() {
             dataUrl = groupedData.toJson(), 
         ) {
             this.posterUrl = groupedData.posterUrl
-            // ⭐ ATAMA BURADA YAPILIYOR: EPG ve orijinal açıklama birleştirilip plot alanına yazılıyor. ⭐
+            // EPG plot ataması
             this.plot = finalPlot
             this.type = TvType.Live
-            
-            // this.programs ataması derleme hatasını önlemek için kullanılmıyor.
        }
     }
 
-    // loadLinks FONKSİYONU (Aynı kaldı)
+    // loadLinks FONKSİYONU
     override suspend fun loadLinks(
         data: String, 
         isCasting: Boolean,
