@@ -12,14 +12,17 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.ActorData
 import java.util.Calendar
 
-// ⭐ KRİTİK DÜZELTME: Program çözümlenemediği için en olası alternatif olan ProgramInfo'yu içe aktarıyoruz.
-import com.lagradost.cloudstream3.ProgramInfo// ProgramInfo import'u için yeni deneme
-
-// Eğer yukarıdaki import hata verirse, ProgramInfo'nun da metainfo içinde olmadığını anlarız.
-// Ancak denemek zorundayız. ProgramInfo genellikle metainfo içindedir.
-// Eğer "metainfo" hala çözümlenemezse, aşağıdaki satırı kullanırız:
-// import com.lagradost.cloudstream3.ProgramInfo
-
+// ⭐ KRİTİK DÜZELTME: ProgramInfo referansı çözümlenemediği için
+// CloudStream'in beklediği data sınıfını yerel olarak tanımlıyoruz.
+// Bu, derleyici hatasını giderecektir.
+data class ProgramInfo(
+    val name: String,
+    val description: String? = null,
+    val posterUrl: String? = null,
+    val rating: Int? = null,
+    val start: Long,
+    val end: Long
+)
 
 // EPG ve Playlist için temel modeller
 data class EpgProgram(
@@ -220,13 +223,16 @@ class Xmltv : MainAPI() {
         val channelTvgId = groupedData.items.firstOrNull()?.attributes?.get("tvg-id")
 
         // EPG eşleştirme ve dönüştürme
-        // Düzeltildi: Program yerine ProgramInfo kullanıldı.
+        // Yerel olarak tanımlanan ProgramInfo tipi kullanıldı.
         val programs: List<ProgramInfo> = if (channelTvgId != null && epgData != null) {
             epgData.programs[channelTvgId]
                 ?.map { epgProgram: EpgProgram -> 
-                    ProgramInfo( // CloudStream'in ProgramInfo sınıfını kullanıyoruz
+                    ProgramInfo( 
                         name = epgProgram.name,
                         description = epgProgram.description,
+                        // posterUrl ve rating bilgisi EpgProgram içinde yok, null geçiliyor
+                        posterUrl = null, 
+                        rating = null, 
                         start = epgProgram.start,
                         end = epgProgram.end
                     )
@@ -245,7 +251,7 @@ class Xmltv : MainAPI() {
             this.posterUrl = groupedData.posterUrl
             this.plot = groupedData.description
             this.type = TvType.Live
-            this.program = programs // EPG verisini buraya ekliyoruz (programInfo olarak)
+            this.program = programs // EPG verisini buraya atıyoruz
        }
     }
 
@@ -289,4 +295,3 @@ class Xmltv : MainAPI() {
         return foundLink
     }
 }
-
