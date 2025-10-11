@@ -10,7 +10,7 @@ import kotlin.collections.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import java.util.Calendar
-// Mutex için gerekli import
+// Mutex için gerekli importlar gereksiz hale geldi ama tutmak derlemeyi bozmaz.
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock 
 
@@ -43,6 +43,7 @@ data class Playlist(val items: List<PlaylistItem> = emptyList())
 // ***************************************************************
 // 2. PARSER SINIFLARI
 // ***************************************************************
+// EPG artık yüklenmediği için bu sınıflar teknik olarak kullanılmayacak ancak derleyiciye lazım olabilir.
 
 class EpgXmlParser { 
     fun parseEPG(xml: String): EpgData {
@@ -147,7 +148,7 @@ class XmlPlaylistParser {
 
 
 // ***************************************************************
-// 3. ANA API SINIFI (ÇİFT AŞAMALI GÜVENLİK İLE)
+// 3. ANA API SINIFI (EPG YÜKLEMESİ DEVRE DIŞI)
 // ***************************************************************
 
 class Xmltv : MainAPI() {
@@ -159,7 +160,7 @@ class Xmltv : MainAPI() {
     // EPG Önbellekleme değişkenleri
     @Volatile
     private var cachedEpgData: EpgData? = null 
-    // Mutex tanımlaması (Coroutine uyumlu kilit)
+    // Mutex tanımlaması (EPG devre dışı olduğu için artık kullanılmayacak)
     private val epgMutex = Mutex() 
 
     override var name = "35 Xmltv"
@@ -176,51 +177,10 @@ class Xmltv : MainAPI() {
         val items: List<PlaylistItem>
     )
 
-    // ⭐ KRİTİK EPG YÜKLEME FONKSİYONU (Çift Aşamalı Try-Catch ve Mutex)
+    // ⭐ EPG YÜKLEMEYİ TAMAMEN DEVRE DIŞI BIRAKAN FONKSİYON
     private suspend fun loadEpgData(): EpgData? {
-        if (cachedEpgData != null) return cachedEpgData
-        
-        return epgMutex.withLock {
-            if (cachedEpgData != null) return cachedEpgData
-            
-            var epgResponse: String? = null
-            var epgData: EpgData? = null
-
-            // ADIM 1: Ağ isteğini dene (Çekme sırasında bağlantı hatası veya okuma hatası)
-            try {
-                Log.d("Xmltv", "EPG verisi çekiliyor...")
-                // app.get(epgUrl) askıya alma noktasıdır. Mutex içinde olması uygundur.
-                epgResponse = app.get(epgUrl).text 
-                if (epgResponse.isNullOrBlank()) {
-                    Log.e("Xmltv", "EPG çekildi ancak boş geldi.")
-                    return@withLock null
-                }
-            } catch (e: Exception) {
-                Log.e("Xmltv", "HATA 1: EPG URL'den çekilemedi: ${e.message}", e)
-                return@withLock null // Hata olursa null döndür ve çık
-            }
-            
-            // ADIM 2: Parser işlemini dene (XML format veya parse etme hatası)
-            try {
-                Log.d("Xmltv", "EPG verisi ayrıştırılıyor (parse ediliyor)...")
-                // EpgResponse'un null olmadığı garanti edildi
-                epgData = EpgXmlParser().parseEPG(epgResponse!!) 
-                
-                // Başarılı olursa önbelleğe al
-                cachedEpgData = epgData
-                Log.d("Xmltv", "EPG başarılı: ${epgData.programs.size} kanal için program bulundu.")
-                return@withLock epgData
-                
-            } catch (e: OutOfMemoryError) {
-                // Özel OOM yakalama
-                Log.e("Xmltv", "HATA 2A: Parser sırasında Bellek Yetersizliği! ${e.message}", e)
-                return@withLock null 
-            } catch (e: Exception) {
-                // XML format hatası veya diğer parser hataları
-                Log.e("Xmltv", "HATA 2B: EPG Parser hatası! (XML formatı hatalı olabilir): ${e.message}", e)
-                return@withLock null // Parser hatası olursa null döndür ve çık
-            }
-        }
+        Log.d("Xmltv", "EPG yükleme geçici olarak devre dışı bırakıldı. Çökme testi yapılıyor.")
+        return null // Doğrudan null döndürerek EPG verisini çekmeyi ve parse etmeyi engeller.
     }
 
     private fun createGroupedChannelItems(playlist: Playlist, query: String? = null): List<SearchResponse> {
@@ -262,122 +222,4 @@ class Xmltv : MainAPI() {
         try {
             val secondaryResponse = app.get(secondaryXmlUrl).text
             homepageLists.add(HomePageList("Diğer Kanallar", createGroupedChannelItems(XmlPlaylistParser().parseXML(secondaryResponse))))
-        } catch (e: Exception) { Log.e("Xmltv", "İkincil URL yüklenemedi: ${e.message}") }
-        
-        try {
-            val tertiaryResponse = app.get(tertiaryXmlUrl).text
-            homepageLists.add(HomePageList("Favori Listem 2", createGroupedChannelItems(XmlPlaylistParser().parseXML(tertiaryResponse))))
-        } catch (e: Exception) { Log.e("Xmltv", "Üçüncül URL yüklenemedi: ${e.message}") }
-
-        return newHomePageResponse(homepageLists)
-    }
-
-    override suspend fun search(query: String): List<SearchResponse> {
-        val allResults = mutableListOf<SearchResponse>()
-        try {
-            val primaryResponse = app.get(mainUrl).text
-            allResults.addAll(createGroupedChannelItems(XmlPlaylistParser().parseXML(primaryResponse), query))
-        } catch (e: Exception) { Log.e("Xmltv", "Arama için birincil URL yüklenemedi: ${e.message}") }
-
-        try {
-            val secondaryResponse = app.get(secondaryXmlUrl).text
-            allResults.addAll(createGroupedChannelItems(XmlPlaylistParser().parseXML(secondaryResponse), query))
-        } catch (e: Exception) { Log.e("Xmltv", "Arama için ikincil URL yüklenemedi: ${e.message}") }
-
-        return allResults.distinctBy { it.name }
-    }
-    
-    // LOAD FONKSİYONU: EPG'yi PLOT alanına atıyor
-    override suspend fun load(url: String): LoadResponse {
-        val groupedData = parseJson<GroupedChannelData>(url)
-        
-        val epgData = loadEpgData() 
-        val channelTvgId = groupedData.items.firstOrNull()?.attributes?.get("tvg-id")
-
-        val programs: List<ProgramInfo> = if (channelTvgId != null && epgData != null) {
-            epgData.programs[channelTvgId]
-                ?.map { epgProgram: EpgProgram -> 
-                    ProgramInfo( 
-                        name = epgProgram.name,
-                        description = epgProgram.description,
-                        posterUrl = null, 
-                        rating = null, 
-                        start = epgProgram.start,
-                        end = epgProgram.end
-                    )
-                }
-                ?.sortedBy { it.start } 
-                ?: emptyList() 
-        } else {
-            emptyList()
-        }
-        
-        // EPG verisini PLOT (Açıklama) metnine dönüştürme
-        val epgPlotText = if (programs.isNotEmpty()) {
-            val today = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
-            
-            val formattedPrograms = programs
-                .filter { Calendar.getInstance().apply { timeInMillis = it.start }.get(Calendar.DAY_OF_YEAR) in (today)..(today + 1) }
-                .joinToString(separator = "\n") { program ->
-                    val startCal = Calendar.getInstance().apply { timeInMillis = program.start }
-                    val startHour = String.format("%02d", startCal.get(Calendar.HOUR_OF_DAY))
-                    val startMinute = String.format("%02d", startCal.get(Calendar.MINUTE))
-                    val descriptionText = program.description?.takeIf { it.isNotBlank() }?.let { " - $it" } ?: ""
-                    
-                    "[$startHour:$startMinute] ${program.name}$descriptionText"
-                }
-            
-            "\n\n--- YAYIN AKIŞI ---\n" + formattedPrograms
-        } else {
-            "\n\n--- Yayın Akışı Bulunamadı ---"
-        }
-
-        val originalPlot = groupedData.description ?: ""
-        val finalPlot = originalPlot + epgPlotText
-
-        return newLiveStreamLoadResponse(
-            name = groupedData.title,
-            url = groupedData.toJson(), 
-            dataUrl = groupedData.toJson(), 
-        ) {
-            this.posterUrl = groupedData.posterUrl
-            this.plot = finalPlot 
-            this.type = TvType.Live
-       }
-    }
-
-    // loadLinks fonksiyonu
-    override suspend fun loadLinks(
-        data: String, 
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        val groupedData = parseJson<GroupedChannelData>(data)
-        var foundLink = false
-        groupedData.items.forEachIndexed { index, item ->
-            val videoUrl = item.url
-            if (videoUrl.isNullOrBlank()) return@forEachIndexed
-            val linkName = groupedData.title + " Kaynak ${index + 1}"
-            val linkType = when {
-                videoUrl.endsWith(".m3u8", ignoreCase = true) -> ExtractorLinkType.M3U8
-                videoUrl.endsWith(".mpd", ignoreCase = true) -> ExtractorLinkType.DASH
-                else -> ExtractorLinkType.M3U8 
-            }
-            callback.invoke(
-                newExtractorLink(
-                    source = linkName,
-                    name = groupedData.title,
-                    url = videoUrl,
-                    type = linkType
-                ) {
-                    this.referer = "" 
-                    this.quality = Qualities.Unknown.value
-                    item.userAgent?.let { ua -> this.headers = mapOf("User-Agent" to ua) }
-                }
-            )
-            foundLink = true
-        }
-        return foundLink
-    }
-}
+        } catch (e: Exception) { Log.e("Xmltv", "İkincil URL yüklenem
