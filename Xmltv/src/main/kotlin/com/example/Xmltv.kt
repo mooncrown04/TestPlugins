@@ -13,7 +13,7 @@ import com.lagradost.cloudstream3.ActorData
 import java.util.Calendar
 
 // ⭐ KRİTİK DÜZELTME: Program çözümlenemediği için en olası alternatif olan ProgramInfo'yu içe aktarıyoruz.
-import com.lagradost.cloudstream3.metainfo.ProgramInfo // ProgramInfo import'u için yeni deneme
+import com.lagradost.cloudstream3.ProgramInfo// ProgramInfo import'u için yeni deneme
 
 // Eğer yukarıdaki import hata verirse, ProgramInfo'nun da metainfo içinde olmadığını anlarız.
 // Ancak denemek zorundayız. ProgramInfo genellikle metainfo içindedir.
@@ -289,3 +289,4 @@ class Xmltv : MainAPI() {
         return foundLink
     }
 }
+
