@@ -14,9 +14,7 @@ import java.util.TimeZone
 import java.text.SimpleDateFormat 
 import java.util.Locale 
 import com.lagradost.cloudstream3.ActorData // Zaten mevcuttu
-import com.lagradost.cloudstream3.metaproviders.IMetadataProvider.Companion.newLiveSearchResponse
-import com.lagradost.cloudstream3.metaproviders.IMetadataProvider.Companion.newLiveStreamLoadResponse
-
+// Hata veren IMetadataProvider.Companion import'ları kaldırıldı.
 
 // ***************************************************************
 // 1. VERİ MODELLERİ
@@ -227,7 +225,7 @@ class Xmltv : MainAPI() {
                     nation = firstItem.nation
                 )
                 val dataUrl = groupedData.toJson()
-                newLiveSearchResponse(
+                newLiveSearchResponse( // Artık bu fonksiyonu sorunsuz kullanabiliriz.
                     name = title,
                     url = dataUrl,
                     type = TvType.Live
