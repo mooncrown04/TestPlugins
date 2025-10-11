@@ -147,7 +147,7 @@ class XmlPlaylistParser {
 
 
 // ***************************************************************
-// 3. ANA API SINIFI (MUTEX VE OOM KORUMASI İLE)
+// 3. ANA API SINIFI (ÇİFT AŞAMALI GÜVENLİK İLE)
 // ***************************************************************
 
 class Xmltv : MainAPI() {
@@ -176,38 +176,49 @@ class Xmltv : MainAPI() {
         val items: List<PlaylistItem>
     )
 
-    // ⭐ KRİTİK EPG YÜKLEME FONKSİYONU (Mutex ve OOM Korumalı)
+    // ⭐ KRİTİK EPG YÜKLEME FONKSİYONU (Çift Aşamalı Try-Catch ve Mutex)
     private suspend fun loadEpgData(): EpgData? {
         if (cachedEpgData != null) return cachedEpgData
         
         return epgMutex.withLock {
             if (cachedEpgData != null) return cachedEpgData
+            
+            var epgResponse: String? = null
+            var epgData: EpgData? = null
 
+            // ADIM 1: Ağ isteğini dene (Çekme sırasında bağlantı hatası veya okuma hatası)
             try {
-                // runCatching ile ağ hatalarını yakala
-                val result = runCatching {
-                    Log.d("Xmltv", "EPG verisi ilk kez yükleniyor...")
-                    val epgResponse = app.get(epgUrl).text 
-                    val epgData = EpgXmlParser().parseEPG(epgResponse)
-                    epgData
-                }.getOrElse { e ->
-                    Log.e("Xmltv", "EPG yüklenirken veya parse edilirken HATA oluştu: ${e.message}", e)
-                    null
+                Log.d("Xmltv", "EPG verisi çekiliyor...")
+                // app.get(epgUrl) askıya alma noktasıdır. Mutex içinde olması uygundur.
+                epgResponse = app.get(epgUrl).text 
+                if (epgResponse.isNullOrBlank()) {
+                    Log.e("Xmltv", "EPG çekildi ancak boş geldi.")
+                    return@withLock null
                 }
-
-                if (result != null) {
-                    cachedEpgData = result
-                }
-                return result
-
-            } catch (e: OutOfMemoryError) {
-                // ⭐ JVM düzeyinde Bellek Yetersizliği hatasını özel olarak yakala
-                Log.e("Xmltv", "!!! KRİTİK HATA: Bellek Yetersizliği (OOM) !!! Uygulama bu yüzden çöküyor olabilir. ${e.message}", e)
-                return null // OOM durumunda null döndürerek uygulamanın çökmesini engelle.
             } catch (e: Exception) {
-                 // Genel hata yakalama (ek güvenlik)
-                Log.e("Xmltv", "EPG yüklenirken beklenmedik genel hata: ${e.message}", e)
-                return null
+                Log.e("Xmltv", "HATA 1: EPG URL'den çekilemedi: ${e.message}", e)
+                return@withLock null // Hata olursa null döndür ve çık
+            }
+            
+            // ADIM 2: Parser işlemini dene (XML format veya parse etme hatası)
+            try {
+                Log.d("Xmltv", "EPG verisi ayrıştırılıyor (parse ediliyor)...")
+                // EpgResponse'un null olmadığı garanti edildi
+                epgData = EpgXmlParser().parseEPG(epgResponse!!) 
+                
+                // Başarılı olursa önbelleğe al
+                cachedEpgData = epgData
+                Log.d("Xmltv", "EPG başarılı: ${epgData.programs.size} kanal için program bulundu.")
+                return@withLock epgData
+                
+            } catch (e: OutOfMemoryError) {
+                // Özel OOM yakalama
+                Log.e("Xmltv", "HATA 2A: Parser sırasında Bellek Yetersizliği! ${e.message}", e)
+                return@withLock null 
+            } catch (e: Exception) {
+                // XML format hatası veya diğer parser hataları
+                Log.e("Xmltv", "HATA 2B: EPG Parser hatası! (XML formatı hatalı olabilir): ${e.message}", e)
+                return@withLock null // Parser hatası olursa null döndür ve çık
             }
         }
     }
