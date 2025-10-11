@@ -12,8 +12,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.ActorData
 import java.util.Calendar
 
-// KRİTİK DÜZELTME: Program/ProgramInfo referansı çözümlenemediği için
-// CloudStream'in beklediği ProgramInfo data sınıfını yerel olarak tanımlıyoruz.
+// ProgramInfo referansı çözümlenemediği için yerel olarak tanımlanmıştır.
 data class ProgramInfo(
     val name: String,
     val description: String? = null,
@@ -49,7 +48,7 @@ data class Playlist(val items: List<PlaylistItem> = emptyList())
 
 class EpgXmlParser {
     fun parseEPG(xml: String): EpgData {
-        // GERÇEK XMLTV PARSE KODUNUZ BURAYA GELECEKTİR!
+        // ⭐ BURAYI EPG XML PARSE KODUNUZLA DOLDURUN.
         Log.w("XmltvParser", "parseEPG metodu boş döndürüyor. XML parse kodunuzu ekleyin.")
         return EpgData()
     }
@@ -57,7 +56,8 @@ class EpgXmlParser {
 
 class XmlPlaylistParser {
     fun parseXML(xml: String): Playlist {
-        // GERÇEK M3U/XML PARSE KODUNUZ BURAYA GELECEKTİR!
+        // ⭐ BURAYI KANAL LİSTESİ (M3U/XML) PARSE KODUNUZLA DOLDURUN.
+        // Şu anki boş hali, boş bir Playlist döndürecektir.
         Log.w("XmltvParser", "parseXML metodu boş döndürüyor. Playlist parse kodunuzu ekleyin.")
         return Playlist()
     }
@@ -152,6 +152,8 @@ class Xmltv : MainAPI() {
 
             if (primaryItems.isNotEmpty()) {
                 homepageLists.add(HomePageList(primaryGroupName, primaryItems))
+            } else {
+                Log.w("Xmltv", "Birincil URL'den geçerli içerik alınamadı veya boş playlist döndü.")
             }
         } catch (e: Exception) {
             Log.e("Xmltv", "Birincil URL yüklenemedi: ${e.message}")
@@ -165,6 +167,8 @@ class Xmltv : MainAPI() {
 
             if (secondaryItems.isNotEmpty()) {
                 homepageLists.add(HomePageList(secondaryGroupName, secondaryItems))
+            } else {
+                Log.w("Xmltv", "İkincil URL'den geçerli içerik alınamadı veya boş playlist döndü.")
             }
         } catch (e: Exception) {
             Log.e("Xmltv", "İkincil URL yüklenemedi: ${e.message}")
@@ -178,14 +182,18 @@ class Xmltv : MainAPI() {
 
             if (tertiaryItems.isNotEmpty()) {
                 homepageLists.add(HomePageList(tertiaryGroupName, tertiaryItems))
+            } else {
+                Log.w("Xmltv", "Üçüncül URL'den geçerli içerik alınamadı veya boş playlist döndü.")
             }
         } catch (e: Exception) {
             Log.e("Xmltv", "Üçüncül URL yüklenemedi: ${e.message}")
         }
 
-
+        // ⭐ KRİTİK DÜZELTME: Tüm URL'ler başarısız olsa bile hata fırlatmak yerine
+        // boş bir Home Page döndürülür. Bu, uygulamanın çökmesini engeller.
         if (homepageLists.isEmpty()) {
-            throw Exception("Tüm URL'ler yüklenemedi veya boş playlist döndürdü.")
+            Log.e("Xmltv", "Hata: Tüm URL'lerden kanal listesi çekilemedi veya parser boş döndü.")
+            return newHomePageResponse(emptyList()) // Boş liste döndür, hata verme.
         }
         return newHomePageResponse(homepageLists)
     }
@@ -218,7 +226,6 @@ class Xmltv : MainAPI() {
     override suspend fun load(url: String): LoadResponse {
         val groupedData = parseJson<GroupedChannelData>(url)
         
-        // EPG verisini çekme ve dönüştürme mantığı yerinde kalıyor
         val epgData = loadEpgData()
         val channelTvgId = groupedData.items.firstOrNull()?.attributes?.get("tvg-id")
 
@@ -249,8 +256,8 @@ class Xmltv : MainAPI() {
             this.plot = groupedData.description
             this.type = TvType.Live
             
-            // ⭐ KRİTİK SON DÜZELTME: EPG verisi atamasını derlemeyi bozan tek satır olduğu için kaldırıyoruz.
-            // this.programs = programs // <-- BU SATIR HATAYA NEDEN OLUYOR, KALDIRILDI.
+            // EPG ataması, alan adı hatası yüzünden geçici olarak devre dışı.
+            // this.programs = programs 
        }
     }
 
