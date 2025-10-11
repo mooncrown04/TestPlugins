@@ -14,10 +14,129 @@ import java.util.TimeZone
 import java.text.SimpleDateFormat 
 import java.util.Locale 
 import com.lagradost.cloudstream3.ActorData // Zaten mevcuttu
-// Hata veren IMetadataProvider.Companion import'ları kaldırıldı.
+
 
 // ***************************************************************
-// 1. VERİ MODELLERİ
+// 3. ANA API SINIFI
+// ***************************************************************
+
+class Xmltv : MainAPI() {
+    override var mainUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b.xml"
+    private val secondaryXmlUrl = "https://dl.dropbox.com/scl/fi/vg40bpys8ym1jjrcuv1wp/XMLTvcs.xml?rlkey=7g2chxiol35z6kg6b36c4nyv8"
+    private val tertiaryXmlUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b-2.xml"
+    private val epgUrl = "https://raw.githubusercontent.com/braveheart1983/tvg-macther/refs/heads/main/tr-epg.xml"
+
+    @Volatile
+    private var cachedEpgData: EpgData? = null
+    private val epgMutex = Mutex()
+
+    override var name = "35 Xmltv"
+    override var lang = "tr"
+    override val hasMainPage = true
+    override val hasQuickSearch = true
+    override val supportedTypes = setOf(TvType.Live)
+
+    data class GroupedChannelData(
+        val title: String,
+        val posterUrl: String,
+        val description: String? = null,
+        val nation: String? = null,
+        val items: List<PlaylistItem>
+    )
+    
+    // ⭐ YENİ FONKSİYON: Öneri Listesi Oluşturma (this.recommendations için gerekli)
+    private suspend fun getRecommendations(currentTitle: String): List<SearchResponse> {
+        val allChannels = mutableListOf<PlaylistItem>()
+        
+        // Üç URL'deki kanalları çekmeye çalış
+        try {
+            allChannels.addAll(XmlPlaylistParser().parseXML(app.get(mainUrl).text).items)
+        } catch (e: Exception) { Log.e("Xmltv", "Öneriler için birincil URL yüklenemedi: ${e.message}") }
+        try {
+            allChannels.addAll(XmlPlaylistParser().parseXML(app.get(secondaryXmlUrl).text).items)
+        } catch (e: Exception) { Log.e("Xmltv", "Öneriler için ikincil URL yüklenemedi: ${e.message}") }
+        try {
+            allChannels.addAll(XmlPlaylistParser().parseXML(app.get(tertiaryXmlUrl).text).items)
+        } catch (e: Exception) { Log.e("Xmltv", "Öneriler için üçüncül URL yüklenemedi: ${e.message}") }
+
+        // Mevcut kanalı listeden çıkar
+        val filteredChannels = allChannels.filter { it.title != currentTitle }
+
+        // Kanalları grupla ve SearchResponse formatına çevir
+        val allGroupedItems = filteredChannels.groupBy { it.title }
+            .mapNotNull { (title, items) ->
+                if (items.isEmpty()) return@mapNotNull null
+                val firstItem = items.first()
+                val logoUrl = firstItem.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: ""
+                val groupedData = GroupedChannelData(
+                    title = title,
+                    posterUrl = logoUrl,
+                    items = items,
+                    description = firstItem.description,
+                    nation = firstItem.nation
+                )
+                val dataUrl = groupedData.toJson()
+                newLiveSearchResponse( // Artık bu fonksiyonu sorunsuz kullanabiliriz.
+                    name = title,
+                    url = dataUrl,
+                    type = TvType.Live
+                ) {
+                    this.posterUrl = logoUrl
+                    groupedData.nation?.let { this.lang = it }
+                }
+            }
+        
+        // Karıştır ve sadece ilk 6 tanesini öneri olarak al
+        return allGroupedItems.shuffled().take(6)
+    }
+
+    private suspend fun loadEpgData(): EpgData {
+        if (cachedEpgData != null) return cachedEpgData!!
+
+        return epgMutex.withLock {
+            if (cachedEpgData != null) return cachedEpgData!!
+
+            var epgResponse: String? = null
+
+            try {
+                epgResponse = app.get(epgUrl).text
+                if (epgResponse.isNullOrBlank()) {
+                    val error = "HATA: EPG URL'den çekildi ancak içerik boş."
+                    Log.e("Xmltv", error)
+                    return@withLock EpgData(errorMessage = error)
+                }
+            } catch (e: Exception) {
+                val error = "HATA: EPG URL'den çekilemedi. Bağlantı veya sunucu hatası: ${e.message}"
+                Log.e("Xmltv", error, e)
+                return@withLock EpgData(errorMessage = error)
+            }
+
+            try {
+                val epgData = EpgXmlParser().parseEPG(epgResponse!!)
+
+                if (epgData.errorMessage != null) {
+                    val error = "HATA: EPG Parser hatası. ${epgData.errorMessage}"
+                    Log.e("Xmltv", error)
+                    return@withLock EpgData(errorMessage = error)
+                }
+
+                cachedEpgData = epgData
+                return@withLock epgData
+
+            } catch (e: OutOfMemoryError) {
+                val error = "KRİTİK HATA: Bellek Yetersizliği! XML dosyası cihaz için çok büyük. Boyut: ${epgResponse?.length ?: 0} bayt."
+                Log.e("Xmltv", error, e)
+                return@withLock EpgData(errorMessage = error)
+            } catch (e: Exception) {
+                val error = "HATA: EPG Parser hatası! XML formatı bozuk veya eksik: ${e.message}"
+                Log.e("Xmltv", error, e)
+                return@withLock EpgData(errorMessage = error)
+            }
+        }
+    }
+
+// ***************************************************************
+// 2. VERİ MODELLERİ
 // ***************************************************************
 data class ProgramInfo(
     val name: String,
@@ -43,7 +162,7 @@ data class Playlist(val items: List<PlaylistItem> = emptyList())
 
 
 // ***************************************************************
-// 2. PARSER SINIFLARI
+// 3. PARSER SINIFLARI
 // ***************************************************************
 
 class EpgXmlParser {
@@ -165,124 +284,6 @@ class XmlPlaylistParser {
 }
 
 
-// ***************************************************************
-// 3. ANA API SINIFI
-// ***************************************************************
-
-class Xmltv : MainAPI() {
-    override var mainUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b.xml"
-    private val secondaryXmlUrl = "https://dl.dropbox.com/scl/fi/vg40bpys8ym1jjrcuv1wp/XMLTvcs.xml?rlkey=7g2chxiol35z6kg6b36c4nyv8"
-    private val tertiaryXmlUrl = "http://lg.mkvod.ovh/mmk/fav/94444407da9b-2.xml"
-    private val epgUrl = "https://raw.githubusercontent.com/braveheart1983/tvg-macther/refs/heads/main/tr-epg.xml"
-
-    @Volatile
-    private var cachedEpgData: EpgData? = null
-    private val epgMutex = Mutex()
-
-    override var name = "35 Xmltv"
-    override var lang = "tr"
-    override val hasMainPage = true
-    override val hasQuickSearch = true
-    override val supportedTypes = setOf(TvType.Live)
-
-    data class GroupedChannelData(
-        val title: String,
-        val posterUrl: String,
-        val description: String? = null,
-        val nation: String? = null,
-        val items: List<PlaylistItem>
-    )
-    
-    // ⭐ YENİ FONKSİYON: Öneri Listesi Oluşturma (this.recommendations için gerekli)
-    private suspend fun getRecommendations(currentTitle: String): List<SearchResponse> {
-        val allChannels = mutableListOf<PlaylistItem>()
-        
-        // Üç URL'deki kanalları çekmeye çalış
-        try {
-            allChannels.addAll(XmlPlaylistParser().parseXML(app.get(mainUrl).text).items)
-        } catch (e: Exception) { Log.e("Xmltv", "Öneriler için birincil URL yüklenemedi: ${e.message}") }
-        try {
-            allChannels.addAll(XmlPlaylistParser().parseXML(app.get(secondaryXmlUrl).text).items)
-        } catch (e: Exception) { Log.e("Xmltv", "Öneriler için ikincil URL yüklenemedi: ${e.message}") }
-        try {
-            allChannels.addAll(XmlPlaylistParser().parseXML(app.get(tertiaryXmlUrl).text).items)
-        } catch (e: Exception) { Log.e("Xmltv", "Öneriler için üçüncül URL yüklenemedi: ${e.message}") }
-
-        // Mevcut kanalı listeden çıkar
-        val filteredChannels = allChannels.filter { it.title != currentTitle }
-
-        // Kanalları grupla ve SearchResponse formatına çevir
-        val allGroupedItems = filteredChannels.groupBy { it.title }
-            .mapNotNull { (title, items) ->
-                if (items.isEmpty()) return@mapNotNull null
-                val firstItem = items.first()
-                val logoUrl = firstItem.attributes["tvg-logo"]?.takeIf { it.isNotBlank() } ?: ""
-                val groupedData = GroupedChannelData(
-                    title = title,
-                    posterUrl = logoUrl,
-                    items = items,
-                    description = firstItem.description,
-                    nation = firstItem.nation
-                )
-                val dataUrl = groupedData.toJson()
-                newLiveSearchResponse( // Artık bu fonksiyonu sorunsuz kullanabiliriz.
-                    name = title,
-                    url = dataUrl,
-                    type = TvType.Live
-                ) {
-                    this.posterUrl = logoUrl
-                    groupedData.nation?.let { this.lang = it }
-                }
-            }
-        
-        // Karıştır ve sadece ilk 6 tanesini öneri olarak al
-        return allGroupedItems.shuffled().take(6)
-    }
-
-    private suspend fun loadEpgData(): EpgData {
-        if (cachedEpgData != null) return cachedEpgData!!
-
-        return epgMutex.withLock {
-            if (cachedEpgData != null) return cachedEpgData!!
-
-            var epgResponse: String? = null
-
-            try {
-                epgResponse = app.get(epgUrl).text
-                if (epgResponse.isNullOrBlank()) {
-                    val error = "HATA: EPG URL'den çekildi ancak içerik boş."
-                    Log.e("Xmltv", error)
-                    return@withLock EpgData(errorMessage = error)
-                }
-            } catch (e: Exception) {
-                val error = "HATA: EPG URL'den çekilemedi. Bağlantı veya sunucu hatası: ${e.message}"
-                Log.e("Xmltv", error, e)
-                return@withLock EpgData(errorMessage = error)
-            }
-
-            try {
-                val epgData = EpgXmlParser().parseEPG(epgResponse!!)
-
-                if (epgData.errorMessage != null) {
-                    val error = "HATA: EPG Parser hatası. ${epgData.errorMessage}"
-                    Log.e("Xmltv", error)
-                    return@withLock EpgData(errorMessage = error)
-                }
-
-                cachedEpgData = epgData
-                return@withLock epgData
-
-            } catch (e: OutOfMemoryError) {
-                val error = "KRİTİK HATA: Bellek Yetersizliği! XML dosyası cihaz için çok büyük. Boyut: ${epgResponse?.length ?: 0} bayt."
-                Log.e("Xmltv", error, e)
-                return@withLock EpgData(errorMessage = error)
-            } catch (e: Exception) {
-                val error = "HATA: EPG Parser hatası! XML formatı bozuk veya eksik: ${e.message}"
-                Log.e("Xmltv", error, e)
-                return@withLock EpgData(errorMessage = error)
-            }
-        }
-    }
 
     private fun createGroupedChannelItems(playlist: Playlist, query: String? = null): List<SearchResponse> {
         val groupedByTitle = playlist.items.groupBy { it.title }
