@@ -1,6 +1,5 @@
-name: Build  cs
+name: Build cs
 
-# https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#concurrency
 concurrency:
   group: "build"
   cancel-in-progress: true
@@ -8,7 +7,6 @@ concurrency:
 on:
   push:
     branches:
-      # choose your default branch
       - master
       - main
     paths-ignore:
@@ -17,45 +15,50 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15 # Buraya eklendi: İş akışının tamamlanması için 15 dakika süre tanır
-    steps:
-      - name: Checkout
-        uses: actions/checkout@master
-        with:
-          path: "src"
+    timeout-minutes: 15
 
-      - name: Checkout builds
-        uses: actions/checkout@master
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
         with:
-          ref: "builds"
-          path: "builds"
+          path: src
+
+      - name: Checkout builds branch
+        uses: actions/checkout@v4
+        with:
+          ref: builds
+          path: builds
 
       - name: Clean old builds
-        run: rm $GITHUB_WORKSPACE/builds/*.cs3 || true # Hata vermemesi için || true eklendi
+        run: rm -f $GITHUB_WORKSPACE/builds/*.cs3
 
       - name: Setup JDK 17
-        uses: actions/setup-java@v4 # v1'den v4'e güncellendi
+        uses: actions/setup-java@v4
         with:
+          distribution: temurin
           java-version: 17
-          distribution: 'temurin' # Genellikle önerilen dağıtım
-          cache: 'gradle' # Gradle önbelleğini etkinleştirir
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
 
+      # 🔥 KRİTİK: Gradle cache temizle
+      - name: Clear Gradle Cache
+        run: rm -rf ~/.gradle/caches
+
       - name: Build Plugins
         run: |
-          cd $GITHUB_WORKSPACE/src
+          cd src
           chmod +x gradlew
-          ./gradlew make makePluginsJson
-          cp **/build/*.cs3 $GITHUB_WORKSPACE/builds
+          ./gradlew clean
+          ./gradlew make makePluginsJson --stacktrace
+          find . -name "*.cs3" -exec cp {} $GITHUB_WORKSPACE/builds \;
           cp build/plugins.json $GITHUB_WORKSPACE/builds
 
       - name: Push builds
         run: |
-          cd $GITHUB_WORKSPACE/builds
-          git config --local user.email "actions@github.com"
-          git config --local user.name "GitHub Actions"
+          cd builds
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
           git add .
-          git commit --amend -m "Build $GITHUB_SHA" || exit 0 # do not error if nothing to commit
-          git push --force
+          git commit -m "Build $GITHUB_SHA" || echo "No changes"
+          git push
