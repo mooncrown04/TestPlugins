@@ -9,7 +9,7 @@ import java.io.InputStream
 
 class NeonSpor : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name                 = "Anime NeonSpor"
+    override var name                 = "AnimeNeonSpor"
     override val hasMainPage          = true
     override var lang                 = "tr"
     override val hasQuickSearch       = true
