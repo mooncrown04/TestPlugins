@@ -70,7 +70,7 @@ class NeonSpor : MainAPI() {
 
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
 
- override suspend fun load(url: String): LoadResponse {
+override suspend fun load(url: String): LoadResponse {
     val loadData = fetchDataFromUrlOrJson(url)
     val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
 
@@ -78,25 +78,30 @@ class NeonSpor : MainAPI() {
         it.attributes["group-title"].toString() == loadData.group
     }
 
-    var selectedIndex = 0
+    // Seçili kanal indexini bul
+    val selectedIndex = sameGroupChannels.indexOfFirst {
+        it.url.toString() == loadData.url
+    }.coerceAtLeast(0)
 
-    val episodes = sameGroupChannels.mapIndexed { index, kanal ->
-        val streamUrl = kanal.url.toString()
-        val channelName = kanal.title.toString()
-        val posterUrl = kanal.attributes["tvg-logo"].toString()
-        val nation = kanal.attributes["tvg-country"].toString()
+    // Listeyi rotate et (seçili kanal başa gelsin)
+    val rotatedList =
+        sameGroupChannels.drop(selectedIndex) +
+        sameGroupChannels.take(selectedIndex)
 
-        if (streamUrl == loadData.url) {
-            selectedIndex = index
-        }
-
+    val episodes = rotatedList.mapIndexed { index, kanal ->
         newEpisode(
-            LoadData(streamUrl, channelName, posterUrl, loadData.group, nation).toJson()
+            LoadData(
+                kanal.url.toString(),
+                kanal.title.toString(),
+                kanal.attributes["tvg-logo"].toString(),
+                loadData.group,
+                kanal.attributes["tvg-country"].toString()
+            ).toJson()
         ) {
-            this.name = channelName
+            this.name = kanal.title.toString()
             this.season = 1
             this.episode = index + 1
-            this.posterUrl = posterUrl
+            this.posterUrl = kanal.attributes["tvg-logo"].toString()
         }
     }
 
@@ -108,9 +113,9 @@ class NeonSpor : MainAPI() {
     ) {
         this.posterUrl = loadData.poster
         this.plot = "» ${loadData.group} | ${loadData.nation} «"
-        this.startEpisode = episodes.getOrNull(selectedIndex)
     }
 }
+
 
     data class LoadData(val url: String, val title: String, val poster: String, val group: String, val nation: String)
 
