@@ -204,7 +204,8 @@ class Film(private val context: android.content.Context, private val sharedPref:
                     val turkishName = languageMap[langCode] ?: originalLanguage
                     append("🌐 <b>Orijinal Dil:</b> $turkishName<br>")
                 }
-                if (Score != null) append("⭐ <b>TMDB Puanı:</b> $rating / 10<br>")
+                val rating = tmdbData?.optDouble("vote_average", 0.0) ?: 0.0
+                if (rating > 0) append("⭐ <b>TMDB Puanı:</b> $rating / 10<br>")
                 if (director.isNotEmpty()) append("🎬 <b>Yönetmen:</b> $director<br>")
                 if (genreList.isNotEmpty()) append("🎭 <b>Film Türü:</b> ${genreList.filter { it.isNotEmpty() }.joinToString(", ")}<br>")
                 if (castList.isNotEmpty()) append("👥 <b>Oyuncular:</b> ${castList.filter { it.isNotEmpty() }.joinToString(", ")}<br>")
@@ -270,8 +271,9 @@ class Film(private val context: android.content.Context, private val sharedPref:
             this.plot = plot
             this.tags = listOf(loadData.group, loadData.nation)
             this.recommendations = recommendations
-            val calculatedScore = (tmdbData?.optDouble("vote_average", 0.0)?.toFloat()?.times(2)?.toInt() ?: (if (loadData.isWatched) 5 else 0))
-            this.score = Score(calculatedScore)
+            val calculatedScore = (tmdbData?.optDouble("vote_average", 0.0)?.toFloat()?.times(2)?.toInt()
+            ?: (if (loadData.isWatched) 5 else 0))
+            this.score = Score.fromInt(calculatedScore) // factory method kullan
             this.duration = if (watchProgress > 0) (watchProgress / 1000).toInt() else tmdbData?.optInt("runtime", 0)
             this.comingSoon = false
         }
