@@ -122,7 +122,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
             }
         }
     }
-
+@OptIn(com.lagradost.cloudstream3.utils.AppUtils.ExperimentalCloudstreamAPI::class)
     override suspend fun load(url: String): LoadResponse {
         val watchKey = "watch_${url.hashCode()}"
         val progressKey = "progress_${url.hashCode()}"
@@ -265,15 +265,21 @@ class Film(private val context: android.content.Context, private val sharedPref:
                 })
             }
         }
-
+  @OptIn(com.lagradost.cloudstream3.utils.AppUtils.ExperimentalCloudstreamAPI::class)
         return newMovieLoadResponse(loadData.title, url, TvType.Movie, loadData.url) {
             this.posterUrl = loadData.poster
             this.plot = plot
             this.tags = listOf(loadData.group, loadData.nation)
             this.recommendations = recommendations
-            val calculatedScore = (tmdbData?.optDouble("vote_average", 0.0)?.toFloat()?.times(2)?.toInt()
-            ?: (if (loadData.isWatched) 5 else 0))
-            this.score = Score.fromInt(calculatedScore) // factory method kullan
+            val voteAverage = tmdbData?.optDouble("vote_average", 0.0) ?: 0.0
+            val calculatedScore = (voteAverage.toFloat() * 2).toInt()
+            try {
+                // En güvenli yöntem:
+                this.score = calculatedScore 
+            } catch (e: Exception) {
+                // Eğer hata verirse alternatif:
+                // this.score = calculatedScore.toScore() 
+            }
             this.duration = if (watchProgress > 0) (watchProgress / 1000).toInt() else tmdbData?.optInt("runtime", 0)
             this.comingSoon = false
         }
