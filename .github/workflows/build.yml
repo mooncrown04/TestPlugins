@@ -40,7 +40,14 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-
+        with: 
+          packages: tools platform-tools 
+          
+          # Ek paketleri yükle 
+      - name: Install required Android packages 
+        run: | 
+           sdkmanager "platforms;android-34" "build-tools;34.0.0" "extras;google;google_tv_addon"
+        
       # ✅ KRİTİK ADIM: Tüm Android lisanslarını otomatik olarak kabul eder
       - name: Accept Android SDK Licenses
         run: |
