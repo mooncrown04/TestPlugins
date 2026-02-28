@@ -9,7 +9,7 @@ import java.io.InputStream
 
 class NeonSpor : MainAPI() {
     override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
-    override var name                 = "AnimeNeonSpor"
+    override var name                 = "Anime NeonSpor"
     override val hasMainPage          = true
     override var lang                 = "tr"
     override val hasQuickSearch       = true
@@ -70,52 +70,70 @@ class NeonSpor : MainAPI() {
 
     override suspend fun quickSearch(query: String): List<SearchResponse> = search(query)
 
-override suspend fun load(url: String): LoadResponse {
-    val loadData = fetchDataFromUrlOrJson(url)
-    val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
+    override suspend fun load(url: String): LoadResponse {
+        val loadData = fetchDataFromUrlOrJson(url)
+        val nation:String = if (loadData.group == "NSFW") {
+            "⚠️🔞🔞🔞 » ${loadData.group} | ${loadData.nation} « 🔞🔞🔞⚠️"
+        } else {
+            "» ${loadData.group} | ${loadData.nation} «"
+        }
 
-    val sameGroupChannels = kanallar.items.filter {
-        it.attributes["group-title"].toString() == loadData.group
-    }
+        val kanallar        = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
+        val recommendations = mutableListOf<LiveSearchResponse>()
 
-    // Seçili kanal indexini bul
-    val selectedIndex = sameGroupChannels.indexOfFirst {
-        it.url.toString() == loadData.url
-    }.coerceAtLeast(0)
+        for (kanal in kanallar.items) {
+            if (kanal.attributes["group-title"].toString() == loadData.group) {
+                val rcStreamUrl   = kanal.url.toString()
+                val rcChannelName = kanal.title.toString()
+                if (rcChannelName == loadData.title) continue
 
-    // Listeyi rotate et (seçili kanal başa gelsin)
-    val rotatedList =
-        sameGroupChannels.drop(selectedIndex) +
-        sameGroupChannels.take(selectedIndex)
+                val rcPosterUrl   = kanal.attributes["tvg-logo"].toString()
+                val rcChGroup     = kanal.attributes["group-title"].toString()
+                val rcNation      = kanal.attributes["tvg-country"].toString()
 
-    val episodes = rotatedList.mapIndexed { index, kanal ->
-        newEpisode(
-            LoadData(
-                kanal.url.toString(),
-                kanal.title.toString(),
-                kanal.attributes["tvg-logo"].toString(),
-                loadData.group,
-                kanal.attributes["tvg-country"].toString()
-            ).toJson()
-        ) {
-            this.name = kanal.title.toString()
-            this.season = 1
-            this.episode = index + 1
-            this.posterUrl = kanal.attributes["tvg-logo"].toString()
+                recommendations.add(newLiveSearchResponse(
+                    rcChannelName,
+                    LoadData(rcStreamUrl, rcChannelName, rcPosterUrl, rcChGroup, rcNation).toJson(),
+                    type = TvType.Live
+                ) {
+                    this.posterUrl = rcPosterUrl
+                    this.lang = rcNation
+                })
+
+            }
+        }
+
+        return newLiveStreamLoadResponse(loadData.title, loadData.url, url) {
+            this.posterUrl = loadData.poster
+            this.plot = nation
+            this.tags = listOf(loadData.group, loadData.nation)
+            this.recommendations = recommendations
         }
     }
 
-    return newTvSeriesLoadResponse(
-        name = loadData.group,
-        url = url,
-        type = TvType.Live,
-        episodes = episodes
-    ) {
-        this.posterUrl = loadData.poster
-        this.plot = "» ${loadData.group} | ${loadData.nation} «"
-    }
-}
+    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
+        val loadData = fetchDataFromUrlOrJson(data)
+        Log.d("IPTV", "loadData » $loadData")
 
+        val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
+        val kanal    = kanallar.items.first { it.url == loadData.url }
+        Log.d("IPTV", "kanal » $kanal")
+
+        callback.invoke(
+            newExtractorLink(
+                source  = this.name,
+                name    = this.name,
+                url     = loadData.url,
+                ExtractorLinkType.M3U8
+            ) {
+                this.headers = kanal.headers
+                this.referer = kanal.headers["referrer"] ?: ""
+                this.quality = Qualities.Unknown.value
+            }
+        )
+
+        return true
+    }
 
     data class LoadData(val url: String, val title: String, val poster: String, val group: String, val nation: String)
 
