@@ -204,7 +204,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
                     val turkishName = languageMap[langCode] ?: originalLanguage
                     append("🌐 <b>Orijinal Dil:</b> $turkishName<br>")
                 }
-                if (rating != null) append("⭐ <b>TMDB Puanı:</b> $rating / 10<br>")
+                if (Score != null) append("⭐ <b>TMDB Puanı:</b> $rating / 10<br>")
                 if (director.isNotEmpty()) append("🎬 <b>Yönetmen:</b> $director<br>")
                 if (genreList.isNotEmpty()) append("🎭 <b>Film Türü:</b> ${genreList.filter { it.isNotEmpty() }.joinToString(", ")}<br>")
                 if (castList.isNotEmpty()) append("👥 <b>Oyuncular:</b> ${castList.filter { it.isNotEmpty() }.joinToString(", ")}<br>")
