@@ -44,6 +44,12 @@ jobs:
       # 🔥 KRİTİK: Gradle cache temizle
       - name: Clear Gradle Cache
         run: rm -rf ~/.gradle/caches
+      
+      - name: Build Project
+        run: |
+          cd src
+          chmod +x gradlew
+          ./gradlew clean build --stacktrace
 
       - name: Build Plugins
         run: |
