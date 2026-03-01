@@ -307,7 +307,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
                     referer = kanal.headers["referrer"] ?: "",
                     //quality = Qualities.Unknown.value,
                  quality = 0,
-                    type = videoType
+                 //   type = videoType
                 )
             )
 
