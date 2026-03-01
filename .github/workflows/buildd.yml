@@ -1,0 +1,94 @@
+name: Build cs
+
+concurrency:
+  group: "build"
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - master
+      - main
+    paths-ignore:
+      - '*.md'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          path: src
+
+      - name: Checkout builds branch
+        uses: actions/checkout@v4
+        with:
+          ref: builds
+          path: builds
+
+      - name: Clean old builds
+        run: rm -f $GITHUB_WORKSPACE/builds/*.cs3
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Pre-approve Android Licenses
+        run: |
+          # SDK'nın kurulacağı varsayılan dizini oluştur
+          mkdir -p /usr/local/lib/android/sdk/licenses
+          
+          # Tüm kritik lisans hashlerini buraya ekliyoruz
+          # Özellikle logda takılan 'android-googletv-license' burada yer alıyor
+          echo -e "8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb74373072c23943e3d0\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n24333f8a63b6ad3651ccc727f8520331f38e0e06" > /usr/local/lib/android/sdk/licenses/android-sdk-license
+          echo -e "33b6a2b64d8f170308c6887554f67d3e60f0891d" > /usr/local/lib/android/sdk/licenses/android-googletv-license
+          echo -e "84831b9409646a918e30573bab4c9c91346d8abd\n5046632205423854d63234d67e7c65369656979a" > /usr/local/lib/android/sdk/licenses/android-sdk-preview-license
+      
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-34 build-tools;34.0.0"
+          accept-android-sdk-licenses: true
+
+      - name: Finalize Android Licenses
+        run: |
+          # 1. Lisans dizinini oluştur
+          mkdir -p $ANDROID_HOME/licenses
+          
+          # 2. Bilinen tüm lisans hashlerini dosyaya yaz (Garanti yöntem)
+          echo -e "8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb74373072c23943e3d0\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n24333f8a63b6ad3651ccc727f8520331f38e0e06" > $ANDROID_HOME/licenses/android-sdk-license
+          echo -e "33b6a2b64d8f170308c6887554f67d3e60f0891d" > $ANDROID_HOME/licenses/android-googletv-license
+          
+          # 3. Dinamik yol tespiti yaparak sdkmanager'ı çalıştır
+          SDK_MANAGER=$(find $ANDROID_HOME -name sdkmanager | head -n 1)
+          yes | $SDK_MANAGER --licenses || true
+
+      - name: Build Project
+        run: |
+          cd src
+          chmod +x gradlew
+          # Derleme sırasında hata detaylarını görmek için --stacktrace ekledik
+          ./gradlew clean build --stacktrace --no-daemon
+
+      - name: Build Plugins
+        run: |
+          cd src
+          ./gradlew make makePluginsJson --stacktrace --no-daemon
+          # Oluşan eklentileri builds klasörüne kopyalar
+          find . -name "*.cs3" -exec cp {} $GITHUB_WORKSPACE/builds \;
+          cp -f build/plugins.json $GITHUB_WORKSPACE/builds || echo "plugins.json bulunamadı"
+
+      - name: Push builds
+        run: |
+          cd builds
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git add .
+          # Değişiklik yoksa hata vermez
+          git commit -m "Build $GITHUB_SHA" || echo "No changes to commit"
+          git push origin builds
