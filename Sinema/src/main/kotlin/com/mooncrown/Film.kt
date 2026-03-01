@@ -268,15 +268,9 @@ class Film(private val context: android.content.Context, private val sharedPref:
             this.posterUrl = loadData.poster
             this.plot = plot
             this.tags = listOf(loadData.group, loadData.nation)
-            this.recommendations = recommendations          
-            val rawScore = tmdbData?.optDouble("vote_average", -1.0) ?: -1.0
-    this.score = if (rawScore >= 0) {
-        (rawScore.toFloat() * 2).toInt().takeIf { it > 0 }
-    } else if (isWatched) {
-        5
-    } else {
-        null  // Varsayılan olarak null
-    }
+            this.recommendations = recommendations     Score.kt     
+  val ratingText = tmdbData?.optString("vote_average", "-1")
+this.score = Score.from10(ratingText)
             this.duration = if (watchProgress > 0) (watchProgress / 1000).toInt() else tmdbData?.optInt("runtime", 0)
             this.comingSoon = false
         }
