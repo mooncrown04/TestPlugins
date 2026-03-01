@@ -13,8 +13,8 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.URL
 import java.net.URLEncoder
-import com.lagradost.cloudstream3.Score
-
+//import com.lagradost.cloudstream3.Score
+import com.example.Score  // Uygun import'u ekleyin
 class Film(private val context: android.content.Context, private val sharedPref: SharedPreferences?) : MainAPI() {
 
  //   override var mainUrl              = "https://raw.githubusercontent.com/emrcxcx/test/refs/heads/main/filmfun.m3u"
