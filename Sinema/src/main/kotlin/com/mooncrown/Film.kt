@@ -264,22 +264,17 @@ class Film(private val context: android.content.Context, private val sharedPref:
                 })
             }
         }
-
+val rawScore = tmdbData?.optDouble("vote_average", -1.0) ?: -1.0
         return newMovieLoadResponse(loadData.title, url, TvType.Movie, loadData.url) {
             this.posterUrl = loadData.poster
             this.plot = plot
             this.tags = listOf(loadData.group, loadData.nation)
             this.recommendations = recommendations
-val rawScore = tmdbData?.optDouble("vote_average", -1.0) ?: -1.0
-
 this.score = when {
-    rawScore >= 0 -> {
-        // TMDB puanı zaten 0-10 arası, direkt kullan
-        Score.from10(rawScore.coerceIn(0.0, 10.0))
-    }
-    isWatched -> Score.from10(5.0)  // İzlenmişse varsayılan 5/10
-    else -> null
-}
+                rawScore >= 0 -> Score.from10(rawScore.coerceIn(0.0, 10.0))
+                isWatched -> Score.from10(5.0)
+                else -> null
+            }
             this.duration = if (watchProgress > 0) (watchProgress / 1000).toInt() else tmdbData?.optInt("runtime", 0)
             this.comingSoon = false
         }
@@ -375,7 +370,7 @@ data class PlaylistItem(
     val attributes: Map<String, String> = emptyMap(),
     val headers: Map<String, String>    = emptyMap(),
     val url: String?                    = null,
-    val userAgent: String?              = null
+    val userAgent: String?              = null,
     val score: Double?              = null
 )
 
