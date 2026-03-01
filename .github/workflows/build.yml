@@ -38,6 +38,17 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Pre-approve Android Licenses
+        run: |
+          # SDK'nın kurulacağı varsayılan dizini oluştur
+          mkdir -p /usr/local/lib/android/sdk/licenses
+          
+          # Tüm kritik lisans hashlerini buraya ekliyoruz
+          # Özellikle logda takılan 'android-googletv-license' burada yer alıyor
+          echo -e "8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb74373072c23943e3d0\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n24333f8a63b6ad3651ccc727f8520331f38e0e06" > /usr/local/lib/android/sdk/licenses/android-sdk-license
+          echo -e "33b6a2b64d8f170308c6887554f67d3e60f0891d" > /usr/local/lib/android/sdk/licenses/android-googletv-license
+          echo -e "84831b9409646a918e30573bab4c9c91346d8abd\n5046632205423854d63234d67e7c65369656979a" > /usr/local/lib/android/sdk/licenses/android-sdk-preview-license
+      
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
