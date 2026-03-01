@@ -290,12 +290,11 @@ class Film(private val context: android.content.Context, private val sharedPref:
             sharedPref?.edit()?.putBoolean(watchKey, true)?.apply()
 
             val videoUrl = loadData.url
-            val videoType = when {
-
-                videoUrl.endsWith(".mkv", ignoreCase = true) -> ExtractorLinkType.VIDEO
-                else -> ExtractorLinkType.M3U8
-            
-                }
+            val videoType = if (videoUrl.endsWith(".mkv", ignoreCase = true)) {
+            0  // VIDEO tipi için int değer (veya enum ordinal)
+        } else {
+            1  // M3U8 tipi için int değer
+        }
 
             callback.invoke(
                 ExtractorLink(
