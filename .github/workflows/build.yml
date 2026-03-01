@@ -41,29 +41,21 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          # Google TV eklentisini çıkardık, sadece gerekli paketleri bıraktık
           packages: "platform-tools platforms;android-34 build-tools;34.0.0"
-# Otomatik lisans onayını burada da aktif ediyoruz
           accept-android-sdk-licenses: true
 
-      - name: Write License Files
+      - name: Finalize Android Licenses
         run: |
+          # 1. Lisans dizinini oluştur
           mkdir -p $ANDROID_HOME/licenses
-          echo -e "8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb74373072c23943e3d0\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license
-          echo -e "84831b9409646a918e30573bab4c9c91346d8abd\n5046632205423854d63234d67e7c65369656979a" > $ANDROID_HOME/licenses/android-sdk-preview-license
+          
+          # 2. Bilinen tüm lisans hashlerini dosyaya yaz (Garanti yöntem)
+          echo -e "8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb74373072c23943e3d0\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n24333f8a63b6ad3651ccc727f8520331f38e0e06" > $ANDROID_HOME/licenses/android-sdk-license
           echo -e "33b6a2b64d8f170308c6887554f67d3e60f0891d" > $ANDROID_HOME/licenses/android-googletv-license
-
-
-      - name: Accept Android SDK Licenses (Force)
-        run: |
-          # Mevcut tüm lisansları toplu olarak ve boru hattı (pipe) ile onayla
-          mkdir -p $ANDROID_HOME/licenses
-          echo -e "24333f8a63b6ad3651ccc727f8520331f38e0e06\n5046633a410d70a12f840237e1906511471f6860\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb74380253863e48e92f\n24333f8a63b6ad3651ccc727f8520331f38e0e06\n3510273f360244458d34354226f9801454157500" > $ANDROID_HOME/licenses/android-sdk-license
-     
-      - name: Accept Android SDK Licenses
-        run: |
-          # SDK kurulumu sonrası tüm lisansları otomatik onaylar
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          
+          # 3. Dinamik yol tespiti yaparak sdkmanager'ı çalıştır
+          SDK_MANAGER=$(find $ANDROID_HOME -name sdkmanager | head -n 1)
+          yes | $SDK_MANAGER --licenses || true
 
       - name: Build Project
         run: |
