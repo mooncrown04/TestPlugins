@@ -13,6 +13,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.URL
 import java.net.URLEncoder
+import com.lagradost.cloudstream3.Score
 
 class Film(private val context: android.content.Context, private val sharedPref: SharedPreferences?) : MainAPI() {
 
@@ -269,8 +270,15 @@ class Film(private val context: android.content.Context, private val sharedPref:
             this.plot = plot
             this.tags = listOf(loadData.group, loadData.nation)
             this.recommendations = recommendations     Score.kt     
-  val ratingText = tmdbData?.optString("vote_average", "-1")
-this.score = Score.from10(ratingText)
+ val rawScore = tmdbData?.optDouble("vote_average", -1.0) ?: -1.0
+this.score = when {
+    rawScore >= 0 -> {
+        val scoreValue = rawScore.toInt().coerceIn(0, 10)
+        Score(scoreValue, 10) // Direkt Score oluştur
+    }
+    isWatched -> Score(5, 10)
+    else -> null
+}
             this.duration = if (watchProgress > 0) (watchProgress / 1000).toInt() else tmdbData?.optInt("runtime", 0)
             this.comingSoon = false
         }
