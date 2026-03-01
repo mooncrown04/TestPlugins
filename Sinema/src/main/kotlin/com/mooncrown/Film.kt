@@ -122,7 +122,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
             }
         }
     }
-@OptIn(com.lagradost.cloudstream3.utils.AppUtils.ExperimentalCloudstreamAPI::class)
+@ExperimentalCloudstreamAPI
     override suspend fun load(url: String): LoadResponse {
         val watchKey = "watch_${url.hashCode()}"
         val progressKey = "progress_${url.hashCode()}"
@@ -265,7 +265,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
                 })
             }
         }
-  @OptIn(com.lagradost.cloudstream3.utils.AppUtils.ExperimentalCloudstreamAPI::class)
+ @ExperimentalCloudstreamAPI
         return newMovieLoadResponse(loadData.title, url, TvType.Movie, loadData.url) {
             this.posterUrl = loadData.poster
             this.plot = plot
@@ -275,7 +275,8 @@ class Film(private val context: android.content.Context, private val sharedPref:
             val calculatedScore = (voteAverage.toFloat() * 2).toInt()
             try {
                 // En güvenli yöntem:
-                this.score = calculatedScore 
+            this.score = Score(calculatedScore)
+
             } catch (e: Exception) {
                 // Eğer hata verirse alternatif:
                 // this.score = calculatedScore.toScore() 
