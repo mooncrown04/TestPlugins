@@ -143,13 +143,12 @@ class Film(private val context: android.content.Context, private val sharedPref:
                 val overview = tmdbData.optString("overview", "")
                 val releaseDate = tmdbData.optString("release_date", "").split("-").firstOrNull() ?: ""
                 val ratingValue = tmdbData.optDouble("vote_average", -1.0)
-             //   val rating = if (ratingValue >= 0) String.format("%.1f", ratingValue) else null
+                val rating = if (ratingValue >= 0) String.format("%.1f", ratingValue) else null
                 val tagline = tmdbData.optString("tagline", "")
                 val budget = tmdbData.optLong("budget", 0L)
                 val revenue = tmdbData.optLong("revenue", 0L)
                 val originalName = tmdbData.optString("original_name", "")
-                val originalLanguage = tmdbData.optString("original_language", "")
-                
+                val originalLanguage = tmdbData.optString("original_language", "")                
                 val genresArray = tmdbData.optJSONArray("genres")
                 val genreList = mutableListOf<String>()
                 if (genresArray != null) {
@@ -204,7 +203,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
                     val turkishName = languageMap[langCode] ?: originalLanguage
                     append("🌐 <b>Orijinal Dil:</b> $turkishName<br>")
                 }
-              //  if (rating != null) append("⭐ <b>TMDB Puanı:</b> $rating / 10<br>")
+                if (rating != null) append("⭐ <b>TMDB Puanı:</b> $rating / 10<br>")
                 if (director.isNotEmpty()) append("🎬 <b>Yönetmen:</b> $director<br>")
                 if (genreList.isNotEmpty()) append("🎭 <b>Film Türü:</b> ${genreList.filter { it.isNotEmpty() }.joinToString(", ")}<br>")
                 if (castList.isNotEmpty()) append("👥 <b>Oyuncular:</b> ${castList.filter { it.isNotEmpty() }.joinToString(", ")}<br>")
@@ -270,7 +269,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
             this.plot = plot
             this.tags = listOf(loadData.group, loadData.nation)
             this.recommendations = recommendations
-         //   this.score = (tmdbData?.optDouble("vote_average", 0.0)?.toFloat()?.times(2)?.toInt() ?: (if (isWatched) 5 else 0))
+            this.score = (tmdbData?.optDouble("vote_average", 0.0)?.toFloat()?.times(2)?.toInt() ?: (if (isWatched) 5 else 0))
             this.duration = if (watchProgress > 0) (watchProgress / 1000).toInt() else tmdbData?.optInt("runtime", 0)
             this.comingSoon = false
         }
