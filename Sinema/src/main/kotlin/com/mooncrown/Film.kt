@@ -296,7 +296,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
                 else -> ExtractorLinkType.M3U8
             
                 }
-if (BuildConfig.PRE_RELEASE) { somePreReleaseApiCall() }
+
             callback.invoke(
                 ExtractorLink(
                     source = this.name,
