@@ -269,7 +269,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
             this.posterUrl = loadData.poster
             this.plot = plot
             this.tags = listOf(loadData.group, loadData.nation)
-            this.recommendations = recommendations     Score.kt     
+            this.recommendations = recommendations
 val rawScore = tmdbData?.optDouble("vote_average", -1.0) ?: -1.0
 
 this.score = when {
