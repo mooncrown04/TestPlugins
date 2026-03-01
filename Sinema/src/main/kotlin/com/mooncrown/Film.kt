@@ -333,10 +333,10 @@ override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallbac
     val title: String,
     val poster: String,
     val group: String,
-    val nation: String,
-    val score: Double? = null, 
+    val nation: String,   
     val isWatched: Boolean = false,
-    val watchProgress: Long = 0L
+    val watchProgress: Long = 0L,
+      val score: Double? = null
 )
 
     private suspend fun fetchDataFromUrlOrJson(data: String): LoadData {
