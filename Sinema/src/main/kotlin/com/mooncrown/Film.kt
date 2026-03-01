@@ -306,7 +306,8 @@ class Film(private val context: android.content.Context, private val sharedPref:
                         "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
                     ),
                     referer = kanal.headers["referrer"] ?: "",
-                    quality = Qualities.Unknown.value,
+                    //quality = Qualities.Unknown.value,
+                 quality = 0,
                     type = videoType
                 )
             )
