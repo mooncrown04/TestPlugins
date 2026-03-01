@@ -16,9 +16,9 @@ import java.net.URLEncoder
 
 class Film(private val context: android.content.Context, private val sharedPref: SharedPreferences?) : MainAPI() {
 
-//  override var mainUrl              = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
- override var mainUrl = "https://dl.dropbox.com/scl/fi/piul7441pe1l41qcgq62y/powerdizi.m3u?rlkey=zwfgmuql18m09a9wqxe3irbbr"
- override var name                 = "35 Mooncrown Sinema 🎥"
+ //   override var mainUrl              = "https://raw.githubusercontent.com/emrcxcx/test/refs/heads/main/filmfun.m3u"
+  override var mainUrl              = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
+    override var name                 = "35 Sinema 🎥"
     override val hasMainPage          = true
     override var lang                 = "tr"
     override val hasQuickSearch       = true
@@ -122,7 +122,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
             }
         }
     }
-@ExperimentalCloudstreamAPI
+
     override suspend fun load(url: String): LoadResponse {
         val watchKey = "watch_${url.hashCode()}"
         val progressKey = "progress_${url.hashCode()}"
@@ -143,7 +143,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
                 val overview = tmdbData.optString("overview", "")
                 val releaseDate = tmdbData.optString("release_date", "").split("-").firstOrNull() ?: ""
                 val ratingValue = tmdbData.optDouble("vote_average", -1.0)
-                val score = if (ratingValue >= 0) String.format("%.1f", ratingValue) else null
+                val rating = if (ratingValue >= 0) String.format("%.1f", ratingValue) else null
                 val tagline = tmdbData.optString("tagline", "")
                 val budget = tmdbData.optLong("budget", 0L)
                 val revenue = tmdbData.optLong("revenue", 0L)
@@ -204,8 +204,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
                     val turkishName = languageMap[langCode] ?: originalLanguage
                     append("🌐 <b>Orijinal Dil:</b> $turkishName<br>")
                 }
-                val rating = tmdbData?.optDouble("vote_average", 0.0) ?: 0.0
-                if (rating > 0) append("⭐ <b>TMDB Puanı:</b> $rating / 10<br>")
+                if (rating != null) append("⭐ <b>TMDB Puanı:</b> $rating / 10<br>")
                 if (director.isNotEmpty()) append("🎬 <b>Yönetmen:</b> $director<br>")
                 if (genreList.isNotEmpty()) append("🎭 <b>Film Türü:</b> ${genreList.filter { it.isNotEmpty() }.joinToString(", ")}<br>")
                 if (castList.isNotEmpty()) append("👥 <b>Oyuncular:</b> ${castList.filter { it.isNotEmpty() }.joinToString(", ")}<br>")
@@ -265,22 +264,13 @@ class Film(private val context: android.content.Context, private val sharedPref:
                 })
             }
         }
- @ExperimentalCloudstreamAPI
+
         return newMovieLoadResponse(loadData.title, url, TvType.Movie, loadData.url) {
             this.posterUrl = loadData.poster
             this.plot = plot
             this.tags = listOf(loadData.group, loadData.nation)
             this.recommendations = recommendations
-            val voteAverage = tmdbData?.optDouble("vote_average", 0.0) ?: 0.0
-            val calculatedScore = (voteAverage.toFloat() * 2).toInt()
-            try {
-                // En güvenli yöntem:
-            this.score = Score(calculatedScore)
-
-            } catch (e: Exception) {
-                // Eğer hata verirse alternatif:
-                // this.score = calculatedScore.toScore() 
-            }
+            this.rating = (tmdbData?.optDouble("vote_average", 0.0)?.toFloat()?.times(2)?.toInt() ?: (if (isWatched) 5 else 0))
             this.duration = if (watchProgress > 0) (watchProgress / 1000).toInt() else tmdbData?.optInt("runtime", 0)
             this.comingSoon = false
         }
