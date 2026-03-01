@@ -143,7 +143,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
                 val overview = tmdbData.optString("overview", "")
                 val releaseDate = tmdbData.optString("release_date", "").split("-").firstOrNull() ?: ""
                 val ratingValue = tmdbData.optDouble("vote_average", -1.0)
-                val rating = if (ratingValue >= 0) String.format("%.1f", ratingValue) else null
+             //   val rating = if (ratingValue >= 0) String.format("%.1f", ratingValue) else null
                 val tagline = tmdbData.optString("tagline", "")
                 val budget = tmdbData.optLong("budget", 0L)
                 val revenue = tmdbData.optLong("revenue", 0L)
@@ -204,7 +204,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
                     val turkishName = languageMap[langCode] ?: originalLanguage
                     append("🌐 <b>Orijinal Dil:</b> $turkishName<br>")
                 }
-                if (rating != null) append("⭐ <b>TMDB Puanı:</b> $rating / 10<br>")
+              //  if (rating != null) append("⭐ <b>TMDB Puanı:</b> $rating / 10<br>")
                 if (director.isNotEmpty()) append("🎬 <b>Yönetmen:</b> $director<br>")
                 if (genreList.isNotEmpty()) append("🎭 <b>Film Türü:</b> ${genreList.filter { it.isNotEmpty() }.joinToString(", ")}<br>")
                 if (castList.isNotEmpty()) append("👥 <b>Oyuncular:</b> ${castList.filter { it.isNotEmpty() }.joinToString(", ")}<br>")
