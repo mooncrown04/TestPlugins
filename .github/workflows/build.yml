@@ -47,7 +47,7 @@ jobs:
       - name: Accept Android SDK Licenses
         run: |
           # SDK kurulumu sonrası tüm lisansları otomatik onaylar
-          yes | sdkmanager --licenses || true
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
       - name: Build Project
         run: |
