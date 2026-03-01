@@ -46,7 +46,7 @@ cloudstream {
     }
 
     android {
-        namespace = "com.example"
+        namespace = "com/mooncrown04"
 
         defaultConfig {
             minSdk = 21
