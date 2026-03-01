@@ -276,47 +276,53 @@ class Film(private val context: android.content.Context, private val sharedPref:
         }
     }
 
-    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        try {
-            val loadData = fetchDataFromUrlOrJson(data)
-            Log.d("IPTV", "loadData » $loadData")
+override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
+    try {
+        val loadData = fetchDataFromUrlOrJson(data)
+        Log.d("IPTV", "loadData » $loadData")
 
-            val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
-            val kanal = kanallar.items.firstOrNull { it.url == loadData.url } ?: return false
-            Log.d("IPTV", "kanal » $kanal")
+        val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
+        val kanal = kanallar.items.firstOrNull { it.url == loadData.url } ?: return false
+        Log.d("IPTV", "kanal » $kanal")
 
-            val watchKey = "watch_${data.hashCode()}"
-            val progressKey = "progress_${data.hashCode()}"
-            sharedPref?.edit()?.putBoolean(watchKey, true)?.apply()
+        val watchKey = "watch_${data.hashCode()}"
+        val progressKey = "progress_${data.hashCode()}"
+        sharedPref?.edit()?.putBoolean(watchKey, true)?.apply()
 
-            val videoUrl = loadData.url
-            val videoType = if (videoUrl.endsWith(".mkv", ignoreCase = true)) {
-            0  // VIDEO tipi için int değer (veya enum ordinal)
+        val videoUrl = loadData.url
+        
+        // Yeni API'de type ExtractorLinkType enum'ı olarak bekleniyor
+        val linkType = if (videoUrl.endsWith(".mkv", ignoreCase = true)) {
+            ExtractorLinkType.VIDEO
         } else {
-            1  // M3U8 tipi için int değer
+            ExtractorLinkType.M3U8
         }
 
-            callback.invoke(
-                newExtractorLink(
-                    source = this.name,
-                    name = loadData.title,
-                    url = videoUrl,
-                    headers = kanal.headers + mapOf(
-                        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-                    ),
-                    referer = kanal.headers["referrer"] ?: "",
-                  // quality = Qualities.Unknown.value,
-                  quality = Qualities.Unknown,
-                    type = videoType
+        // Yeni API'de quality Int olarak bekleniyor (Qualities enum'ının .value kullanın)
+        val qualityValue = Qualities.Unknown.value
+
+        callback.invoke(
+            newExtractorLink(
+                source = this.name,
+                name = loadData.title,
+                url = videoUrl,
+                type = linkType  // Sadece temel parametreler constructor'da
+            ) {
+                // Diğer parametreler lambda builder içinde
+                this.headers = kanal.headers + mapOf(
+                    "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
                 )
-            )
+                this.referer = kanal.headers["referrer"] ?: ""
+                this.quality = qualityValue
+            }
+        )
 
-            return true
-        } catch (e: Exception) {
-            Log.e("IPTV", "Error in loadLinks: ${e.message}", e)
-            return false
-        }
+        return true
+    } catch (e: Exception) {
+        Log.e("IPTV", "Error in loadLinks: ${e.message}", e)
+        return false
     }
+}
 
     data class LoadData(
     val url: String,
