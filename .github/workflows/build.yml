@@ -15,7 +15,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20  # Android build işlemleri için süreyi biraz artırmak güvenlidir
+    timeout-minutes: 25
 
     steps:
       - name: Checkout source
@@ -43,20 +43,15 @@ jobs:
         with:
           packages: "platform-tools platforms;android-34 build-tools;34.0.0"
 
-      - name: Install Extra Android Packages
+      - name: Install Extra Android Packages and Accept Licenses
         run: |
           yes | sdkmanager "extras;google;google_tv_addon"
-        
-      # ✅ KRİTİK ADIM: Tüm Android lisanslarını otomatik olarak kabul eder
-      - name: Accept Android SDK Licenses
-        run: |
           yes | sdkmanager --licenses || true
 
       - name: Build Project
         run: |
           cd src
           chmod +x gradlew
-          # Gradle cache temizliği yerine --no-daemon kullanmak CI üzerinde daha sağlıklıdır
           ./gradlew clean build --stacktrace --no-daemon
 
       - name: Build Plugins
@@ -64,7 +59,6 @@ jobs:
           cd src
           ./gradlew make makePluginsJson --stacktrace --no-daemon
           find . -name "*.cs3" -exec cp {} $GITHUB_WORKSPACE/builds \;
-          # build klasörünün varlığından emin olun, hata almamak için -f kullanın
           cp -f build/plugins.json $GITHUB_WORKSPACE/builds || echo "plugins.json bulunamadı"
 
       - name: Push builds
@@ -73,6 +67,5 @@ jobs:
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
           git add .
-          # Değişiklik yoksa hata vermemesi için git commit komutunu koruyoruz
           git commit -m "Build $GITHUB_SHA" || echo "No changes to commit"
           git push origin builds
