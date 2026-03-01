@@ -43,7 +43,15 @@ jobs:
         with:
           # Google TV eklentisini çıkardık, sadece gerekli paketleri bıraktık
           packages: "platform-tools platforms;android-34 build-tools;34.0.0"
+# Otomatik lisans onayını burada da aktif ediyoruz
+          accept-android-sdk-licenses: true
 
+      - name: Accept Android SDK Licenses (Force)
+        run: |
+          # Mevcut tüm lisansları toplu olarak ve boru hattı (pipe) ile onayla
+          mkdir -p $ANDROID_HOME/licenses
+          echo -e "24333f8a63b6ad3651ccc727f8520331f38e0e06\n5046633a410d70a12f840237e1906511471f6860\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb74380253863e48e92f\n24333f8a63b6ad3651ccc727f8520331f38e0e06\n3510273f360244458d34354226f9801454157500" > $ANDROID_HOME/licenses/android-sdk-license
+     
       - name: Accept Android SDK Licenses
         run: |
           # SDK kurulumu sonrası tüm lisansları otomatik onaylar
