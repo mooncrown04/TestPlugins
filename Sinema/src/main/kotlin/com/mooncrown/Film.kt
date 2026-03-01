@@ -13,8 +13,8 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.URL
 import java.net.URLEncoder
-//import com.lagradost.cloudstream3.Score
-import com.example.Score  // Uygun import'u ekleyin
+import com.lagradost.cloudstream3.Score
+
 class Film(private val context: android.content.Context, private val sharedPref: SharedPreferences?) : MainAPI() {
 
  //   override var mainUrl              = "https://raw.githubusercontent.com/emrcxcx/test/refs/heads/main/filmfun.m3u"
@@ -339,6 +339,7 @@ override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallbac
     val poster: String,
     val group: String,
     val nation: String,
+    val score: Double? = null, 
     val isWatched: Boolean = false,
     val watchProgress: Long = 0L
 )
@@ -375,6 +376,7 @@ data class PlaylistItem(
     val headers: Map<String, String>    = emptyMap(),
     val url: String?                    = null,
     val userAgent: String?              = null
+    val score: Double?              = null
 )
 
 class IptvPlaylistParser {
