@@ -18,7 +18,7 @@ class Film(private val context: android.content.Context, private val sharedPref:
 
  //   override var mainUrl              = "https://raw.githubusercontent.com/emrcxcx/test/refs/heads/main/filmfun.m3u"
   override var mainUrl              = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
-    override var name                 = "35 Sinema 35 🎥"
+    override var name                 = "35 Sinema  🎥"
     override val hasMainPage          = true
     override var lang                 = "tr"
     override val hasQuickSearch       = true
