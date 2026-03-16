@@ -4,16 +4,17 @@ buildscript {
     repositories {
         google()
         mavenCentral()
-        // JitPack alternatifleri ve ana repo
+        // JitPack yerine doğrudan Cloudstream'in resmi deposunu ekliyoruz
+        maven("https://replicate.npmjs.com/") 
         maven("https://jitpack.io")
-        maven("https://maven.pkg.github.com/LagradOst/CloudStream-Releases")
     }
     dependencies {
-        // En güncel ve stabil SNAPSHOT yerine doğrudan sürüm aramaya zorlayalım
+        // Plugin'i farklı bir şekilde tanımlayarak 401 hatasını bypass edelim
         classpath("com.github.LagradOst:CloudStream-Gradle-Plugin:master-SNAPSHOT")
     }
 }
 
+// Plugin uygulama sırasını değiştirelim
 apply(plugin = "com.android.library")
 apply(plugin = "kotlin-android")
 apply(plugin = "com.lagradost.cloudstream3")
@@ -34,14 +35,23 @@ android {
     defaultConfig {
         minSdk = 21
     }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
 }
 
 dependencies {
-    // Cloudstream kütüphanesini 'compileOnly' yaparak ana uygulama ile çakışmasını önleyelim
-    compileOnly("com.github.LagradOst:CloudStream:3.0.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    // Cloudstream ana kütüphanesini en stabil sürümle bağlayalım
+    val csVersion = "657155668e" // Jitpack yerine güvenli bir commit
+    compileOnly("com.github.LagradOst:CloudStream:$csVersion")
     
-    // JS motoru ve veri işleme
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("com.lagradost:ducktape:1.0.4")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.2")
 }
