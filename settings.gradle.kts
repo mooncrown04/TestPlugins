@@ -1,6 +1,6 @@
 // settings.gradle.kts
 
-pluginManagement {
+//pluginManagement {
  //   repositories {
       //  gradlePluginPortal() // Gradle'ın kendi plugin portalı
       //  mavenCentral()       // Yaygın Maven deposu
