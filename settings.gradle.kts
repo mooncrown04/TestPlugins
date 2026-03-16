@@ -1,15 +1,40 @@
 // settings.gradle.kts
 
 pluginManagement {
-    repositories {
-        gradlePluginPortal() // Gradle'ın kendi plugin portalı
-        mavenCentral()       // Yaygın Maven deposu
-        google()             // Google'ın Android için deposu
-        maven("https://jitpack.io") // JitPack, Cloudstream'in bazı bağımlılıklarını barındırabilir
+ //   repositories {
+      //  gradlePluginPortal() // Gradle'ın kendi plugin portalı
+      //  mavenCentral()       // Yaygın Maven deposu
+     //   google()             // Google'ın Android için deposu
+   //     maven("https://jitpack.io") // JitPack, Cloudstream'in bazı bağımlılıklarını barındırabilir
         // Cloudstream'in kendi plugin deposu: BU ÇOK ÖNEMLİ!
-        maven("https://maven.pkg.github.com/LagradOst/CloudStream-Releases/")
+    //    maven("https://maven.pkg.github.com/LagradOst/CloudStream-Releases/")
+  //  }
+//}
+
+
+
+
+
+
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+    repositories {
+        google()
+        mavenCentral()
+        maven {
+            url = uri("https://jitpack.io")
+            // 401 hatasını tetikleyebilen metadata sorgularını minimize etmek için
+            metadataSources {
+                mavenPom()
+                artifact()
+            }
+        }
     }
 }
+
+
+
 
 
 
