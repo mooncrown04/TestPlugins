@@ -7,8 +7,9 @@ buildscript {
         maven("https://jitpack.io")
     }
     dependencies {
-        // Hash yerine versiyon kullanarak Jitpack erişimini garantiliyoruz
-        classpath("com.github.LagradOst:CloudStream-Gradle-Plugin:master-SNAPSHOT")
+        // master-SNAPSHOT yerine doğrudan stabil bir commit hash kullanıyoruz
+        // Bu hash genellikle 401 hatasını atlatır çünkü meta-data aramaz
+        classpath("com.github.LagradOst:CloudStream-Gradle-Plugin:657155668e")
     }
 }
 
@@ -19,7 +20,7 @@ apply(plugin = "com.lagradost.cloudstream3")
 configure<CloudstreamExtension> {
     authors = listOf("MoOnCrOwN")
     language = "tr"
-    description = "Mooncrown IPTV ve Film Eklentisi"
+    description = "Mooncrown Eklentisi"
     status = 1
     tvTypes = listOf("Movie", "TvSeries")
 }
@@ -44,8 +45,9 @@ android {
 }
 
 dependencies {
-    // Cloudstream bağımlılığı (Versiyonu master-SNAPSHOT yaparak güncel tutuyoruz)
-    compileOnly("com.github.LagradOst:CloudStream:master-SNAPSHOT")
+    // Ana kütüphane için de aynı hash'i kullanalım
+    val csHash = "657155668e"
+    compileOnly("com.github.LagradOst:CloudStream:$csHash")
     
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("com.lagradost:ducktape:1.0.4")
