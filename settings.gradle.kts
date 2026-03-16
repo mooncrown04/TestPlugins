@@ -9,12 +9,20 @@ pluginManagement {
         // Cloudstream'in kendi plugin deposu: BU ÇOK ÖNEMLİ!
         maven("https://maven.pkg.github.com/LagradOst/CloudStream-Releases/")
     }
-
-
-
-
-
 }
+
+//sonradan eklendi 
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
+    repositories {
+        google()
+        mavenCentral()
+        maven("https://jitpack.io")
+    }
+}
+
+
+
 
 rootProject.name = "TestPlugins"
 
