@@ -5,7 +5,7 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.ducktape.Duktape // Cloudstream'in içindeki JS motoru
 
 class MooncrownLoader : MainAPI() {
-    override var mainUrl = "https://raw.githubusercontent.com/KULLANICI_ADIN/REPO_ADIN/main"
+    override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/TestPlugins/refs/heads/master"
     override var name    = "Mooncrown Dynamic"
     override var lang    = "tr"
     override val hasMainPage = true
