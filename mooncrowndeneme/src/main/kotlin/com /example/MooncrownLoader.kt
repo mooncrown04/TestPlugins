@@ -1,8 +1,10 @@
 package com.example
 
-import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.utils.*
-import com.lagradost.ducktape.Duktape // Cloudstream'in içindeki JS motoru
+import com.lagradost.cloudstream3.MainAPI
+import com.lagradost.cloudstream3.SearchResponse
+import com.lagradost.cloudstream3.LoadResponse
+import com.lagradost.cloudstream3.app
+import com.lagradost.ducktape.Duktape
 
 class MooncrownLoader : MainAPI() {
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/TestPlugins/refs/heads/master"
