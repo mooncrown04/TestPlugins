@@ -9,6 +9,30 @@ pluginManagement {
         // Cloudstream'in kendi plugin deposu: BU ÇOK ÖNEMLİ!
         maven("https://maven.pkg.github.com/LagradOst/CloudStream-Releases/")
     }
+
+
+
+//sonradan ekledik
+
+resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id == "com.lagradost.cloudstream3") {
+                // Plugin'i JitPack üzerinden manuel olarak eşleştiriyoruz
+                useModule("com.github.LagradOst:CloudStream-Gradle-Plugin:master-SNAPSHOT")
+            }
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
 }
 
 rootProject.name = "TestPlugins"
