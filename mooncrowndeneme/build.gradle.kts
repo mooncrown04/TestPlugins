@@ -6,10 +6,10 @@ buildscript {
         mavenCentral()
         maven("https://jitpack.io")
     }
-    dependencies {
-        // master-SNAPSHOT yerine doğrudan stabil bir commit hash kullanıyoruz
-        // Bu hash genellikle 401 hatasını atlatır çünkü meta-data aramaz
-        classpath("com.github.LagradOst:CloudStream-Gradle-Plugin:657155668e")
+dependencies {
+        // Eğer commit hash çalışmıyorsa, aşağıdaki sürümü deneyin.
+        // Bu sürüm genellikle daha stabil bir endpoint'tir.
+        classpath("com.github.LagradOst:CloudStream-Gradle-Plugin:master-SNAPSHOT")
     }
 }
 
