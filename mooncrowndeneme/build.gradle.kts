@@ -4,7 +4,8 @@ import com.lagradost.cloudstream3.gradle.CloudstreamExtension
 plugins {
     id("com.android.library")
     kotlin("android")
-    id("com.lagradost.cloudstream3")
+    // Buraya versiyon numarasını ekliyoruz:
+    id("com.lagradost.cloudstream3") version "0.1.0" 
 }
 
 // Eklentinin versiyonu.
