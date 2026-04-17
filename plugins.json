@@ -1,9 +1,10 @@
 [
     {
         "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png",
+        "fileHash": "sha256-754c2afa19b3190292d5ea365e373622ee1a59c09016d94651a7eda90af237e4",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
-        "fileSize": 19715,
+        "fileSize": 19716,
         "status": 1,
         "language": "tr",
         "authors": [
@@ -23,6 +24,7 @@
     },
     {
         "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png",
+        "fileHash": "sha256-183db56fa4a00a64da6ab60c4244102cf80a72546bf0eaa2d27922e521b0f60b",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
         "fileSize": 31254,
@@ -45,6 +47,7 @@
     },
     {
         "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png",
+        "fileHash": "sha256-3af8f64b55b1b68c48dd6ecea560ff086e6ee4acee7831c22e45a85654822d98",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
         "fileSize": 45810,
@@ -67,6 +70,7 @@
     },
     {
         "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png",
+        "fileHash": "sha256-1f64ab3406947df6249c04533f339ba82b84438d2c3def4e1c6f66bdab5164f5",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
         "fileSize": 31240,
@@ -88,6 +92,7 @@
     },
     {
         "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powerdizi/powerdizi.png",
+        "fileHash": "sha256-88fa000060cf038c23b569651c6a2631b1d0c62794cc8e5bfffc3f84d5b4d908",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
         "fileSize": 24706,
@@ -110,6 +115,7 @@
     },
     {
         "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png",
+        "fileHash": "sha256-9c23064d92880e9b3483931f862e530bfa9b19782dd97af6b03fe4c118ab6963",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
         "fileSize": 30980,
