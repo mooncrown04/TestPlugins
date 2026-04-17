@@ -11,17 +11,16 @@ class NeonSpor : MainAPI() {
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown/refs/heads/main/guncel_liste.m3u"
     private val epgUrl = "https://iptv-epg.org/files/epg-tr.xml"
 
-    override var name = "ANİME-TV"
+    override var name = "EPG-TV"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
     override val supportedTypes = setOf(TvType.Live)
 
-    // Fire Stick RAM'ini korumak için EPG'yi sadece 'load' anında ve kısıtlı çeken fonksiyon
+    // EPG Çekme Fonksiyonu (Bellek Dostu)
     private suspend fun getEpgForChannel(tvgId: String): String {
         if (tvgId.isBlank()) return ""
         return kotlin.runCatching {
-            // timeout süresini kısa tutarak sistemin kilitlenmesini önlüyoruz
             val response = app.get(epgUrl, timeout = 8).text
             if (response.isBlank()) return ""
 
@@ -30,11 +29,9 @@ class NeonSpor : MainAPI() {
             val sdfOutput = SimpleDateFormat("HH:mm", Locale.getDefault())
             val programs = mutableListOf<String>()
 
-            // Sadece bu kanala ait programları Regex ile ayıkla
             val pattern = """<programme start="([^"]*)"[^>]*channel="${Regex.escape(tvgId)}">.*?<title[^>]*>(.*?)</title>"""
             Regex(pattern, RegexOption.DOT_MATCHES_ALL).findAll(response).forEach { m ->
                 val startTime = sdfInput.parse(m.groupValues[1].substring(0, 14))?.time ?: 0L
-                // Sadece şu anki ve gelecek programları listeye ekle
                 if (startTime > now - 3600000) { 
                     val title = m.groupValues[2].replace("<![CDATA[", "").replace("]]>", "").trim()
                     programs.add("[${sdfOutput.format(Date(startTime))}] $title")
@@ -57,14 +54,12 @@ class NeonSpor : MainAPI() {
                 val t = line.trim()
                 if (t.startsWith("#EXTINF")) {
                     currentAttr = mutableMapOf()
-                    // M3U taglarını (tvg-id, logo vb.) toplar
                     Regex("([\\w-]+)=\"([^\"]*)\"").findAll(t).forEach { 
                         currentAttr[it.groupValues[1]] = it.groupValues[2] 
                     }
                     val title = t.split(",").lastOrNull()?.trim() ?: "Kanal"
                     items.add(PlaylistItem(title, currentAttr))
                 } else if (t.isNotEmpty() && !t.startsWith("#") && items.isNotEmpty()) {
-                    // URL satırını bir önceki başlıkla eşleştirir
                     items[items.lastIndex] = items.last().copy(url = t)
                 }
             }
@@ -73,7 +68,6 @@ class NeonSpor : MainAPI() {
                 val responses = group.value.mapNotNull { kanal ->
                     val streamUrl = kanal.url ?: return@mapNotNull null
                     
-                    // Tüm veriyi JSON olarak 'url' parametresine gömüyoruz
                     val data = LoadData(
                         url = streamUrl,
                         title = kanal.title ?: "Kanal",
@@ -95,8 +89,6 @@ class NeonSpor : MainAPI() {
     override suspend fun load(url: String): LoadResponse? {
         return kotlin.runCatching {
             val loadData = parseJson<LoadData>(url)
-            
-            // Kanala tıklandığında EPG bilgisini arka planda çek
             val epgInfo = getEpgForChannel(loadData.tvgId)
 
             newLiveStreamLoadResponse(loadData.title, loadData.url, url) {
@@ -114,19 +106,25 @@ class NeonSpor : MainAPI() {
     ): Boolean {
         return kotlin.runCatching {
             val loadData = parseJson<LoadData>(data)
+            
+            // İstediğin link ismi formatı: Kanal Adı + Kaynak No
+            val linkName = "${loadData.title} Kaynak 1"
+            
             callback.invoke(
                 newExtractorLink(
                     source = this.name,
-                    name = this.name,
+                    name = linkName, 
                     url = loadData.url,
                     type = ExtractorLinkType.M3U8
-                )
+                ) {
+                    // Kaliteyi bilinmiyor olarak işaretliyoruz (Auto)
+                    quality = Qualities.Unknown.value
+                }
             )
             true
         }.getOrElse { false }
     }
 
-    // Yardımcı Veri Sınıfları
     data class LoadData(
         val url: String, 
         val title: String, 
