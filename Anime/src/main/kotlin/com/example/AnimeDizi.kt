@@ -11,24 +11,21 @@ class NeonSpor : MainAPI() {
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown/refs/heads/main/guncel_liste.m3u"
     private val epgUrl = "https://iptv-epg.org/files/epg-tr.xml"
 
-    override var name = "EPG-TV"
+    override var name = "ANİME-TV"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
     override val supportedTypes = setOf(TvType.Live)
 
-    // EPG Çekme Fonksiyonu (Bellek Dostu)
     private suspend fun getEpgForChannel(tvgId: String): String {
         if (tvgId.isBlank()) return ""
         return kotlin.runCatching {
             val response = app.get(epgUrl, timeout = 8).text
             if (response.isBlank()) return ""
-
             val now = System.currentTimeMillis()
             val sdfInput = SimpleDateFormat("yyyyMMddHHmmss", Locale.ENGLISH)
             val sdfOutput = SimpleDateFormat("HH:mm", Locale.getDefault())
             val programs = mutableListOf<String>()
-
             val pattern = """<programme start="([^"]*)"[^>]*channel="${Regex.escape(tvgId)}">.*?<title[^>]*>(.*?)</title>"""
             Regex(pattern, RegexOption.DOT_MATCHES_ALL).findAll(response).forEach { m ->
                 val startTime = sdfInput.parse(m.groupValues[1].substring(0, 14))?.time ?: 0L
@@ -37,17 +34,14 @@ class NeonSpor : MainAPI() {
                     programs.add("[${sdfOutput.format(Date(startTime))}] $title")
                 }
             }
-
-            if (programs.isNotEmpty()) {
-                "\n\n--- YAYIN AKIŞI ---\n" + programs.take(4).joinToString("\n")
-            } else ""
+            if (programs.isNotEmpty()) "\n\n--- YAYIN AKIŞI ---\n" + programs.take(4).joinToString("\n") else ""
         }.getOrElse { "" }
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         return kotlin.runCatching {
             val playlistText = app.get(mainUrl).text
-            val items = mutableListOf<PlaylistItem>()
+            val rawItems = mutableListOf<PlaylistItem>()
             
             var currentAttr = mutableMapOf<String, String>()
             playlistText.lines().forEach { line ->
@@ -58,18 +52,27 @@ class NeonSpor : MainAPI() {
                         currentAttr[it.groupValues[1]] = it.groupValues[2] 
                     }
                     val title = t.split(",").lastOrNull()?.trim() ?: "Kanal"
-                    items.add(PlaylistItem(title, currentAttr))
-                } else if (t.isNotEmpty() && !t.startsWith("#") && items.isNotEmpty()) {
-                    items[items.lastIndex] = items.last().copy(url = t)
+                    rawItems.add(PlaylistItem(title, currentAttr))
+                } else if (t.isNotEmpty() && !t.startsWith("#") && rawItems.isNotEmpty()) {
+                    rawItems[rawItems.lastIndex] = rawItems.last().copy(url = t)
                 }
             }
 
-            val homePageLists = items.groupBy { it.attributes["group-title"] ?: "Genel" }.map { group ->
-                val responses = group.value.mapNotNull { kanal ->
-                    val streamUrl = kanal.url ?: return@mapNotNull null
+            // --- AYNI KANALLARI GRUPLAMA MANTIĞI ---
+            // Kanalları isimlerine göre grupluyoruz (TRT 1, ATV vb.)
+            val groupedChannels = rawItems.groupBy { it.title ?: "Bilinmeyen Kanal" }
+
+            val homePageLists = rawItems.groupBy { it.attributes["group-title"] ?: "Genel" }.map { group ->
+                // Her gruptaki benzersiz kanalları alıyoruz
+                val distinctChannels = group.value.distinctBy { it.title }
+                
+                val responses = distinctChannels.mapNotNull { kanal ->
+                    // Aynı isme sahip tüm linkleri bulup listeye ekliyoruz
+                    val allLinksForThisChannel = groupedChannels[kanal.title]?.mapNotNull { it.url } ?: listOf()
+                    if (allLinksForThisChannel.isEmpty()) return@mapNotNull null
                     
                     val data = LoadData(
-                        url = streamUrl,
+                        urls = allLinksForThisChannel, // Tek URL yerine liste gönderiyoruz
                         title = kanal.title ?: "Kanal",
                         poster = kanal.attributes["tvg-logo"] ?: "",
                         group = group.key,
@@ -91,9 +94,9 @@ class NeonSpor : MainAPI() {
             val loadData = parseJson<LoadData>(url)
             val epgInfo = getEpgForChannel(loadData.tvgId)
 
-            newLiveStreamLoadResponse(loadData.title, loadData.url, url) {
+            newLiveStreamLoadResponse(loadData.title, loadData.urls.first(), url) {
                 this.posterUrl = loadData.poster
-                this.plot = "Kategori: ${loadData.group}$epgInfo"
+                this.plot = "Kategori: ${loadData.group}\nKaynak Sayısı: ${loadData.urls.size}$epgInfo"
             }
         }.getOrNull()
     }
@@ -107,26 +110,25 @@ class NeonSpor : MainAPI() {
         return kotlin.runCatching {
             val loadData = parseJson<LoadData>(data)
             
-            // İstediğin link ismi formatı: Kanal Adı + Kaynak No
-            val linkName = "${loadData.title} Kaynak 1"
-            
-            callback.invoke(
-                newExtractorLink(
-                    source = this.name,
-                    name = linkName, 
-                    url = loadData.url,
-                    type = ExtractorLinkType.M3U8
-                ) {
-                    // Kaliteyi bilinmiyor olarak işaretliyoruz (Auto)
-                    quality = Qualities.Unknown.value
-                }
-            )
+            // LİSTEDEKİ TÜM LİNKLERİ DÖNGÜYE ALIYORUZ
+            loadData.urls.forEachIndexed { index, videoUrl ->
+                callback.invoke(
+                    newExtractorLink(
+                        source = this.name,
+                        name = "${loadData.title} Kaynak ${index + 1}", // Kaynak 1, Kaynak 2...
+                        url = videoUrl,
+                        type = ExtractorLinkType.M3U8
+                    ) {
+                        quality = Qualities.Unknown.value
+                    }
+                )
+            }
             true
         }.getOrElse { false }
     }
 
     data class LoadData(
-        val url: String, 
+        val urls: List<String>, // Değişti: Artık liste tutuyor
         val title: String, 
         val poster: String, 
         val group: String, 
