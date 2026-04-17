@@ -410,17 +410,16 @@ class XmlPlaylistParser {
                     }
 
                 // Başlığı anlık saat bilgisiyle oluştur
-                epgPlotText = "\n\n--- EPG YAYIN AKIŞI (Saat: $nowHour:$nowMinute) ---\n" + formattedPrograms
+                epgPlotText = "\n\n YAYIN AKIŞI (Saat: $nowHour:$nowMinute) ---\n" + formattedPrograms
             } else {
                 val availableTvgIds = epgData.programs.keys.take(5).joinToString(", ")
                 val totalChannels = epgData.programs.size
 
                 epgPlotText = "\n\n--- EPG BİLGİSİ ---\n" +
-                              "HATA KODU: EPG_ID_MISMATCH (PROGRAM BOŞ)\n" +
+                              "HATA KODU:(PROGRAM BOŞ)\n" +
                               "Aranan ID: '${channelTvgId}' (Normalize: '${normalizedTvgId}')\n" +
                               "Sonuç: Bu ID için yayın akışı bulunamadı. Toplam $totalChannels kanal EPG'de yüklü.\n" +
-                              "Örnek Bulunan ID'ler: ${availableTvgIds}... \n\n" +
-                              "Çözüm Önerisi: XML kontrolü."
+                              "Örnek ID'ler: ${availableTvgIds}... \n\n"
             }
         }
 
@@ -498,4 +497,3 @@ class XmlPlaylistParser {
         return foundLink
     }
 }
-
