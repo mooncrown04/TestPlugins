@@ -64,22 +64,23 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
         var lastInf: String? = null
 
         response.lines().forEach { line ->
-            if (line.startsWith("#EXTINF")) {
-                lastInf = line
-            } else if (line.isNotEmpty() && !line.startsWith("#") && lastInf != null) {
+            val t = line.trim()
+            if (t.startsWith("#EXTINF")) {
+                lastInf = t
+            } else if (t.isNotEmpty() && !t.startsWith("#") && lastInf != null) {
                 val title = lastInf?.split(",")?.lastOrNull()?.trim()
                 val logo = Regex("""tvg-logo="([^"]*)"""").find(lastInf!!)?.groupValues?.get(1)
                 val tvgId = Regex("""tvg-id="([^"]*)"""").find(lastInf!!)?.groupValues?.get(1)
                 val group = Regex("""group-title="([^"]*)"""").find(lastInf!!)?.groupValues?.get(1)
                 
-                items.add(PlaylistItem(title, line.trim(), logo, tvgId, group))
+                items.add(PlaylistItem(title, t, logo, tvgId, group))
                 lastInf = null
             }
         }
         return items
     }
 
-    // --- Ana Sayfa: Kategorileri "Dizi" olarak listele ---
+    // --- Ana Sayfa ---
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val allItems = parsePlaylist()
         val categories = allItems.groupBy { it.group ?: "Genel" }
@@ -94,15 +95,14 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
             }
         }
 
-        return newHomePageResponse(listOf(HomePageList("Tüm Kategoriler", responses)), false)
+        return newHomePageResponse(listOf(HomePageList("Tüm Kategoriler", responses, isHorizontalImages = true)), false)
     }
 
-    // --- Dizi Detayı: Kategorideki Kanalları "Bölüm" yap ---
+    // --- Dizi Detayı ---
     override suspend fun load(url: String): LoadResponse {
         val cat = parseJson<CategoryData>(url)
         
         val episodesList = cat.items.mapIndexed { index, item ->
-            // Bölüm verisi olarak kanalın tüm detaylarını gömüyoruz
             val epData = item.toJson() 
             
             newEpisode(epData) {
@@ -116,12 +116,13 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
 
         return newAnimeLoadResponse(cat.name, url, TvType.TvSeries) {
             this.posterUrl = cat.poster
-            this.episodes = mapOf(DubStatus.Subbed to episodesList)
+            // DERLEME HATASI DÜZELTİLDİ: mutableMapOf kullanıldı
+            this.episodes = mutableMapOf(DubStatus.Subbed to episodesList)
             this.plot = "${cat.name} kategorisinde ${cat.items.size} kanal bulundu."
         }
     }
 
-    // --- Video Oynatıcı: Link ve EPG ---
+    // --- Video Oynatıcı ---
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -130,15 +131,12 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
     ): Boolean {
         val item = parseJson<PlaylistItem>(data)
         if (item.url.isNullOrBlank()) return false
-
-        // Yayın akışını sadece link yüklenirken loglara veya plot'a eklemek istersen fetchEpg kullanabilirsin.
-        // Ancak loadLinks içinde sadece link döndürülür.
         
         callback.invoke(
             newExtractorLink(
                 source = this.name,
                 name = "${item.title} Kaynak 1",
-                url = item.url,
+                url = item.url!!,
                 type = ExtractorLinkType.M3U8
             ) {
                 quality = Qualities.P1080.value
