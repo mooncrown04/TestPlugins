@@ -11,7 +11,7 @@ class NeonSpor : MainAPI() {
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown/refs/heads/main/guncel_liste.m3u"
     private val epgUrl = "https://iptv-epg.org/files/epg-tr.xml"
 
-    override var name = "ANİME-TV"
+    override var name = "EPG-TV"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
