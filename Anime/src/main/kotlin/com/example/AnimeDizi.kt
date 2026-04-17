@@ -1,17 +1,18 @@
- package com.example
+package com.example
 
 import android.util.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
+import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 class NeonSpor : MainAPI() {
-    override var mainUrl = "https://dl.dropbox.com/scl/fi/chn3cr4g67hnah3w2c19m/eyuptv.m3u?rlkey=2ubdclpcrhkcgj8iogwipuj3r"
+    override var mainUrl = "https://dl.dropbox.com/scl/fi/r4p9v7g76ikwt8zsyuhyn/sile.m3u?rlkey=esnalbpm4kblxgkvym51gjokm"
     private val epgUrl = "https://iptv-epg.org/files/epg-tr.xml"
 
     @Volatile
@@ -22,9 +23,10 @@ class NeonSpor : MainAPI() {
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
+    override val hasDownloadSupport = false
     override val supportedTypes = setOf(TvType.Live)
 
-    // --- EPG YÜKLEME VE ÖNBELLEKLEME ---
+    // --- EPG VERİSİNİ GÜVENLİ ÇEKME ---
     private suspend fun loadEpgData(): EpgData {
         val cached = cachedEpgData
         if (cached != null) return cached
@@ -34,18 +36,16 @@ class NeonSpor : MainAPI() {
             if (cachedInner != null) return@withLock cachedInner
             
             try {
-                val response = app.get(epgUrl).text
-                if (response.isBlank()) return@withLock EpgData(errorMessage = "EPG Boş")
+                val response = app.get(epgUrl, timeout = 30).text
+                if (response.isBlank()) return@withLock EpgData()
                 
                 val parsed = EpgXmlParser().parseEPG(response)
                 cachedEpgData = parsed
                 parsed
             } catch (e: OutOfMemoryError) {
-                Log.e("EPG", "Bellek yetersiz, EPG yüklenemedi")
-                EpgData(errorMessage = "Bellek Yetersiz")
+                EpgData(errorMessage = "EPG dosyası bellek için çok büyük.")
             } catch (e: Exception) {
-                Log.e("EPG", "EPG hatası: ${e.message}")
-                EpgData(errorMessage = e.message)
+                EpgData(errorMessage = "EPG yüklenemedi: ${e.message}")
             }
         }
     }
@@ -55,21 +55,26 @@ class NeonSpor : MainAPI() {
             val playlistText = app.get(mainUrl).text
             val kanallar = IptvPlaylistParser().parseM3U(playlistText)
 
-            val homePageLists = kanallar.items.groupBy { it.attributes["group-title"] ?: "Diğer" }.map { entry ->
-                val groupName = entry.key
-                val show = entry.value.mapNotNull { kanal ->
+            val homePageLists = kanallar.items.groupBy { it.attributes["group-title"] ?: "Diğer" }.map { group ->
+                val title = group.key
+                val show = group.value.mapNotNull { kanal ->
                     val streamurl = kanal.url ?: return@mapNotNull null
+                    val channelname = kanal.title ?: "Bilinmeyen Kanal"
+                    val posterurl = kanal.attributes["tvg-logo"] ?: ""
+                    val chGroup = kanal.attributes["group-title"] ?: ""
+                    val nation = kanal.attributes["tvg-country"] ?: ""
                     val tvgId = kanal.attributes["tvg-id"] ?: ""
 
                     newLiveSearchResponse(
-                        kanal.title ?: "Kanal",
-                        LoadData(streamurl, kanal.title ?: "", kanal.attributes["tvg-logo"] ?: "", groupName, kanal.attributes["tvg-country"] ?: "", tvgId).toJson(),
+                        channelname,
+                        LoadData(streamurl, channelname, posterurl, chGroup, nation, tvgId).toJson(),
                         type = TvType.Live
                     ) {
-                        this.posterUrl = kanal.attributes["tvg-logo"]
+                        this.posterUrl = posterurl
+                        this.lang = nation
                     }
                 }
-                HomePageList(groupName, show, isHorizontalImages = true)
+                HomePageList(title, show, isHorizontalImages = true)
             }
             newHomePageResponse(homePageLists, hasNext = false)
         } catch (e: Exception) {
@@ -77,27 +82,39 @@ class NeonSpor : MainAPI() {
         }
     }
 
+    override suspend fun search(query: String): List<SearchResponse> {
+        return try {
+            val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
+            kanallar.items.filter { it.title?.contains(query, ignoreCase = true) == true }.map { kanal ->
+                newLiveSearchResponse(
+                    kanal.title ?: "",
+                    LoadData(kanal.url ?: "", kanal.title ?: "", kanal.attributes["tvg-logo"] ?: "", kanal.attributes["group-title"] ?: "", kanal.attributes["tvg-country"] ?: "", kanal.attributes["tvg-id"] ?: "").toJson(),
+                    type = TvType.Live
+                ) {
+                    this.posterUrl = kanal.attributes["tvg-logo"]
+                    this.lang = kanal.attributes["tvg-country"]
+                }
+            }
+        } catch (e: Exception) { emptyList() }
+    }
+
     override suspend fun load(url: String): LoadResponse? {
         return try {
-            val loadData = parseJson<LoadData>(url)
+            val loadData = fetchDataFromUrlOrJson(url)
             val epgData = loadEpgData()
             
             val normalizedTvgId = loadData.tvgId.lowercase()
             val programs = epgData.programs[normalizedTvgId] ?: emptyList()
             val currentTime = System.currentTimeMillis()
 
-            // EPG Bilgisini Oluşturma (Xmltv sınıfındaki mantık)
-            val epgPlotText = if (epgData.errorMessage != null) {
-                "\n\n--- EPG HATA ---\n${epgData.errorMessage}"
-            } else if (programs.isNotEmpty()) {
+            val epgPlotText = if (programs.isNotEmpty()) {
                 val localTimeZone = TimeZone.getDefault()
                 val nowCal = Calendar.getInstance().apply { timeZone = localTimeZone }
                 val nowTime = String.format("%02d:%02d", nowCal.get(Calendar.HOUR_OF_DAY), nowCal.get(Calendar.MINUTE))
 
                 val formattedPrograms = programs
-                    .filter { it.end > currentTime } // Bitmemiş programları göster
-                    .sortedBy { it.start }
-                    .take(6) // Gelecek 6 programı al
+                    .filter { it.end > currentTime }
+                    .take(6)
                     .joinToString("\n") { prog ->
                         val startCal = Calendar.getInstance().apply { 
                             timeInMillis = prog.start
@@ -107,83 +124,107 @@ class NeonSpor : MainAPI() {
                         "[$startTime] ${prog.name}"
                     }
                 "\n\n--- YAYIN AKIŞI (Saat: $nowTime) ---\n$formattedPrograms"
+            } else ""
+
+            val displayInfo = if (loadData.group == "NSFW") {
+                "⚠️🔞 » ${loadData.group} | ${loadData.nation} « 🔞⚠️"
             } else {
-                "\n\n--- Yayın akışı bulunamadı (ID: $normalizedTvgId) ---"
+                "» ${loadData.group} | ${loadData.nation} «"
             }
 
             newLiveStreamLoadResponse(loadData.title, loadData.url, url) {
                 this.posterUrl = loadData.poster
-                this.plot = "» ${loadData.group} | ${loadData.nation} «$epgPlotText"
+                this.plot = displayInfo + epgPlotText
                 this.tags = listOf(loadData.group, loadData.nation)
             }
-        } catch (e: Exception) {
-            null
-        }
+        } catch (e: Exception) { null }
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
         return try {
-            val loadData = parseJson<LoadData>(data)
-            callback.invoke(newExtractorLink(this.name, this.name, loadData.url, ExtractorLinkType.M3U8) { this.quality = Qualities.Unknown.value })
+            val loadData = fetchDataFromUrlOrJson(data)
+            callback.invoke(
+                newExtractorLink(this.name, this.name, loadData.url, ExtractorLinkType.M3U8) {
+                    this.quality = Qualities.Unknown.value
+                }
+            )
             true
         } catch (e: Exception) { false }
     }
 
     // --- DATA VE PARSER SINIFLARI ---
+
     data class LoadData(val url: String, val title: String, val poster: String, val group: String, val nation: String, val tvgId: String = "")
+
+    private suspend fun fetchDataFromUrlOrJson(data: String): LoadData {
+        return try {
+            if (data.startsWith("{")) {
+                parseJson<LoadData>(data)
+            } else {
+                val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
+                val kanal = kanallar.items.first { it.url == data }
+                LoadData(kanal.url ?: "", kanal.title ?: "", kanal.attributes["tvg-logo"] ?: "", kanal.attributes["group-title"] ?: "", kanal.attributes["tvg-country"] ?: "", kanal.attributes["tvg-id"] ?: "")
+            }
+        } catch (e: Exception) { LoadData("", "", "", "", "", "") }
+    }
+
     data class EpgProgram(val name: String, val start: Long, val end: Long, val channel: String)
     data class EpgData(val programs: Map<String, List<EpgProgram>> = emptyMap(), val errorMessage: String? = null)
 
     class EpgXmlParser {
         fun parseEPG(xml: String): EpgData {
             val programs = mutableListOf<EpgProgram>()
-            // Daha sağlam bir regex (Xmltv sınıfına benzer)
-            val programmeRegex = Regex("""<programme start="([^"]*)" stop="([^"]*)" channel="([^"]*)">.*?<title[^>]*>(.*?)</title>""", RegexOption.DOT_MATCHES_ALL)
-            
-            programmeRegex.findAll(xml).forEach { m ->
+            val progRegex = Regex("""<programme start="([^"]*)" stop="([^"]*)" channel="([^"]*)">.*?<title[^>]*>(.*?)</title>""", RegexOption.DOT_MATCHES_ALL)
+            progRegex.findAll(xml).forEach { m ->
                 val start = parseXmlDate(m.groupValues[1])
                 val end = parseXmlDate(m.groupValues[2])
-                val channelId = m.groupValues[3].lowercase()
                 val title = m.groupValues[4].replace("<![CDATA[", "").replace("]]>", "").trim()
-                
-                if (start > 0L && end > 0L) {
-                    programs.add(EpgProgram(title, start, end, channelId))
-                }
+                programs.add(EpgProgram(title, start, end, m.groupValues[3].lowercase()))
             }
             return EpgData(programs.groupBy { it.channel })
         }
-
-        private fun parseXmlDate(dateString: String): Long {
-            return try {
-                val datePart = if (dateString.length >= 14) dateString.substring(0, 14) else return 0L
-                val sdf = SimpleDateFormat("yyyyMMddHHmmss", Locale.ENGLISH)
-                sdf.timeZone = TimeZone.getTimeZone("UTC") // Standart XMLTV UTC'dir
-                sdf.parse(datePart)?.time ?: 0L
-            } catch (e: Exception) { 0L }
+        private fun parseXmlDate(s: String): Long {
+            return try { SimpleDateFormat("yyyyMMddHHmmss", Locale.ENGLISH).apply { timeZone = TimeZone.getTimeZone("UTC") }.parse(s.substring(0, 14))?.time ?: 0L } catch (e: Exception) { 0L }
         }
     }
 }
 
-// M3U PARSER
+// --- M3U PARSER (Senin çalışan parser'ın) ---
+
 data class Playlist(val items: List<PlaylistItem> = emptyList())
-data class PlaylistItem(val title: String? = null, val attributes: Map<String, String> = emptyMap(), val url: String? = null)
+data class PlaylistItem(val title: String? = null, val attributes: Map<String, String> = emptyMap(), val headers: Map<String, String> = emptyMap(), val url: String? = null, val userAgent: String? = null)
 
 class IptvPlaylistParser {
-    fun parseM3U(content: String): Playlist {
+    fun parseM3U(content: String): Playlist = parseM3U(content.byteInputStream())
+    fun parseM3U(input: InputStream): Playlist {
+        val reader = input.bufferedReader()
+        if (reader.readLine()?.startsWith("#EXTM3U") != true) return Playlist()
         val playlistItems = mutableListOf<PlaylistItem>()
-        var currentAttributes = mutableMapOf<String, String>()
-        content.lines().forEach { line ->
-            val trimmed = line.trim()
-            if (trimmed.startsWith("#EXTINF")) {
-                currentAttributes = mutableMapOf()
-                Regex("([\\w-]+)=\"([^\"]*)\"").findAll(trimmed).forEach { m ->
-                    currentAttributes[m.groupValues[1]] = m.groupValues[2]
+        var line: String? = reader.readLine()
+        while (line != null) {
+            val trimmedLine = line.trim()
+            if (trimmedLine.isNotEmpty()) {
+                when {
+                    trimmedLine.startsWith("#EXTINF") -> {
+                        val title = trimmedLine.split(",").lastOrNull()?.trim()
+                        val attributes = trimmedLine.getM3uAttributes()
+                        playlistItems.add(PlaylistItem(title = title, attributes = attributes))
+                    }
+                    !trimmedLine.startsWith("#") -> {
+                        if (playlistItems.isNotEmpty()) {
+                            val lastIdx = playlistItems.lastIndex
+                            playlistItems[lastIdx] = playlistItems[lastIdx].copy(url = trimmedLine)
+                        }
+                    }
                 }
-                playlistItems.add(PlaylistItem(title = trimmed.split(",").lastOrNull()?.trim(), attributes = currentAttributes))
-            } else if (trimmed.isNotEmpty() && !trimmed.startsWith("#") && playlistItems.isNotEmpty()) {
-                playlistItems[playlistItems.lastIndex] = playlistItems.last().copy(url = trimmed)
             }
+            line = reader.readLine()
         }
         return Playlist(playlistItems)
+    }
+    private fun String.getM3uAttributes(): Map<String, String> {
+        val attributes = mutableMapOf<String, String>()
+        Regex("([\\w-]+)=\"([^\"]*)\"").findAll(this).forEach { m -> attributes[m.groupValues[1]] = m.groupValues[2] }
+        return attributes
     }
 }
