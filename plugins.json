@@ -92,10 +92,10 @@
     },
     {
         "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powerdizi/powerdizi.png",
-        "fileHash": "sha256-88fa000060cf038c23b569651c6a2631b1d0c62794cc8e5bfffc3f84d5b4d908",
+        "fileHash": "sha256-284380764bdd0cf81bd936c6e80866b5957a66df4e313197c6ff8071f4818714",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
-        "fileSize": 24706,
+        "fileSize": 24700,
         "status": 1,
         "language": "tr",
         "authors": [
