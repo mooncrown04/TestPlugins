@@ -30,7 +30,7 @@ class Xmltv : MainAPI() {
     private var cachedEpgData: EpgData? = null
     private val epgMutex = Mutex()
 
-    override var name = "35 Xmltv"
+    override var name = "Favori Xmltv epg"
     override var lang = "tr"
     override val hasMainPage = true
     override val hasQuickSearch = true
