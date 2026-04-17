@@ -128,16 +128,17 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
         
         grouped.urls.forEachIndexed { i, link ->
             // DERLEME HATASI ÇÖZÜLDÜ: 
-            // newExtractorLink kullanarak ve parametreleri isimlendirerek en güvenli yoldan link oluşturuyoruz.
+            // Parametreleri isimle vermek yerine süslü parantez içinde atıyoruz.
             callback.invoke(
                 newExtractorLink(
-                    source = this.name,
-                    name = "${grouped.title} Kaynak ${i + 1}",
-                    url = link,
-                    referer = "",
-                    quality = Qualities.P1080.value,
-                    type = ExtractorLinkType.M3U8
-                )
+                    this.name,
+                    "${grouped.title} Kaynak ${i + 1}",
+                    link,
+                    "" // Referer buraya (üçüncü sıraya) String olarak gelir
+                ) {
+                    this.quality = Qualities.P1080.value
+                    this.type = ExtractorLinkType.M3U8
+                }
             )
         }
         return true
