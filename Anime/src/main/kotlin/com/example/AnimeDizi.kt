@@ -23,84 +23,61 @@ class NeonSpor : MainAPI() {
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
-    override val hasDownloadSupport = false
     override val supportedTypes = setOf(TvType.Live)
 
-    // --- EPG VERİSİNİ GÜVENLİ ÇEKME ---
+    // EPG verisini çekerken oluşacak hataların uygulamayı kapatmasını engeller
     private suspend fun loadEpgData(): EpgData {
-        val cached = cachedEpgData
-        if (cached != null) return cached
-        
-        return epgMutex.withLock {
-            val cachedInner = cachedEpgData
-            if (cachedInner != null) return@withLock cachedInner
+        return kotlin.runCatching {
+            val cached = cachedEpgData
+            if (cached != null) return@runCatching cached
             
-            try {
-                val response = app.get(epgUrl, timeout = 30).text
+            epgMutex.withLock {
+                val cachedInner = cachedEpgData
+                if (cachedInner != null) return@withLock cachedInner
+                
+                val response = app.get(epgUrl, timeout = 15).text
                 if (response.isBlank()) return@withLock EpgData()
                 
                 val parsed = EpgXmlParser().parseEPG(response)
                 cachedEpgData = parsed
                 parsed
-            } catch (e: OutOfMemoryError) {
-                EpgData(errorMessage = "EPG dosyası bellek için çok büyük.")
-            } catch (e: Exception) {
-                EpgData(errorMessage = "EPG yüklenemedi: ${e.message}")
             }
-        }
+        }.getOrElse { EpgData(errorMessage = "EPG Yüklenemedi") }
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        return try {
+        return kotlin.runCatching {
             val playlistText = app.get(mainUrl).text
             val kanallar = IptvPlaylistParser().parseM3U(playlistText)
 
             val homePageLists = kanallar.items.groupBy { it.attributes["group-title"] ?: "Diğer" }.map { group ->
-                val title = group.key
                 val show = group.value.mapNotNull { kanal ->
                     val streamurl = kanal.url ?: return@mapNotNull null
-                    val channelname = kanal.title ?: "Bilinmeyen Kanal"
-                    val posterurl = kanal.attributes["tvg-logo"] ?: ""
-                    val chGroup = kanal.attributes["group-title"] ?: ""
-                    val nation = kanal.attributes["tvg-country"] ?: ""
                     val tvgId = kanal.attributes["tvg-id"] ?: ""
+                    
+                    // KRİTİK: Tüm veriyi LoadData içine koyup JSON yapıyoruz ki 'load' içinde tekrar internete çıkmayalım
+                    val data = LoadData(
+                        streamurl, 
+                        kanal.title ?: "Kanal", 
+                        kanal.attributes["tvg-logo"] ?: "", 
+                        group.key, 
+                        kanal.attributes["tvg-country"] ?: "", 
+                        tvgId
+                    ).toJson()
 
-                    newLiveSearchResponse(
-                        channelname,
-                        LoadData(streamurl, channelname, posterurl, chGroup, nation, tvgId).toJson(),
-                        type = TvType.Live
-                    ) {
-                        this.posterUrl = posterurl
-                        this.lang = nation
+                    newLiveSearchResponse(kanal.title ?: "Kanal", data, TvType.Live) {
+                        this.posterUrl = kanal.attributes["tvg-logo"]
                     }
                 }
-                HomePageList(title, show, isHorizontalImages = true)
+                HomePageList(group.key, show, isHorizontalImages = true)
             }
-            newHomePageResponse(homePageLists, hasNext = false)
-        } catch (e: Exception) {
-            newHomePageResponse(emptyList(), hasNext = false)
-        }
-    }
-
-    override suspend fun search(query: String): List<SearchResponse> {
-        return try {
-            val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
-            kanallar.items.filter { it.title?.contains(query, ignoreCase = true) == true }.map { kanal ->
-                newLiveSearchResponse(
-                    kanal.title ?: "",
-                    LoadData(kanal.url ?: "", kanal.title ?: "", kanal.attributes["tvg-logo"] ?: "", kanal.attributes["group-title"] ?: "", kanal.attributes["tvg-country"] ?: "", kanal.attributes["tvg-id"] ?: "").toJson(),
-                    type = TvType.Live
-                ) {
-                    this.posterUrl = kanal.attributes["tvg-logo"]
-                    this.lang = kanal.attributes["tvg-country"]
-                }
-            }
-        } catch (e: Exception) { emptyList() }
+            newHomePageResponse(homePageLists, false)
+        }.getOrElse { newHomePageResponse(emptyList(), false) }
     }
 
     override suspend fun load(url: String): LoadResponse? {
-        return try {
-            val loadData = fetchDataFromUrlOrJson(url)
+        return kotlin.runCatching {
+            val loadData = parseJson<LoadData>(url)
             val epgData = loadEpgData()
             
             val normalizedTvgId = loadData.tvgId.lowercase()
@@ -108,65 +85,36 @@ class NeonSpor : MainAPI() {
             val currentTime = System.currentTimeMillis()
 
             val epgPlotText = if (programs.isNotEmpty()) {
-                val localTimeZone = TimeZone.getDefault()
-                val nowCal = Calendar.getInstance().apply { timeZone = localTimeZone }
-                val nowTime = String.format("%02d:%02d", nowCal.get(Calendar.HOUR_OF_DAY), nowCal.get(Calendar.MINUTE))
-
-                val formattedPrograms = programs
+                val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
+                val formatted = programs
                     .filter { it.end > currentTime }
-                    .take(6)
-                    .joinToString("\n") { prog ->
-                        val startCal = Calendar.getInstance().apply { 
-                            timeInMillis = prog.start
-                            timeZone = localTimeZone 
-                        }
-                        val startTime = String.format("%02d:%02d", startCal.get(Calendar.HOUR_OF_DAY), startCal.get(Calendar.MINUTE))
-                        "[$startTime] ${prog.name}"
-                    }
-                "\n\n--- YAYIN AKIŞI (Saat: $nowTime) ---\n$formattedPrograms"
+                    .take(5)
+                    .joinToString("\n") { "[${sdf.format(Date(it.start))}] ${it.name}" }
+                "\n\n--- YAYIN AKIŞI ---\n$formatted"
             } else ""
-
-            val displayInfo = if (loadData.group == "NSFW") {
-                "⚠️🔞 » ${loadData.group} | ${loadData.nation} « 🔞⚠️"
-            } else {
-                "» ${loadData.group} | ${loadData.nation} «"
-            }
 
             newLiveStreamLoadResponse(loadData.title, loadData.url, url) {
                 this.posterUrl = loadData.poster
-                this.plot = displayInfo + epgPlotText
-                this.tags = listOf(loadData.group, loadData.nation)
+                this.plot = "» ${loadData.group} | ${loadData.nation} «$epgPlotText"
             }
-        } catch (e: Exception) { null }
+        }.getOrNull()
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        return try {
-            val loadData = fetchDataFromUrlOrJson(data)
+        return kotlin.runCatching {
+            val loadData = parseJson<LoadData>(data)
             callback.invoke(
                 newExtractorLink(this.name, this.name, loadData.url, ExtractorLinkType.M3U8) {
                     this.quality = Qualities.Unknown.value
                 }
             )
             true
-        } catch (e: Exception) { false }
+        }.getOrElse { false }
     }
 
-    // --- DATA VE PARSER SINIFLARI ---
+    // --- YARDIMCI YAPILAR ---
 
-    data class LoadData(val url: String, val title: String, val poster: String, val group: String, val nation: String, val tvgId: String = "")
-
-    private suspend fun fetchDataFromUrlOrJson(data: String): LoadData {
-        return try {
-            if (data.startsWith("{")) {
-                parseJson<LoadData>(data)
-            } else {
-                val kanallar = IptvPlaylistParser().parseM3U(app.get(mainUrl).text)
-                val kanal = kanallar.items.first { it.url == data }
-                LoadData(kanal.url ?: "", kanal.title ?: "", kanal.attributes["tvg-logo"] ?: "", kanal.attributes["group-title"] ?: "", kanal.attributes["tvg-country"] ?: "", kanal.attributes["tvg-id"] ?: "")
-            }
-        } catch (e: Exception) { LoadData("", "", "", "", "", "") }
-    }
+    data class LoadData(val url: String, val title: String, val poster: String, val group: String, val nation: String, val tvgId: String)
 
     data class EpgProgram(val name: String, val start: Long, val end: Long, val channel: String)
     data class EpgData(val programs: Map<String, List<EpgProgram>> = emptyMap(), val errorMessage: String? = null)
@@ -184,47 +132,28 @@ class NeonSpor : MainAPI() {
             return EpgData(programs.groupBy { it.channel })
         }
         private fun parseXmlDate(s: String): Long {
-            return try { SimpleDateFormat("yyyyMMddHHmmss", Locale.ENGLISH).apply { timeZone = TimeZone.getTimeZone("UTC") }.parse(s.substring(0, 14))?.time ?: 0L } catch (e: Exception) { 0L }
+            return try { SimpleDateFormat("yyyyMMddHHmmss", Locale.ENGLISH).parse(s.substring(0, 14))?.time ?: 0L } catch (e: Exception) { 0L }
         }
     }
 }
 
-// --- M3U PARSER (Senin çalışan parser'ın) ---
-
-data class Playlist(val items: List<PlaylistItem> = emptyList())
-data class PlaylistItem(val title: String? = null, val attributes: Map<String, String> = emptyMap(), val headers: Map<String, String> = emptyMap(), val url: String? = null, val userAgent: String? = null)
-
+// STABİL M3U PARSER
+data class PlaylistItem(val title: String? = null, val attributes: Map<String, String> = emptyMap(), val url: String? = null)
 class IptvPlaylistParser {
-    fun parseM3U(content: String): Playlist = parseM3U(content.byteInputStream())
-    fun parseM3U(input: InputStream): Playlist {
-        val reader = input.bufferedReader()
-        if (reader.readLine()?.startsWith("#EXTM3U") != true) return Playlist()
-        val playlistItems = mutableListOf<PlaylistItem>()
-        var line: String? = reader.readLine()
-        while (line != null) {
-            val trimmedLine = line.trim()
-            if (trimmedLine.isNotEmpty()) {
-                when {
-                    trimmedLine.startsWith("#EXTINF") -> {
-                        val title = trimmedLine.split(",").lastOrNull()?.trim()
-                        val attributes = trimmedLine.getM3uAttributes()
-                        playlistItems.add(PlaylistItem(title = title, attributes = attributes))
-                    }
-                    !trimmedLine.startsWith("#") -> {
-                        if (playlistItems.isNotEmpty()) {
-                            val lastIdx = playlistItems.lastIndex
-                            playlistItems[lastIdx] = playlistItems[lastIdx].copy(url = trimmedLine)
-                        }
-                    }
-                }
+    fun parseM3U(content: String): Playlist {
+        val items = mutableListOf<PlaylistItem>()
+        var currentAttr = mutableMapOf<String, String>()
+        content.lines().forEach { line ->
+            val t = line.trim()
+            if (t.startsWith("#EXTINF")) {
+                currentAttr = mutableMapOf()
+                Regex("([\\w-]+)=\"([^\"]*)\"").findAll(t).forEach { currentAttr[it.groupValues[1]] = it.groupValues[2] }
+                items.add(PlaylistItem(t.split(",").lastOrNull()?.trim(), currentAttr))
+            } else if (t.isNotEmpty() && !t.startsWith("#") && items.isNotEmpty()) {
+                items[items.lastIndex] = items.last().copy(url = t)
             }
-            line = reader.readLine()
         }
-        return Playlist(playlistItems)
+        return Playlist(items)
     }
-    private fun String.getM3uAttributes(): Map<String, String> {
-        val attributes = mutableMapOf<String, String>()
-        Regex("([\\w-]+)=\"([^\"]*)\"").findAll(this).forEach { m -> attributes[m.groupValues[1]] = m.groupValues[2] }
-        return attributes
-    }
+    data class Playlist(val items: List<PlaylistItem>)
 }
