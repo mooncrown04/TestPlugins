@@ -8,7 +8,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class NeonSpor : MainAPI() {
-    override var mainUrl = "https://dl.dropbox.com/scl/fi/r4p9v7g76ikwt8zsyuhyn/sile.m3u?rlkey=esnalbpm4kblxgkvym51gjokm"
+    override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown/refs/heads/main/guncel_liste.m3u"
     private val epgUrl = "https://iptv-epg.org/files/epg-tr.xml"
 
     override var name = "ANİME-TV"
