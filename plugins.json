@@ -47,6 +47,29 @@
     },
     {
         "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png",
+        "fileHash": "sha256-97b71e4001ffc3e1467da523795876d06db463ac9b17d4c619ef9ec3c4c2677a",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
+        "fileSize": 31254,
+        "status": 1,
+        "language": "tr",
+        "authors": [
+            "MoOnCrOwN",
+            "GitLatte",
+            "patr0nq",
+            "keyiflerolsun"
+        ],
+        "tvTypes": [
+            "Movie"
+        ],
+        "version": 3,
+        "internalName": "CanliTv",
+        "description": "powerboard`un sinema ar\u015fivi",
+        "url": "https://raw.githubusercontent.com/mooncrown04/TestPlugins/builds/CanliTv.cs3",
+        "name": "CanliTv"
+    },
+    {
+        "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png",
         "fileHash": "sha256-c2616f8b7587d2c6fc272a4efad2ce1af6d703e977c00038daf2fd89d0deaf32",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
