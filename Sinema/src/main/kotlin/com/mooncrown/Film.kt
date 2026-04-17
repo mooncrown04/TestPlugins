@@ -17,9 +17,9 @@ import com.lagradost.cloudstream3.Score
 
 class Film(private val context: android.content.Context, private val sharedPref: SharedPreferences?) : MainAPI() {
 
- //   override var mainUrl              = "https://raw.githubusercontent.com/emrcxcx/test/refs/heads/main/filmfun.m3u"
-  override var mainUrl              = "https://raw.githubusercontent.com/mooncrown04/mooncrown34/refs/heads/master/dizi.m3u"
-    override var name                 = "35 Sinema  🎥"
+
+  override var mainUrl              = "https://dl.dropbox.com/scl/fi/r4p9v7g76ikwt8zsyuhyn/sile.m3u?rlkey=esnalbpm4kblxgkvym51gjokm"
+    override var name                 = "ASinema 🎥"
     override val hasMainPage          = true
     override var lang                 = "tr"
     override val hasQuickSearch       = true
