@@ -1,10 +1,10 @@
 [
     {
         "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png",
-        "fileHash": "sha256-1a8d6bdd32edc0fd086db0ad645ba56547bd0cafdd9280614c31869079ace621",
+        "fileHash": "sha256-d1e8a01dc3e74306f15c29ef527c14e54b0fb716caab0310d759604ea8bff93e",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
-        "fileSize": 20220,
+        "fileSize": 20903,
         "status": 1,
         "language": "tr",
         "authors": [
