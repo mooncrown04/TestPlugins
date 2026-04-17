@@ -263,16 +263,26 @@ data class LoadData(
 
 )
 
+
 private suspend fun getOrFetchPlaylist(): Playlist {
-    Log.d(name, "Playlist verisi ağdan indiriliyor.")
-    val content = app.get(mainUrl).text
-    val newPlaylist = IptvPlaylistParser().parseM3U(content)
-    cachedPlaylist = newPlaylist
-    sharedPref?.edit()?.putString(CACHE_KEY, newPlaylist.toJson())?.apply()
-    return newPlaylist
+    cachedPlaylist?.let {
+        Log.d(name, "Playlist hafızadan (RAM) getirildi.")
+        return it
+   }
+
+    return try {
+        Log.d(name, "Playlist verisi ağdan indiriliyor...")
+        val response = app.get(mainUrl, timeout = 120).text // Zaman aşımını 120 sn yaptık
+        val newPlaylist = IptvPlaylistParser().parseM3U(response)
+        cachedPlaylist = newPlaylist
+        sharedPref?.edit()?.putString(CACHE_KEY, newPlaylist.toJson())?.apply()
+        
+        newPlaylist
+    } catch (e: Exception) {
+        Log.e(name, "İndirme hatası: ${e.message}")
+        Playlist(emptyList())
+    }
 }
-
-
 
 // isDubbed ve isSubbed fonksiyonları
 private fun isDubbed(item: PlaylistItem): Boolean {
