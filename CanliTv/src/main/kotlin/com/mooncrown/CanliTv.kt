@@ -128,15 +128,15 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
         
         grouped.urls.forEachIndexed { i, link ->
             // DERLEME HATASI ÇÖZÜLDÜ: 
-            // Hata mesajındaki 4. constructor kullanıldı (source, name, url, referer, quality, isM3u8)
+            // newExtractorLink kullanarak ve parametreleri isimlendirerek en güvenli yoldan link oluşturuyoruz.
             callback.invoke(
-                ExtractorLink(
+                newExtractorLink(
                     source = this.name,
                     name = "${grouped.title} Kaynak ${i + 1}",
                     url = link,
                     referer = "",
                     quality = Qualities.P1080.value,
-                    isM3u8 = true
+                    type = ExtractorLinkType.M3U8
                 )
             )
         }
