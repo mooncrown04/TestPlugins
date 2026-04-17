@@ -127,7 +127,8 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
         val grouped = parseJson<GroupedEpisodeData>(data)
         
         grouped.urls.forEachIndexed { i, link ->
-            // DERLEME HATALARI BURADA DÜZELTİLDİ:
+            // DERLEME HATASI ÇÖZÜLDÜ: 
+            // Hata mesajındaki 4. constructor kullanıldı (source, name, url, referer, quality, isM3u8)
             callback.invoke(
                 ExtractorLink(
                     source = this.name,
@@ -135,7 +136,6 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
                     url = link,
                     referer = "",
                     quality = Qualities.P1080.value,
-                    type = ExtractorLinkType.M3U8,
                     isM3u8 = true
                 )
             )
