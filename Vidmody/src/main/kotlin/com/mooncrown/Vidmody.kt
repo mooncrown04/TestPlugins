@@ -19,12 +19,10 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         val categories = listOf(
             Pair("Haftalık Trendler", "trending/all/week"),
             Pair("Popüler Türk Yapımları", "discover/movie?with_original_language=tr&sort_by=popularity.desc"),
-            Pair("Sinemalarda", "movie/now_playing"),
-            Pair("Popüler Diziler", "tv/popular"),     
-            Pair("Korku ve Gerilim", "discover/movie?with_genres=27,53"), // Korku(27) ve Gerilim(53)
             Pair("Netflix Dizileri", "discover/tv?with_networks=213"),
+            Pair("Sinemalarda", "movie/now_playing"),
+            Pair("Korku Seansı", "discover/movie?with_genres=27"),
             Pair("Popüler Kore Dizileri", "discover/tv?with_original_language=ko"),
-            Pair("Bilim Kurgu Klasikleri", "discover/movie?with_genres=878&sort_by=vote_average.desc&vote_count.gte=500"),
             Pair("En Çok Oy Alan Filmler", "movie/top_rated")
         )
 
@@ -63,25 +61,26 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         val d = app.get(detailsUrl).parsedSafe<TmdbDetailResponse>() ?: throw ErrorLoadingException("Detaylar alınamadı")
         val imdbId = d.external_ids?.imdb_id ?: throw ErrorLoadingException("IMDB ID yok")
 
-        // Actor yapısını en basit ve hatasız haliyle kuruyoruz
+        // Actor parametre isimleri (role -> character) olarak güncellendi veya pozisyonel hale getirildi
         val actorList = mutableListOf<ActorData>()
         
-        // Kanal Sahipleri
-        actorList.add(ActorData(Actor("MoOnCrOwN", role = "Developer", image = "https://github.com/mooncrown04.png")))
-        actorList.add(ActorData(Actor("Yazılım Amelesi", role = "Architect", image = "https://github.com/yazilimamelesi.png")))
+        // Kanal Sahipleri (Parametre isimlerini kaldırarak en güvenli yoldan ekliyoruz)
+        actorList.add(ActorData(Actor("MoOnCrOwN", "https://github.com/mooncrown04.png", "Developer")))
+        actorList.add(ActorData(Actor("Yazılım Amelesi", "https://github.com/yazilimamelesi.png", "Architect")))
 
-        // TMDB Oyuncuları
         d.credits?.cast?.take(10)?.forEach {
             actorList.add(ActorData(Actor(
                 it.name ?: "Bilinmeyen",
-                role = it.character ?: "Oyuncu",
-                image = if (it.profile_path != null) "https://image.tmdb.org/t/p/w185${it.profile_path}" else null
+                if (it.profile_path != null) "https://image.tmdb.org/t/p/w185${it.profile_path}" else null,
+                it.character ?: "Oyuncu"
             )))
         }
 
         val tags = mutableListOf("MoOnCrOwN", categoryName)
         d.genres?.forEach { it.name?.let { g -> tags.add(g) } }
-        val rating = d.vote_average?.times(10)?.toInt()
+        
+        // Rating yerine Score kullanımı
+        val currentScore = d.vote_average?.times(10)?.toInt()
 
         return if (type == "movie") {
             newMovieLoadResponse(d.title ?: d.name ?: "Film", url, TvType.Movie, "vid|$imdbId") {
@@ -89,7 +88,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 this.plot = d.overview
                 this.year = (d.release_date ?: d.first_air_date)?.take(4)?.toIntOrNull()
                 this.tags = tags
-                this.rating = rating
+                this.score = currentScore // Score olarak güncellendi
                 this.actors = actorList
                 addImdbId(imdbId)
             }
@@ -110,7 +109,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 this.plot = d.overview
                 this.year = (d.release_date ?: d.first_air_date)?.take(4)?.toIntOrNull()
                 this.tags = tags
-                this.rating = rating
+                this.score = currentScore // Score olarak güncellendi
                 this.actors = actorList
                 addImdbId(imdbId)
             }
