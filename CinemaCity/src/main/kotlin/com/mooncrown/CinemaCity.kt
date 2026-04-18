@@ -3,6 +3,7 @@ package com.mooncrown
 import android.util.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import org.json.JSONArray
 import org.json.JSONObject
 import org.jsoup.nodes.Element
@@ -58,13 +59,20 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse {
         val doc = app.get(url, headers = protectionHeaders).document
-        val title = doc.selectFirst("h1")?.text()?.trim() ?: throw ErrorLoadingException("Başlık bulunamadı")
+        val title = doc.selectFirst("h1")?.text()?.trim() ?: throw ErrorLoadingException("Başlık yok")
         val poster = fixUrlNull(doc.selectFirst("div.dar-full_poster img")?.attr("src"))
         val plot = doc.selectFirst("div.ta-full_text1")?.text()?.trim()
+        val score = doc.selectFirst("span.rating-color")?.text()
         
         val isTv = url.contains("/tv-series/")
         val episodes = mutableListOf<Episode>()
+        
+        // --- AKTOR VE KİMLİK KARTLARI ---
+        val actorsList = mutableListOf<ActorData>()
+        actorsList.add(ActorData(Actor("MoOnCrOwN", "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"), roleString = "Yazılım Amelesi"))
+        actorsList.add(ActorData(Actor(title, poster), roleString = "Yapım Bilgisi"))
 
+        // --- VERİ ÇÖZME MANTIĞI ---
         val script = doc.select("script").map { it.html() }.firstOrNull { it.contains("atob") }
         if (script != null) {
             val base64Match = """atob\s*\(\s*["'](.*?)["']\s*\)""".toRegex().find(script)
@@ -73,39 +81,53 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
             val fileRegex = """file\s*:\s*['"](\[.*?\]|http.*?)['"]""".toRegex(RegexOption.DOT_MATCHES_ALL)
             val fileData = fileRegex.find(decoded)?.groupValues?.get(1)
 
-            if (fileData != null && fileData.startsWith("[")) {
-                val jArray = JSONArray(fileData)
-                for (i in 0 until jArray.length()) {
-                    val seasonObj = jArray.getJSONObject(i)
-                    if (seasonObj.has("folder")) {
-                        val sNum = i + 1
-                        val folder = seasonObj.getJSONArray("folder")
-                        for (j in 0 until folder.length()) {
-                            val epObj = folder.getJSONObject(j)
-                            episodes.add(newEpisode(epObj.toString()) {
-                                this.name = epObj.optString("title")
-                                this.season = sNum
-                                this.episode = j + 1
+            if (fileData != null) {
+                if (fileData.startsWith("[")) {
+                    val jArray = JSONArray(fileData)
+                    for (i in 0 until jArray.length()) {
+                        val item = jArray.getJSONObject(i)
+                        if (item.has("folder")) {
+                            val folder = item.getJSONArray("folder")
+                            for (j in 0 until folder.length()) {
+                                val epObj = folder.getJSONObject(j)
+                                episodes.add(newEpisode(epObj.toString()) {
+                                    this.name = epObj.optString("title")
+                                    this.season = i + 1
+                                    this.episode = j + 1
+                                })
+                            }
+                        } else {
+                            episodes.add(newEpisode(item.toString()) {
+                                this.name = item.optString("title", "Film")
                             })
                         }
-                    } else {
-                        episodes.add(newEpisode(seasonObj.toString()) {
-                            this.name = seasonObj.optString("title", "Film")
-                        })
                     }
+                } else if (fileData.startsWith("http")) {
+                    val movieJson = JSONObject().put("file", fileData).put("title", title)
+                    episodes.add(newEpisode(movieJson.toString()) { this.name = title })
                 }
             }
         }
+
+        // --- ÖNERİLENLER ---
+        val recommend = doc.select("div.ta-rel div.ta-rel_item").mapNotNull { it.toSearchResult() }
 
         return if (isTv) {
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) { 
                 this.posterUrl = poster
                 this.plot = plot 
+                this.score = Score.from10(score)
+                this.actors = actorsList
+                this.recommendations = recommend
             }
         } else {
+            // Filmlerde Play tuşu için episodes listesinin ilk elemanı gönderilir
             newMovieLoadResponse(title, url, TvType.Movie, episodes.firstOrNull()?.data ?: "") {
                 this.posterUrl = poster
                 this.plot = plot
+                this.score = Score.from10(score)
+                this.actors = actorsList
+                this.recommendations = recommend
             }
         }
     }
