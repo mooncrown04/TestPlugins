@@ -1,4 +1,4 @@
-package com.mooncrown
+   package com.mooncrown
 
 import android.util.Log
 import com.lagradost.cloudstream3.*
@@ -65,11 +65,9 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
         val script = doc.select("script").map { it.html() }.firstOrNull { it.contains("atob") }
 
         if (script != null) {
-            // Nuvio'daki gibi atob içindeki veriyi temizce ayıklayalım
             val base64Match = """atob\s*\(\s*["'](.*?)["']\s*\)""".toRegex().find(script)
             val decoded = base64Match?.let { base64Decode(it.groupValues[1]) } ?: ""
 
-            // Nuvio'da fileData JSON.parse(rawFile) yapılıyordu
             val fileRegex = """file\s*:\s*['"](\[.*?\]|http.*?)['"]""".toRegex(RegexOption.DOT_MATCHES_ALL)
             val fileData = fileRegex.find(decoded)?.groupValues?.get(1)
 
@@ -95,14 +93,13 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
                         }
                     }
                 } else {
-                    // Tekil link gelirse (Nuvio'daki processStr mantığı)
                     val movieJson = JSONObject().put("file", fileData)
                     episodes.add(newEpisode(movieJson.toString()) { this.name = title })
                 }
             }
         }
 
-        // Eğer hala boşsa (Play butonu gelmesi için şart)
+        // Play tuşu için zorunlu doluluk
         if (episodes.isEmpty()) {
             episodes.add(newEpisode(JSONObject().put("file", "empty").toString()) { this.name = "Kaynak Bulunamadı" })
         }
@@ -117,7 +114,6 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
                 this.actors = actorsList
             }
         } else {
-            // Filmlerde data parametresi boş olmamalı!
             newMovieLoadResponse(title, url, TvType.Movie, episodes.first().data) {
                 this.posterUrl = poster
                 this.plot = plot
@@ -137,7 +133,6 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
             val fileStr = json.optString("file")
             if (fileStr.isNullOrBlank() || fileStr == "empty") return false
 
-            // Nuvio'daki virgülle ayırma ve kalite çekme mantığı (processStr)
             fileStr.split(",").forEach { part ->
                 val qualityMatch = """\[(.*?)\]""".toRegex().find(part)
                 val qualityLabel = qualityMatch?.groupValues?.get(1) ?: ""
@@ -149,15 +144,17 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
                     if (streamUrl.contains("english") || streamUrl.contains("_en")) flags.add("🇺🇸")
                     val label = if (flags.isEmpty()) "Orijinal" else flags.joinToString("")
 
+                    // Hatalı yer burasıydı, düzelttik:
                     callback.invoke(
                         newExtractorLink(
-                            this.name,
-                            "$name [$label] $qualityLabel",
-                            streamUrl,
-                            "$mainUrl/",
-                            getQualityFromName(qualityLabel),
-                            streamUrl.contains(".m3u8")
-                        )
+                            source = this.name,
+                            name = "$name [$label] $qualityLabel",
+                            url = streamUrl,
+                            type = if (streamUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
+                        ) {
+                            this.referer = "$mainUrl/"
+                            this.quality = getQualityFromName(qualityLabel)
+                        }
                     )
                 }
             }
