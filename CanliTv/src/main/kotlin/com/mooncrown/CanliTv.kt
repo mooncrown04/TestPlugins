@@ -12,7 +12,7 @@ class CanliTv(private val sharedPref: SharedPreferences? = null) : MainAPI() {
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown/refs/heads/main/guncel_liste.m3u"
     private val epgUrl = "https://iptv-epg.org/files/epg-tr.xml"
 
-    override var name = "EPG-TV"
+    override var name = "EPG-TV-1"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
