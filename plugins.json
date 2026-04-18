@@ -47,10 +47,10 @@
     },
     {
         "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png",
-        "fileHash": "sha256-780bfb9ae82c54244dce7326406cbf15c0944dc3c3f91cf0c3be31ad78146961",
+        "fileHash": "sha256-ee03bef7d4f0e7608979b14bd014d2eebe51ca951a57cd1a9978d9396fd16e8b",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
-        "fileSize": 15754,
+        "fileSize": 15748,
         "status": 1,
         "language": "tr",
         "authors": [
@@ -138,10 +138,10 @@
     },
     {
         "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png",
-        "fileHash": "sha256-9fa59acdd6c06052b36980555b4461002efc8c536af33dd59cdbbf32b535116a",
+        "fileHash": "sha256-9c08c163b9d8d27abb1a23d5a2fc5af8ad311530aa9b96f9840e6ce0587c2277",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
-        "fileSize": 21011,
+        "fileSize": 20460,
         "status": 1,
         "language": "tr",
         "authors": [
