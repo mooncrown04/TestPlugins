@@ -76,16 +76,15 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         val d = app.get(detailsUrl).parsedSafe<TmdbDetailResponse>() ?: throw ErrorLoadingException("Detay Hatası")
         val imdbId = d.external_ids?.imdb_id ?: throw ErrorLoadingException("IMDB Yok")
 
-        // --- ÖZEL AKTÖR MANTIĞI ---
         val actorsList = mutableListOf<ActorData>()
         
         // 1. Geliştirici İmzası
         actorsList.add(ActorData(Actor("MoOnCrOwN", "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"), roleString = "Yazılım Amelesi"))
 
-        // 2. Dinamik Yapım Kartı (Yapım İsmi ve Kategorisi)
+        // 2. Dinamik Yapım Kartı
         actorsList.add(ActorData(Actor(d.name ?: d.title ?: "Bilgi", "https://image.tmdb.org/t/p/w500${d.poster_path}"), roleString = d.genres?.firstOrNull()?.name ?: "Kategori"))
 
-        // 3. Gerçek Oyuncular (Filtreli)
+        // 3. Filtreli Oyuncular
         d.credits?.cast?.take(20)?.forEach { castItem ->
             if (!castItem.character.isNullOrBlank()) {
                 actorsList.add(ActorData(Actor(castItem.name ?: "Oyuncu", if (castItem.profile_path != null) "https://image.tmdb.org/t/p/w185${castItem.profile_path}" else null), roleString = castItem.character))
@@ -144,15 +143,15 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 source = this.name,
                 name = "Vidmody [TR]",
                 url = link,
-                referer = "https://vidmody.com/",
-                quality = Qualities.P1080.value,
                 type = ExtractorLinkType.M3U8
-            )
+            ) {
+                this.referer = "https://vidmody.com/"
+                this.quality = Qualities.P1080.value
+            }
         )
         return true
     }
 
-    // --- Veri Yapıları ---
     data class TmdbListResponse(val results: List<TmdbResult>?)
     data class TmdbResult(val id: Int?, val title: String?, val name: String?, val poster_path: String?, val media_type: String?, val release_date: String?, val first_air_date: String?, val vote_average: Double?)
     data class TmdbDetailResponse(val title: String?, val name: String?, val overview: String?, val poster_path: String?, val external_ids: ExternalIds?, val seasons: List<TmdbSeason>?, val release_date: String?, val first_air_date: String?, val genres: List<Genre>?, val credits: Credits?, val vote_average: Double?)
