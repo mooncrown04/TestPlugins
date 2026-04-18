@@ -26,9 +26,26 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
             Pair("Netflix Dizileri", "discover/tv?with_networks=213"),
             Pair("Popüler Kore Dizileri", "discover/tv?with_original_language=ko"),
             Pair("Bilim Kurgu Klasikleri", "discover/movie?with_genres=878&sort_by=vote_average.desc&vote_count.gte=500"),
+            // 1. Disney+ Orijinal İçerikleri (Network ID: 2739)
+            Pair("Disney+ Orijinalleri", "discover/tv?with_networks=2739"),    
+            // 2. Apple TV+ Dizileri (Network ID: 2552)
+            Pair("Apple TV+ Dizileri", "discover/tv?with_networks=2552"),    
+            // 3. Türk Komedi Filmleri (Tür: 35, Dil: tr)
+            Pair("Yerli Komediler", "discover/movie?with_genres=35&with_original_language=tr&sort_by=popularity.desc"),   
+            // 4. Marvel Sinematik Evreni (Şirket ID: 420)
+            Pair("Marvel Dünyası", "discover/movie?with_companies=420&sort_by=release_date.desc"),    
+            // 5. Animasyon & Aile (Tür: 16, 10751)
+            Pair("Animasyon Kuşağı", "discover/movie?with_genres=16,10751&sort_by=popularity.desc"),    
+            // 6. Ödüllü Dramalar (Tür: 18, Min Oy Sayısı: 1000)
+            Pair("Ödüllü Dramlar", "discover/movie?with_genres=18&sort_by=vote_average.desc&vote_count.gte=1000"),    
+            // 7. Yeni Çıkan Diziler (İlk Hava Tarihi 2026 - Mevcut Yıl)
+            Pair("2026 Yeni Diziler", "discover/tv?first_air_date_year=2026&sort_by=popularity.desc"),    
+            // 8. Aksiyon & Macera (Tür: 28, 12)
+            Pair("Aksiyon Dolu Dakikalar", "discover/movie?with_genres=28,12&sort_by=popularity.desc"),    
+            // 9. Belgesel Tutkunları (Tür: 99)
+            Pair("Belgeseller", "discover/tv?with_genres=99&sort_by=popularity.desc")
             Pair("En Çok Oy Alan Filmler", "movie/top_rated")
         )
-
         categories.forEach { (title, endpoint) ->
             try {
                 val sep = if (endpoint.contains("?")) "&" else "?"
