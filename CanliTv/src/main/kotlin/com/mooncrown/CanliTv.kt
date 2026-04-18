@@ -1,5 +1,6 @@
 package com.mooncrown
 
+import android.content.SharedPreferences
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
@@ -7,7 +8,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import java.text.SimpleDateFormat
 import java.util.*
 
-class CanliTv : MainAPI() {
+class CanliTv(private val sharedPref: SharedPreferences? = null) : MainAPI() {
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown/refs/heads/main/guncel_liste.m3u"
     private val epgUrl = "https://iptv-epg.org/files/epg-tr.xml"
 
@@ -130,12 +131,11 @@ class CanliTv : MainAPI() {
             val loadData = parseJson<LoadData>(url)
             val epgInfo = getEpgForChannel(loadData.tvgId)
 
-            // DÜZELTME: newLiveStreamLoadResponse doğru parametrelerle
+            // DÜZELTME: CloudStream API'sine uygun newLiveStreamLoadResponse kullanımı
             newLiveStreamLoadResponse(
-                name = loadData.title,
-                url = loadData.urls.firstOrNull() ?: "",
-                referer = url,
-                type = TvType.Live
+                loadData.title,
+                loadData.urls.firstOrNull() ?: "",
+                url
             ) {
                 this.posterUrl = loadData.poster
                 this.plot = "Kategori: ${loadData.group}\nKaynak Sayısı: ${loadData.urls.size}$epgInfo"
@@ -168,7 +168,6 @@ class CanliTv : MainAPI() {
         }.getOrElse { false }
     }
 
-    // DÜZELTME: data class - val val yazım hatası giderildi
     data class LoadData(
         val urls: List<String>,
         val title: String, 
