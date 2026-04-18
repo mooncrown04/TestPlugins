@@ -70,6 +70,27 @@
     },
     {
         "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png",
+        "fileHash": "sha256-646008eac737d9c47b5f17f6e4f5a583e2af22a63c48e7a34db99ef4f897ddeb",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
+        "fileSize": 13810,
+        "status": 1,
+        "language": "tr",
+        "authors": [
+            "MoOnCrOwN"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries"
+        ],
+        "version": 3,
+        "internalName": "CinemaCity",
+        "description": "CinemaCity` sinema ve dizi",
+        "url": "https://raw.githubusercontent.com/mooncrown04/TestPlugins/builds/CinemaCity.cs3",
+        "name": "CinemaCity"
+    },
+    {
+        "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png",
         "fileHash": "sha256-c2616f8b7587d2c6fc272a4efad2ce1af6d703e977c00038daf2fd89d0deaf32",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
