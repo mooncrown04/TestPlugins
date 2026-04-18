@@ -1,4 +1,4 @@
-package com.example
+package com.mooncrown
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
@@ -7,7 +7,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import java.text.SimpleDateFormat
 import java.util.*
 
-class NeonSpor : MainAPI() {
+class CanliTv : MainAPI() {
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown/refs/heads/main/guncel_liste.m3u"
     private val epgUrl = "https://iptv-epg.org/files/epg-tr.xml"
 
@@ -130,7 +130,13 @@ class NeonSpor : MainAPI() {
             val loadData = parseJson<LoadData>(url)
             val epgInfo = getEpgForChannel(loadData.tvgId)
 
-            newLiveStreamLoadResponse(loadData.title, loadData.urls.first(), url) {
+            // DÜZELTME: newLiveStreamLoadResponse doğru parametrelerle
+            newLiveStreamLoadResponse(
+                name = loadData.title,
+                url = loadData.urls.firstOrNull() ?: "",
+                referer = url,
+                type = TvType.Live
+            ) {
                 this.posterUrl = loadData.poster
                 this.plot = "Kategori: ${loadData.group}\nKaynak Sayısı: ${loadData.urls.size}$epgInfo"
             }
@@ -162,12 +168,13 @@ class NeonSpor : MainAPI() {
         }.getOrElse { false }
     }
 
+    // DÜZELTME: data class - val val yazım hatası giderildi
     data class LoadData(
         val urls: List<String>,
         val title: String, 
         val poster: String, 
         val group: String, 
-        val val tvgId: String
+        val tvgId: String
     )
     
     data class PlaylistItem(
