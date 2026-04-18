@@ -21,10 +21,12 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
             Pair("Haftalık Trendler", "trending/all/week"),
             Pair("Popüler Türk Yapımları", "discover/movie?with_original_language=tr&sort_by=popularity.desc"),
             Pair("Sinemalarda", "movie/now_playing"),
-            Pair("Popüler Diziler", "tv/popular"),     
+            Pair("Popüler Diziler", "tv/popular"),
             Pair("Korku ve Gerilim", "discover/movie?with_genres=27,53"),
             Pair("Netflix Dizileri", "discover/tv?with_networks=213"),
-            Pair("Popüler Kore Dizileri", "discover/tv?with_original_language=ko")
+            Pair("Popüler Kore Dizileri", "discover/tv?with_original_language=ko"),
+            Pair("Marvel Dünyası", "discover/movie?with_companies=420&sort_by=release_date.desc"),
+            Pair("Disney+ Orijinalleri", "discover/tv?with_networks=2739")
         )
 
         categories.forEach { (title, endpoint) ->
@@ -47,6 +49,23 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         return newHomePageResponse(homeLists, false)
     }
 
+    override suspend fun search(query: String): List<SearchResponse> {
+        val results = mutableListOf<SearchResponse>()
+        listOf("movie", "tv").forEach { type ->
+            try {
+                val url = "https://api.themoviedb.org/3/search/$type?api_key=$tmdbKey&query=$query&language=tr-TR"
+                val res = app.get(url).parsedSafe<TmdbListResponse>()
+                res?.results?.forEach {
+                    results.add(newMovieSearchResponse(it.title ?: it.name ?: return@forEach, "tmdb|${it.id}|$type", if (type == "tv") TvType.TvSeries else TvType.Movie) {
+                        this.posterUrl = "https://image.tmdb.org/t/p/w500${it.poster_path}"
+                        this.year = (it.release_date ?: it.first_air_date)?.take(4)?.toIntOrNull()
+                    })
+                }
+            } catch (e: Exception) { }
+        }
+        return results
+    }
+
     override suspend fun load(url: String): LoadResponse {
         val parts = url.split("|")
         val tmdbId = parts[1]
@@ -54,27 +73,23 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         val catName = if (parts.size > 3) parts[3] else "MoOnCrOwN"
 
         val detailsUrl = "https://api.themoviedb.org/3/$type/$tmdbId?api_key=$tmdbKey&language=tr-TR&append_to_response=external_ids,credits"
-        val d = app.get(detailsUrl).parsedSafe<TmdbDetailResponse>() ?: throw ErrorLoadingException("Detay hatası")
+        val d = app.get(detailsUrl).parsedSafe<TmdbDetailResponse>() ?: throw ErrorLoadingException("Detay Hatası")
         val imdbId = d.external_ids?.imdb_id ?: throw ErrorLoadingException("IMDB Yok")
 
-        // AKTOR & KANAL İMZASI - ActorRole.Main ile Tip Hatası Giderildi
+        // --- ÖZEL AKTÖR MANTIĞI ---
         val actorsList = mutableListOf<ActorData>()
-        actorsList.add(
-            ActorData(
-                actor = Actor("MoOnCrOwN | Vidmody Kanalı", "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"),
-                role = ActorRole.Main,
-                roleString = "Geliştirici"
-            )
-        )
+        
+        // 1. Geliştirici İmzası
+        actorsList.add(ActorData(Actor("MoOnCrOwN", "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"), roleString = "Yazılım Amelesi"))
 
-        d.credits?.cast?.take(10)?.forEach {
-            actorsList.add(
-                ActorData(
-                    actor = Actor(it.name ?: "Bilinmeyen", if (it.profile_path != null) "https://image.tmdb.org/t/p/w185${it.profile_path}" else null),
-                    role = ActorRole.Main,
-                    roleString = it.character ?: "Oyuncu"
-                )
-            )
+        // 2. Dinamik Yapım Kartı (Yapım İsmi ve Kategorisi)
+        actorsList.add(ActorData(Actor(d.name ?: d.title ?: "Bilgi", "https://image.tmdb.org/t/p/w500${d.poster_path}"), roleString = d.genres?.firstOrNull()?.name ?: "Kategori"))
+
+        // 3. Gerçek Oyuncular (Filtreli)
+        d.credits?.cast?.take(20)?.forEach { castItem ->
+            if (!castItem.character.isNullOrBlank()) {
+                actorsList.add(ActorData(Actor(castItem.name ?: "Oyuncu", if (castItem.profile_path != null) "https://image.tmdb.org/t/p/w185${castItem.profile_path}" else null), roleString = castItem.character))
+            }
         }
 
         val tags = mutableListOf("MoOnCrOwN", catName).apply { d.genres?.forEach { it.name?.let { add(it) } } }
@@ -93,18 +108,19 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         } else {
             val epList = mutableListOf<Episode>()
             d.seasons?.filter { (it.season_number ?: 0) > 0 }?.forEach { s ->
-                val sUrl = "https://api.themoviedb.org/3/tv/$tmdbId/season/${s.season_number}?api_key=$tmdbKey&language=tr-TR"
-                val sData = app.get(sUrl).parsedSafe<TmdbSeasonResponse>()
-                
-                sData?.episodes?.forEach { ep ->
-                    epList.add(newEpisode("vid|$imdbId|${s.season_number}|${ep.episode_number}") {
-                        this.name = ep.name ?: "Bölüm ${ep.episode_number}"
-                        this.season = s.season_number
-                        this.episode = ep.episode_number
-                        this.description = ep.overview
-                        this.posterUrl = if (ep.still_path != null) "https://image.tmdb.org/t/p/w500${ep.still_path}" else null
-                    })
-                }
+                try {
+                    val sUrl = "https://api.themoviedb.org/3/tv/$tmdbId/season/${s.season_number}?api_key=$tmdbKey&language=tr-TR"
+                    val sData = app.get(sUrl).parsedSafe<TmdbSeasonResponse>()
+                    sData?.episodes?.forEach { ep ->
+                        epList.add(newEpisode("vid|$imdbId|${s.season_number}|${ep.episode_number}") {
+                            this.name = ep.name ?: "Bölüm ${ep.episode_number}"
+                            this.season = s.season_number
+                            this.episode = ep.episode_number
+                            this.description = ep.overview
+                            this.posterUrl = if (ep.still_path != null) "https://image.tmdb.org/t/p/w500${ep.still_path}" else null
+                        })
+                    }
+                } catch (e: Exception) { }
             }
             newTvSeriesLoadResponse(d.name ?: d.title ?: "Dizi", url, TvType.TvSeries, epList) {
                 this.posterUrl = "https://image.tmdb.org/t/p/w500${d.poster_path}"
@@ -128,15 +144,15 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 source = this.name,
                 name = "Vidmody [TR]",
                 url = link,
+                referer = "https://vidmody.com/",
+                quality = Qualities.P1080.value,
                 type = ExtractorLinkType.M3U8
-            ) {
-                this.quality = Qualities.P1080.value
-                this.referer = "https://vidmody.com/"
-            }
+            )
         )
         return true
     }
 
+    // --- Veri Yapıları ---
     data class TmdbListResponse(val results: List<TmdbResult>?)
     data class TmdbResult(val id: Int?, val title: String?, val name: String?, val poster_path: String?, val media_type: String?, val release_date: String?, val first_air_date: String?, val vote_average: Double?)
     data class TmdbDetailResponse(val title: String?, val name: String?, val overview: String?, val poster_path: String?, val external_ids: ExternalIds?, val seasons: List<TmdbSeason>?, val release_date: String?, val first_air_date: String?, val genres: List<Genre>?, val credits: Credits?, val vote_average: Double?)
