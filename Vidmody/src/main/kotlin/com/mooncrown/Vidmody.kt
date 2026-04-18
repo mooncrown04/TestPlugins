@@ -3,8 +3,6 @@ package com.mooncrown
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
-import com.lagradost.cloudstream3.Actor
-import com.lagradost.cloudstream3.ActorMetaData
 
 class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
     override var name = "Vidmody"
@@ -18,8 +16,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val homeLists = mutableListOf<HomePageList>()
-        
-      val categories = listOf(
+        val categories = listOf(
             Pair("Haftalık Trendler", "trending/all/week"),
             Pair("Popüler Türk Yapımları", "discover/movie?with_original_language=tr&sort_by=popularity.desc"),
             Pair("Sinemalarda", "movie/now_playing"),
@@ -43,7 +40,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                     
                     newMovieSearchResponse(
                         it.title ?: it.name ?: return@mapNotNull null,
-                        "tmdb|${it.id}|$type|$title", // Başlığı tag için paslıyoruz
+                        "tmdb|${it.id}|$type|$title",
                         if (type == "tv") TvType.TvSeries else TvType.Movie
                     ) {
                         this.posterUrl = "https://image.tmdb.org/t/p/w500${it.poster_path}"
@@ -60,29 +57,30 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         val parts = url.split("|")
         val tmdbId = parts[1]
         val type = parts[2]
-        val categoryName = if (parts.size > 3) parts[3] else "Genel"
+        val categoryName = if (parts.size > 3) parts[3] else "MoOnCrOwN"
 
         val detailsUrl = "https://api.themoviedb.org/3/$type/$tmdbId?api_key=$tmdbKey&language=tr-TR&append_to_response=external_ids,credits"
         val d = app.get(detailsUrl).parsedSafe<TmdbDetailResponse>() ?: throw ErrorLoadingException("Detaylar alınamadı")
-        val imdbId = d.external_ids?.imdb_id ?: throw ErrorLoadingException("IMDB ID bulunamadı")
+        val imdbId = d.external_ids?.imdb_id ?: throw ErrorLoadingException("IMDB ID yok")
 
-        // Özel Aktörler (En Başta Sen ve Yazılım Amelesi)
-        val customActors = mutableListOf<Actor>()
-        customActors.add(Actor("MoOnCrOwN", "Lead Developer", "https://github.com/mooncrown04.png"))
-        customActors.add(Actor("Yazılım Amelesi", "Software Architect", "https://github.com/yazilimamelesi.png"))
+        // Actor yapısını en basit ve hatasız haliyle kuruyoruz
+        val actorList = mutableListOf<ActorData>()
         
+        // Kanal Sahipleri
+        actorList.add(ActorData(Actor("MoOnCrOwN", role = "Developer", image = "https://github.com/mooncrown04.png")))
+        actorList.add(ActorData(Actor("Yazılım Amelesi", role = "Architect", image = "https://github.com/yazilimamelesi.png")))
+
+        // TMDB Oyuncuları
         d.credits?.cast?.take(10)?.forEach {
-            customActors.add(Actor(
+            actorList.add(ActorData(Actor(
                 it.name ?: "Bilinmeyen",
-                it.character ?: "Oyuncu",
-                if (it.profile_path != null) "https://image.tmdb.org/t/p/w185${it.profile_path}" else "https://www.themoviedb.org/assets/2/v4/glyphicons/basic/glyphicons-basic-4-user-grey-d8fe57f12f2970e303494914c673410f92461944e554d3d3d63d898c8c519d55.svg"
-            ))
+                role = it.character ?: "Oyuncu",
+                image = if (it.profile_path != null) "https://image.tmdb.org/t/p/w185${it.profile_path}" else null
+            )))
         }
 
-        // Taglar: İmza + Kategori + Türler
         val tags = mutableListOf("MoOnCrOwN", categoryName)
         d.genres?.forEach { it.name?.let { g -> tags.add(g) } }
-
         val rating = d.vote_average?.times(10)?.toInt()
 
         return if (type == "movie") {
@@ -92,7 +90,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 this.year = (d.release_date ?: d.first_air_date)?.take(4)?.toIntOrNull()
                 this.tags = tags
                 this.rating = rating
-                this.actors = customActors
+                this.actors = actorList
                 addImdbId(imdbId)
             }
         } else {
@@ -103,7 +101,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                         this.name = "Bölüm $i"
                         this.season = season.season_number
                         this.episode = i
-                        this.description = "Sezon ${season.season_number} - Bölüm $i | MoOnCrOwN & Yazılım Amelesi"
+                        this.description = "S${season.season_number} E$i | MoOnCrOwN Kalitesi"
                     })
                 }
             }
@@ -113,7 +111,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 this.year = (d.release_date ?: d.first_air_date)?.take(4)?.toIntOrNull()
                 this.tags = tags
                 this.rating = rating
-                this.actors = customActors
+                this.actors = actorList
                 addImdbId(imdbId)
             }
         }
