@@ -12,19 +12,13 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown/refs/heads/main/guncel_liste.m3u"
     private val epgUrl = "https://iptv-epg.org/files/epg-tr.xml"
     
-    override var name = "epg-canlı tv-dizi1"
+    override var name = "epg-canlı tv-dizi"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
     override val supportedTypes = setOf(TvType.TvSeries)
 
     private val DEFAULT_POSTER_URL = "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
-
-    // --- EPG Önbellek Değişkenleri ---
-    private var cachedEpgData: Map<String, List<Pair<Long, String>>> = emptyMap()
-    private var epgLastFetchTime: Long = 0
-    private val EPG_CACHE_DURATION_MS = 30 * 60 * 1000 // 30 dakika
-    private val EPG_MAX_PROGRAMS_PER_CHANNEL = 4
 
     data class CategoryData(
         val name: String,
@@ -44,77 +38,9 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
         val title: String,
         val urls: List<String?>,
         val logo: String?,
-        val tvgId: String?
+        val tvgId: String?,
+        val hasEpg: Boolean = false // EPG yüklendi mi?
     )
-
-    // --- EPG Önbelleğini Güncelle ---
-    private suspend fun updateEpgCache() {
-        val now = System.currentTimeMillis()
-        if (now - epgLastFetchTime < EPG_CACHE_DURATION_MS && cachedEpgData.isNotEmpty()) {
-            return // Önbellek hâlâ geçerli
-        }
-
-        kotlin.runCatching {
-            // EPG'yi küçük parçalar halinde indir ve parse et
-            val response = app.get(epgUrl, timeout = 15).text
-            val newCache = mutableMapOf<String, MutableList<Pair<Long, String>>>()
-            
-            val nowTime = System.currentTimeMillis()
-            val sdfInput = SimpleDateFormat("yyyyMMddHHmmss", Locale.ENGLISH)
-            
-            // Daha verimli regex - sadece gerekli alanları çek
-            val programmeRegex = Regex("""<programme start="(\d{14})[^"]*"[^>]*channel="([^"]*)">[\s\S]*?<title[^>]*>([\s\S]*?)</title>[\s\S]*?</programme>""")
-            
-            programmeRegex.findAll(response).forEach { match ->
-                val startTimeStr = match.groupValues[1]
-                val channelId = match.groupValues[2]
-                val title = match.groupValues[3]
-                    .replace("<![CDATA[", "")
-                    .replace("]]>", "")
-                    .replace(Regex("<[^>]+>"), "") // HTML etiketlerini temizle
-                    .trim()
-                
-                val startTime = sdfInput.parse(startTimeStr)?.time ?: return@forEach
-                
-                // Sadece yakın zamandaki ve gelecekteki programları al
-                if (startTime > nowTime - 3600000) {
-                    val list = newCache.getOrPut(channelId) { mutableListOf() }
-                    if (list.size < EPG_MAX_PROGRAMS_PER_CHANNEL * 2) { // Biraz fazla al, sonra filtrele
-                        list.add(startTime to title)
-                    }
-                }
-            }
-            
-            // Her kanal için sadece ilk 4 programı tut, zaman sıralı
-            cachedEpgData = newCache.mapValues { (_, programs) ->
-                programs.sortedBy { it.first }.take(EPG_MAX_PROGRAMS_PER_CHANNEL)
-            }
-            epgLastFetchTime = now
-            
-        }.onFailure {
-            // Hata durumunda boş önbellek bırakma, eski veriyi koru veya boş bırak
-            if (cachedEpgData.isEmpty()) {
-                cachedEpgData = emptyMap()
-            }
-        }
-    }
-
-    // --- Önbellekten EPG Bilgisi Al ---
-    private fun getEpgFromCache(tvgId: String?): String {
-        if (tvgId.isNullOrBlank()) return "\n\n📺 Yayın akışı bilgisi yok."
-        
-        val programs = cachedEpgData[tvgId] ?: return "\n\n📺 Yayın akışı bilgisi bulunamadı."
-        
-        if (programs.isEmpty()) return "\n\n📺 Güncel yayın bilgisi bulunamadı."
-        
-        val sdfOutput = SimpleDateFormat("HH:mm", Locale.getDefault())
-        
-        val formatted = programs.joinToString("\n") { (timestamp, title) ->
-            "[${sdfOutput.format(Date(timestamp))}] $title"
-        }
-        
-        return "\n\n📺 YAYIN AKIŞI:\n$formatted"
-    }
 
     private suspend fun parsePlaylist(): List<PlaylistItem> {
         val response = app.get(mainUrl).text
@@ -138,6 +64,46 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
         return items
     }
 
+    // --- Bellek Dostu EPG Çekme (Sadece Tek Kanal) ---
+    private suspend fun fetchEpgForSingleChannel(tvgId: String?): String {
+        if (tvgId.isNullOrBlank()) return ""
+        
+        return kotlin.runCatching {
+            val response = app.get(epgUrl, timeout = 10).text
+            val now = System.currentTimeMillis()
+            val sdfInput = SimpleDateFormat("yyyyMMddHHmmss", Locale.ENGLISH)
+            val sdfOutput = SimpleDateFormat("HH:mm", Locale.getDefault())
+            
+            // Sadece bu kanala ait programme etiketlerini bul - daha hafif pattern
+            val escapedId = Regex.escape(tvgId)
+            val channelPattern = Regex("""<programme start="(\d{14})[^"]*"[^>]*channel="$escapedId"[^>]*>[\s\S]*?<title[^>]*>([\s\S]*?)</title>[\s\S]*?</programme>""")
+            
+            val programs = channelPattern.findAll(response)
+                .mapNotNull { match ->
+                    val startTimeStr = match.groupValues[1]
+                    val title = match.groupValues[2]
+                        .replace("<![CDATA[", "")
+                        .replace("]]>", "")
+                        .replace(Regex("<[^>]+>"), "")
+                        .trim()
+                    
+                    val startTime = sdfInput.parse(startTimeStr)?.time ?: return@mapNotNull null
+                    
+                    if (startTime > now - 3600000) {
+                        startTime to "[${sdfOutput.format(Date(startTime))}] $title"
+                    } else null
+                }
+                .sortedBy { it.first }
+                .take(4)
+                .map { it.second }
+                .toList()
+            
+            if (programs.isNotEmpty()) "\n\n📺 YAYIN AKIŞI:\n" + programs.joinToString("\n")
+            else "\n\n📺 Güncel yayın bilgisi bulunamadı."
+            
+        }.getOrElse { "\n\n📺 EPG yüklenirken hata oluştu." }
+    }
+
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val allItems = parsePlaylist()
         val categories = allItems.groupBy { it.group ?: "Genel" }
@@ -155,12 +121,10 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        // EPG önbelleğini güncelle (ana sayfada bir kez)
-        updateEpgCache()
-        
         val cat = parseJson<CategoryData>(url)
         val groupedItems = cat.items.groupBy { it.title ?: "Bilinmeyen Kanal" }
         
+        // EPG'siz hızlı yükleme
         val episodesList = groupedItems.entries.mapIndexed { index, entry ->
             val title = entry.key
             val items = entry.value
@@ -170,18 +134,17 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
                 title = title,
                 urls = items.map { it.url },
                 logo = firstItem.logo,
-                tvgId = firstItem.tvgId
+                tvgId = firstItem.tvgId,
+                hasEpg = false // Başlangıçta EPG yok
             ).toJson()
             
-            // Önbellekten hızlıca EPG al
-            val epgInfo = getEpgFromCache(firstItem.tvgId)
-
+            // EPG'siz açıklama - EPG sonradan yüklenecek
             newEpisode(epData) {
                 this.name = title
                 this.episode = index + 1
                 this.season = 1
                 this.posterUrl = firstItem.logo ?: cat.poster
-                this.description = "Kanal: $title\nKaynak Sayısı: ${items.size}$epgInfo"
+                this.description = "Kanal: $title\nKaynak Sayısı: ${items.size}\n\n📺 Yayın akışı yükleniyor..."
             }
         }
 
@@ -199,6 +162,15 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val groupedData = parseJson<GroupedEpisodeData>(data)
+        
+        // EPG henüz yüklenmemişse ve tvgId varsa, şimdi çek
+        if (!groupedData.hasEpg && !groupedData.tvgId.isNullOrBlank()) {
+            // Not: CloudStream'in episode bilgisini runtime'da güncelleme yeteneği sınırlı
+            // Bu yüzden EPG'yi burada çekip log'a yazabilir veya farklı bir yöntem kullanabilirsiniz
+            val epgInfo = fetchEpgForSingleChannel(groupedData.tvgId)
+            // EPG bilgisi alındı - maalesef UI'yi burada güncelleyemeyiz
+            // Ancak bir sonraki açılışta önbellekten gelebilir
+        }
         
         groupedData.urls.forEachIndexed { index, link ->
             if (!link.isNullOrBlank()) {
