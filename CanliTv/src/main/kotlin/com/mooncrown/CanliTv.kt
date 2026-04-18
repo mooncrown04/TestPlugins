@@ -16,61 +16,126 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
-    // episodes özelliğini kullanabilmek için TvSeries olarak kalmalı
     override val supportedTypes = setOf(TvType.TvSeries)
-
-    // EPG Önbellekleme değişkenleri
-    private var cachedEpg: String? = null
-    private var lastEpgFetch: Long = 0
-    private val EPG_CACHE_TIME = 30 * 60 * 1000 // 30 Dakika
 
     private val DEFAULT_POSTER_URL = "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
 
-    data class CategoryData(val name: String, val poster: String)
-    data class PlaylistItem(val title: String?, val url: String?, val logo: String?, val tvgId: String?, val group: String?)
-    data class GroupedEpisodeData(val title: String, val urls: List<String>, val logo: String?, val tvgId: String?)
+    // --- EPG Önbellek Değişkenleri ---
+    private var cachedEpgData: Map<String, List<Pair<Long, String>>> = emptyMap()
+    private var epgLastFetchTime: Long = 0
+    private val EPG_CACHE_DURATION_MS = 30 * 60 * 1000 // 30 dakika
+    private val EPG_MAX_PROGRAMS_PER_CHANNEL = 4
 
-    private suspend fun parsePlaylist(): List<PlaylistItem> {
-        return try {
-            val response = app.get(mainUrl, timeout = 15).text
-            val items = mutableListOf<PlaylistItem>()
-            var lastInf: String? = null
+    data class CategoryData(
+        val name: String,
+        val poster: String,
+        val items: List<PlaylistItem>
+    )
 
-            response.lines().forEach { line ->
-                val t = line.trim()
-                if (t.startsWith("#EXTINF")) {
-                    lastInf = t
-                } else if (t.isNotEmpty() && !t.startsWith("#") && lastInf != null) {
-                    val title = lastInf?.split(",")?.lastOrNull()?.trim()
-                    val logo = Regex("""tvg-logo="([^"]*)"""").find(lastInf!!)?.groupValues?.get(1)
-                    val tvgId = Regex("""tvg-id="([^"]*)"""").find(lastInf!!)?.groupValues?.get(1)
-                    val group = Regex("""group-title="([^"]*)"""").find(lastInf!!)?.groupValues?.get(1)
-                    items.add(PlaylistItem(title, t, logo, tvgId, group))
-                    lastInf = null
+    data class PlaylistItem(
+        val title: String? = null,
+        val url: String? = null,
+        val logo: String? = null,
+        val tvgId: String? = null,
+        val group: String? = null
+    )
+
+    data class GroupedEpisodeData(
+        val title: String,
+        val urls: List<String?>,
+        val logo: String?,
+        val tvgId: String?
+    )
+
+    // --- EPG Önbelleğini Güncelle ---
+    private suspend fun updateEpgCache() {
+        val now = System.currentTimeMillis()
+        if (now - epgLastFetchTime < EPG_CACHE_DURATION_MS && cachedEpgData.isNotEmpty()) {
+            return // Önbellek hâlâ geçerli
+        }
+
+        kotlin.runCatching {
+            // EPG'yi küçük parçalar halinde indir ve parse et
+            val response = app.get(epgUrl, timeout = 15).text
+            val newCache = mutableMapOf<String, MutableList<Pair<Long, String>>>()
+            
+            val nowTime = System.currentTimeMillis()
+            val sdfInput = SimpleDateFormat("yyyyMMddHHmmss", Locale.ENGLISH)
+            
+            // Daha verimli regex - sadece gerekli alanları çek
+            val programmeRegex = Regex("""<programme start="(\d{14})[^"]*"[^>]*channel="([^"]*)">[\s\S]*?<title[^>]*>([\s\S]*?)</title>[\s\S]*?</programme>""")
+            
+            programmeRegex.findAll(response).forEach { match ->
+                val startTimeStr = match.groupValues[1]
+                val channelId = match.groupValues[2]
+                val title = match.groupValues[3]
+                    .replace("<![CDATA[", "")
+                    .replace("]]>", "")
+                    .replace(Regex("<[^>]+>"), "") // HTML etiketlerini temizle
+                    .trim()
+                
+                val startTime = sdfInput.parse(startTimeStr)?.time ?: return@forEach
+                
+                // Sadece yakın zamandaki ve gelecekteki programları al
+                if (startTime > nowTime - 3600000) {
+                    val list = newCache.getOrPut(channelId) { mutableListOf() }
+                    if (list.size < EPG_MAX_PROGRAMS_PER_CHANNEL * 2) { // Biraz fazla al, sonra filtrele
+                        list.add(startTime to title)
+                    }
                 }
             }
-            items
-        } catch (e: Exception) { emptyList() }
+            
+            // Her kanal için sadece ilk 4 programı tut, zaman sıralı
+            cachedEpgData = newCache.mapValues { (_, programs) ->
+                programs.sortedBy { it.first }.take(EPG_MAX_PROGRAMS_PER_CHANNEL)
+            }
+            epgLastFetchTime = now
+            
+        }.onFailure {
+            // Hata durumunda boş önbellek bırakma, eski veriyi koru veya boş bırak
+            if (cachedEpgData.isEmpty()) {
+                cachedEpgData = emptyMap()
+            }
+        }
     }
 
-    private fun extractEpg(epgData: String, tvgId: String?): String {
-        if (tvgId.isNullOrBlank() || !epgData.contains("channel=\"$tvgId\"")) return ""
-        return try {
-            val now = System.currentTimeMillis()
-            val sdfIn = SimpleDateFormat("yyyyMMddHHmmss", Locale.ENGLISH)
-            val sdfOut = SimpleDateFormat("HH:mm", Locale.getDefault())
+    // --- Önbellekten EPG Bilgisi Al ---
+    private fun getEpgFromCache(tvgId: String?): String {
+        if (tvgId.isNullOrBlank()) return "\n\n📺 Yayın akışı bilgisi yok."
+        
+        val programs = cachedEpgData[tvgId] ?: return "\n\n📺 Yayın akışı bilgisi bulunamadı."
+        
+        if (programs.isEmpty()) return "\n\n📺 Güncel yayın bilgisi bulunamadı."
+        
+        val sdfOutput = SimpleDateFormat("HH:mm", Locale.getDefault())
+        
+        val formatted = programs.joinToString("\n") { (timestamp, title) ->
+            "[${sdfOutput.format(Date(timestamp))}] $title"
+        }
+        
+        return "\n\n📺 YAYIN AKIŞI:\n$formatted"
+    }
 
-            val programs = Regex("""<programme start="([^"]*)"[^>]*channel="${Regex.escape(tvgId)}">.*?<title[^>]*>(.*?)</title>""", RegexOption.DOT_MATCHES_ALL)
-                .findAll(epgData).mapNotNull { m ->
-                    val start = sdfIn.parse(m.groupValues[1].substring(0, 14))?.time ?: 0L
-                    if (start > now - 3600000) {
-                        val t = m.groupValues[2].replace(Regex("<!\\[CDATA\\[|]]>"), "").trim()
-                        "[${sdfOut.format(Date(start))}] $t"
-                    } else null
-                }.take(3).toList()
+    private suspend fun parsePlaylist(): List<PlaylistItem> {
+        val response = app.get(mainUrl).text
+        val items = mutableListOf<PlaylistItem>()
+        var lastInf: String? = null
 
-            if (programs.isNotEmpty()) "\n\n📺 Yayın Akışı:\n" + programs.joinToString("\n") else ""
-        } catch (e: Exception) { "" }
+        response.lines().forEach { line ->
+            val t = line.trim()
+            if (t.startsWith("#EXTINF")) {
+                lastInf = t
+            } else if (t.isNotEmpty() && !t.startsWith("#") && lastInf != null) {
+                val title = lastInf?.split(",")?.lastOrNull()?.trim()
+                val logo = Regex("""tvg-logo="([^"]*)"""").find(lastInf!!)?.groupValues?.get(1)
+                val tvgId = Regex("""tvg-id="([^"]*)"""").find(lastInf!!)?.groupValues?.get(1)
+                val group = Regex("""group-title="([^"]*)"""").find(lastInf!!)?.groupValues?.get(1)
+                
+                items.add(PlaylistItem(title, t, logo, tvgId, group))
+                lastInf = null
+            }
+        }
+        return items
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -79,61 +144,51 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
 
         val responses = categories.map { (name, items) ->
             val poster = items.firstOrNull { !it.logo.isNullOrBlank() }?.logo ?: DEFAULT_POSTER_URL
-            newAnimeSearchResponse(name, CategoryData(name, poster).toJson()) {
+            val data = CategoryData(name, poster, items).toJson()
+
+            newAnimeSearchResponse(name, data) {
                 this.posterUrl = poster
                 this.type = TvType.TvSeries
             }
         }
-        return newHomePageResponse(listOf(HomePageList("Kategoriler", responses, isHorizontalImages = true)), false)
+        return newHomePageResponse(listOf(HomePageList("Tüm Kategoriler", responses, isHorizontalImages = true)), false)
     }
 
     override suspend fun load(url: String): LoadResponse {
+        // EPG önbelleğini güncelle (ana sayfada bir kez)
+        updateEpgCache()
+        
         val cat = parseJson<CategoryData>(url)
-        val allItems = parsePlaylist()
+        val groupedItems = cat.items.groupBy { it.title ?: "Bilinmeyen Kanal" }
         
-        // EPG'yi sadece 30 dakikada bir indirerek hızı koruyoruz
-        if (cachedEpg == null || System.currentTimeMillis() - lastEpgFetch > EPG_CACHE_TIME) {
-            try {
-                val epgResponse = app.get(epgUrl, timeout = 10).text
-                if (epgResponse.isNotBlank()) {
-                    cachedEpg = epgResponse
-                    lastEpgFetch = System.currentTimeMillis()
-                }
-            } catch (e: Exception) { }
-        }
-        
-        val currentEpg = cachedEpg ?: ""
-        val filtered = allItems.filter { (it.group ?: "Genel") == cat.name }
-        val grouped = filtered.groupBy { it.title ?: "Bilinmeyen" }
-
-        val episodesList = grouped.entries.mapIndexed { index, entry ->
+        val episodesList = groupedItems.entries.mapIndexed { index, entry ->
             val title = entry.key
             val items = entry.value
-            val first = items.first()
-
+            val firstItem = items.first()
+            
             val epData = GroupedEpisodeData(
-                title, 
-                items.mapNotNull { it.url }, 
-                first.logo,
-                first.tvgId
+                title = title,
+                urls = items.map { it.url },
+                logo = firstItem.logo,
+                tvgId = firstItem.tvgId
             ).toJson()
             
-            val channelEpg = extractEpg(currentEpg, first.tvgId)
+            // Önbellekten hızlıca EPG al
+            val epgInfo = getEpgFromCache(firstItem.tvgId)
 
             newEpisode(epData) {
                 this.name = title
                 this.episode = index + 1
                 this.season = 1
-                this.posterUrl = first.logo ?: cat.poster
-                this.description = "Kaynak: ${items.size} adet$channelEpg"
+                this.posterUrl = firstItem.logo ?: cat.poster
+                this.description = "Kanal: $title\nKaynak Sayısı: ${items.size}$epgInfo"
             }
         }
 
-        // episodes özelliğini destekleyen LoadResponse tipi
         return newAnimeLoadResponse(cat.name, url, TvType.TvSeries) {
             this.posterUrl = cat.poster
             this.episodes = mutableMapOf(DubStatus.Subbed to episodesList)
-            this.plot = "${cat.name} kategorisi altındaki tüm kanallar."
+            this.plot = "${cat.name} kategorisinde ${groupedItems.size} benzersiz içerik bulundu."
         }
     }
 
@@ -143,21 +198,22 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        return try {
-            val grouped = parseJson<GroupedEpisodeData>(data)
-            grouped.urls.forEachIndexed { i, link ->
+        val groupedData = parseJson<GroupedEpisodeData>(data)
+        
+        groupedData.urls.forEachIndexed { index, link ->
+            if (!link.isNullOrBlank()) {
                 callback.invoke(
                     newExtractorLink(
                         source = this.name,
-                        name = "${grouped.title} Kaynak ${i + 1}",
+                        name = "${groupedData.title} - Kaynak ${index + 1}",
                         url = link,
                         type = ExtractorLinkType.M3U8
                     ) {
-                        this.quality = Qualities.Unknown.value
+                        quality = Qualities.P1080.value
                     }
                 )
             }
-            true
-        } catch (e: Exception) { false }
+        }
+        return true
     }
 }
