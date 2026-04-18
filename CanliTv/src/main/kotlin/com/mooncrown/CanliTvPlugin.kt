@@ -7,7 +7,8 @@ import android.content.Context
 @CloudstreamPlugin
 class CanliTvPlugin: Plugin() {
     override fun load(context: Context) {
-    registerMainAPI(CanliTv(context.getSharedPreferences("CanliTv", 0)))
+      registerMainAPI(CanliTv())   
+    //registerMainAPI(CanliTv(context.getSharedPreferences("CanliTv", 0)))
  
     }
 }
