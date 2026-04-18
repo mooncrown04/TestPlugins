@@ -20,7 +20,6 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
 
     private val DEFAULT_POSTER_URL = "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
 
-    // Önbelleği String yerine liste olarak tutarak yükü azaltıyoruz
     private var cachedEpgData: String? = null
     private var lastFetch: Long = 0
 
@@ -28,14 +27,12 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
     data class PlaylistItem(val title: String?, val url: String?, val logo: String?, val tvgId: String?, val group: String?)
     data class GroupedEpisodeData(val title: String, val urls: List<String?>, val logo: String?, val tvgId: String?)
 
-    // EPG verisini sadece ihtiyaç anında ve çok hızlı filtreleyen fonksiyon
     private fun getFastEpg(tvgId: String?): String {
         val xml = cachedEpgData ?: return ""
         if (tvgId.isNullOrBlank()) return ""
 
         return try {
             val now = SimpleDateFormat("yyyyMMdd", Locale.ENGLISH).format(Date())
-            // Tüm dosyayı taramak yerine sadece tvgId'nin geçtiği bloklara odaklanıyoruz
             val pattern = """<programme start="$now.*?channel="${Regex.escape(tvgId)}">.*?<title[^>]*>(.*?)</title>"""
             Regex(pattern, RegexOption.DOT_MATCHES_ALL).findAll(xml)
                 .map { it.groupValues[1].replace(Regex("<!\\[CDATA\\[|\\]\\]>"), "").trim() }
@@ -76,7 +73,6 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
     override suspend fun load(url: String): LoadResponse {
         val cat = parseJson<CategoryData>(url)
         
-        // EPG'yi burada çekmek yerine sadece çok eskiyse güncelliyoruz
         if (cachedEpgData == null || (System.currentTimeMillis() - lastFetch > 7200000)) {
             kotlin.runCatching {
                 cachedEpgData = app.get(epgUrl, timeout = 10).text
@@ -86,7 +82,7 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
 
         val episodesList = cat.items.groupBy { it.title ?: "Kanal" }.entries.mapIndexed { index, entry ->
             val first = entry.value.first()
-            val epgSnippet = getFastEpg(first.tvgId) // Çok daha hızlı filtreleme
+            val epgSnippet = getFastEpg(first.tvgId)
 
             newEpisode(GroupedEpisodeData(entry.key, entry.value.map { it.url }, first.logo, first.tvgId).toJson()) {
                 this.name = entry.key
@@ -102,11 +98,26 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
         }
     }
 
-    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
         val grouped = parseJson<GroupedEpisodeData>(data)
         grouped.urls.forEachIndexed { i, link ->
             if (!link.isNullOrBlank()) {
-                callback.invoke(newExtractorLink(this.name, "${grouped.title} S${i+1}", link, "", Qualities.P1080.value, true))
+                callback.invoke(
+                    ExtractorLink(
+                        source = this.name,
+                        name = "${grouped.title} Kaynak ${i + 1}",
+                        url = link,
+                        referer = "",
+                        quality = Qualities.P1080.value,
+                        type = ExtractorLinkType.M3U8,
+                        isM3u8 = true
+                    )
+                )
             }
         }
         return true
