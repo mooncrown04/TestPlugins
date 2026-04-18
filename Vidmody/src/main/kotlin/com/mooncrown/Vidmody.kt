@@ -16,7 +16,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val homeLists = mutableListOf<HomePageList>()
-         val categories = listOf(
+        val categories = listOf(
             Pair("Haftalık Trendler", "trending/all/week"),
             Pair("Popüler Türk Yapımları", "discover/movie?with_original_language=tr&sort_by=popularity.desc"),
             Pair("Sinemalarda", "movie/now_playing"),
@@ -27,7 +27,6 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
             Pair("Bilim Kurgu Klasikleri", "discover/movie?with_genres=878&sort_by=vote_average.desc&vote_count.gte=500"),
             Pair("En Çok Oy Alan Filmler", "movie/top_rated")
         )
-
         categories.forEach { (title, endpoint) ->
             try {
                 val sep = if (endpoint.contains("?")) "&" else "?"
@@ -55,7 +54,6 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         val d = app.get("https://api.themoviedb.org/3/$type/$tmdbId?api_key=$tmdbKey&language=tr-TR&append_to_response=external_ids,credits").parsedSafe<TmdbDetailResponse>() ?: throw ErrorLoadingException("Hata")
         val imdbId = d.external_ids?.imdb_id ?: throw ErrorLoadingException("No IMDB")
 
-        // Actor: Hata vermemesi için sadece isim ve resim gönderiyoruz
         val actorList = mutableListOf<ActorData>()
         actorList.add(ActorData(Actor("MoOnCrOwN", "https://github.com/mooncrown04.png")))
         actorList.add(ActorData(Actor("Yazılım Amelesi", "https://github.com/yazilimamelesi.png")))
@@ -65,10 +63,6 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         }
 
         val tags = mutableListOf("MoOnCrOwN", catName).apply { d.genres?.forEach { it.name?.let { add(it) } } }
-        
-        // SCORE DÜZELTMESİ: Hata mesajına göre Score sadece tek bir Int alıyor
-        val ratingInt = d.vote_average?.times(10)?.toInt() ?: 0
-        val tmdbScore = Score(ratingInt) 
 
         return if (type == "movie") {
             newMovieLoadResponse(d.title ?: d.name ?: "Film", url, TvType.Movie, "vid|$imdbId") {
@@ -76,9 +70,9 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 this.plot = d.overview
                 this.year = (d.release_date ?: d.first_air_date)?.take(4)?.toIntOrNull()
                 this.tags = tags
-                this.score = tmdbScore
                 this.actors = actorList
                 addImdbId(imdbId)
+                // this.score = ... (Hata verdiği için kaldırıldı)
             }
         } else {
             val episodes = d.seasons?.filter { (it.season_number ?: 0) > 0 }?.flatMap { s ->
@@ -96,9 +90,9 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 this.plot = d.overview
                 this.year = (d.release_date ?: d.first_air_date)?.take(4)?.toIntOrNull()
                 this.tags = tags
-                this.score = tmdbScore
                 this.actors = actorList
                 addImdbId(imdbId)
+                // this.score = ... (Hata verdiği için kaldırıldı)
             }
         }
     }
