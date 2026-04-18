@@ -138,6 +138,27 @@
     },
     {
         "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png",
+        "fileHash": "sha256-1641cee3c3fab5d2fee5cda1c6eb8885e5a266d755a5e27579017925dfadc7fd",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
+        "fileSize": 15090,
+        "status": 1,
+        "language": "tr",
+        "authors": [
+            "MoOnCrOwN"
+        ],
+        "tvTypes": [
+            "Movie",
+            "TvSeries"
+        ],
+        "version": 3,
+        "internalName": "Vidmody",
+        "description": "Vidmody`un sinema  ve dizi ar\u015fivi",
+        "url": "https://raw.githubusercontent.com/mooncrown04/TestPlugins/builds/Vidmody.cs3",
+        "name": "Vidmody"
+    },
+    {
+        "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png",
         "fileHash": "sha256-42b5ee773f873b6f0dc66a1db690ffae11a5e60a6965ca6221ea6a017b8c24b1",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
