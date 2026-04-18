@@ -3,6 +3,8 @@ package com.mooncrown
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
+import com.lagradost.cloudstream3.Actor
+import com.lagradost.cloudstream3.ActorMetaData
 
 class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
     override var name = "Vidmody"
@@ -14,30 +16,24 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
 
     private val tmdbKey = "500330721680edb6d5f7f12ba7cd9023"
 
+    // --- 1. ANA SAYFA ---
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val homeLists = mutableListOf<HomePageList>()
-        
-        // Zenginleştirilmiş Kategoriler
         val categories = listOf(
             Pair("Haftalık Trendler", "trending/all/week"),
             Pair("Popüler Türk Yapımları", "discover/movie?with_original_language=tr&sort_by=popularity.desc"),
             Pair("Sinemalarda", "movie/now_playing"),
             Pair("Popüler Diziler", "tv/popular"),
-            Pair("En Çok Oy Alan Filmler", "movie/top_rated"),
-            Pair("Yakında Gelecekler", "movie/upcoming")
+            Pair("En Çok Oy Alan Filmler", "movie/top_rated")
         )
 
         categories.forEach { (title, endpoint) ->
             try {
-                val url = "https://api.themoviedb.org/3/$endpoint&api_key=$tmdbKey&language=tr-TR&page=1".let {
-                    if (!it.contains("?")) it.replace("&api_key", "?api_key") else it
-                }
+                val url = "https://api.themoviedb.org/3/$endpoint&api_key=$tmdbKey&language=tr-TR&page=1"
                 val res = app.get(url).parsedSafe<TmdbListResponse>()
-                
                 val items = res?.results?.mapNotNull {
                     val type = if (endpoint.contains("tv")) "tv" else (it.media_type ?: "movie")
                     if (type == "person") return@mapNotNull null
-                    
                     newMovieSearchResponse(
                         it.title ?: it.name ?: return@mapNotNull null,
                         "tmdb|${it.id}|$type",
@@ -47,32 +43,13 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                         this.year = (it.release_date ?: it.first_air_date)?.take(4)?.toIntOrNull()
                     }
                 }
-                if (!items.isNullOrEmpty()) {
-                    homeLists.add(HomePageList(title, items))
-                }
+                if (!items.isNullOrEmpty()) homeLists.add(HomePageList(title, items))
             } catch (e: Exception) { }
         }
         return newHomePageResponse(homeLists, hasNext = false)
     }
 
-    override suspend fun search(query: String): List<SearchResponse> {
-        val url = "https://api.themoviedb.org/3/search/multi?api_key=$tmdbKey&language=tr-TR&query=$query"
-        val res = app.get(url).parsedSafe<TmdbListResponse>()
-        
-        return res?.results?.mapNotNull {
-            val type = it.media_type ?: "movie"
-            if (type == "person") return@mapNotNull null
-            newMovieSearchResponse(
-                it.title ?: it.name ?: return@mapNotNull null,
-                "tmdb|${it.id}|$type",
-                if (type == "tv") TvType.TvSeries else TvType.Movie
-            ) {
-                this.posterUrl = "https://image.tmdb.org/t/p/w500${it.poster_path}"
-                this.year = (it.release_date ?: it.first_air_date)?.take(4)?.toIntOrNull()
-            }
-        } ?: emptyList()
-    }
-
+    // --- 2. DETAY YÜKLEME ---
     override suspend fun load(url: String): LoadResponse {
         val parts = url.split("|")
         val tmdbId = parts[1]
@@ -82,17 +59,37 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         val d = app.get(detailsUrl).parsedSafe<TmdbDetailResponse>() ?: throw ErrorLoadingException("Detaylar yüklenemedi")
         val imdbId = d.external_ids?.imdb_id ?: throw ErrorLoadingException("IMDB ID bulunamadı")
 
-        val title = d.title ?: d.name ?: "İçerik"
-        val actors = d.credits?.cast?.take(10)?.map { it.name ?: "" } ?: emptyList()
-        val tags = d.genres?.mapNotNull { it.name } ?: emptyList()
+        // --- Özel Oyuncu Kadrosu (Kanal Sahipleri + TMDB Oyuncuları) ---
+        val customActors = mutableListOf<Actor>()
+        
+        // 1. Sırada Sen (MoOnCrOwN)
+        customActors.add(Actor("MoOnCrOwN", "Geliştirici", "https://github.com/mooncrown04.png"))
+        // 2. Sırada Yazılım Amelesi
+        customActors.add(Actor("Yazılım Amelesi", "Katkıda Bulunan", "https://github.com/yazilimamelesi.png"))
+        
+        // TMDB'den gelen oyuncuları ekle
+        d.credits?.cast?.take(10)?.forEach {
+            customActors.add(Actor(
+                it.name ?: "Bilinmeyen Oyuncu",
+                it.character ?: "Oyuncu",
+                if (it.profile_path != null) "https://image.tmdb.org/t/p/w185${it.profile_path}" else "https://www.themoviedb.org/assets/2/v4/glyphicons/basic/glyphicons-basic-4-user-grey-d8fe57f12f2970e303494914c673410f92461944e554d3d3d63d898c8c519d55.svg"
+            ))
+        }
+
+        // Tag kısmına MoOnCrOwN ekle + TMDB Türleri
+        val tags = mutableListOf("MoOnCrOwN")
+        d.genres?.forEach { it.name?.let { name -> tags.add(name) } }
+
+        val rating = d.vote_average?.times(10)?.toInt()
 
         return if (type == "movie") {
-            newMovieLoadResponse(title, url, TvType.Movie, "vid|$imdbId") {
+            newMovieLoadResponse(d.title ?: d.name ?: "Film", url, TvType.Movie, "vid|$imdbId") {
                 this.posterUrl = "https://image.tmdb.org/t/p/w500${d.poster_path}"
                 this.plot = d.overview
                 this.year = (d.release_date ?: d.first_air_date)?.take(4)?.toIntOrNull()
                 this.tags = tags
-                this.recommendations = actors.map { newMovieSearchResponse(it, "actor", TvType.Movie) }
+                this.rating = rating
+                this.actors = customActors
                 addImdbId(imdbId)
             }
         } else {
@@ -100,17 +97,20 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
             d.seasons?.filter { (it.season_number ?: 0) > 0 }?.forEach { season ->
                 for (i in 1..(season.episode_count ?: 0)) {
                     episodes.add(newEpisode("vid|$imdbId|${season.season_number}|$i") {
-                        this.name = "Sezon ${season.season_number} - Bölüm $i"
+                        this.name = "Bölüm $i"
                         this.season = season.season_number
                         this.episode = i
+                        this.description = "Sezon ${season.season_number} - Bölüm $i | MoOnCrOwN Kalitesiyle"
                     })
                 }
             }
-            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+            newTvSeriesLoadResponse(d.name ?: d.title ?: "Dizi", url, TvType.TvSeries, episodes) {
                 this.posterUrl = "https://image.tmdb.org/t/p/w500${d.poster_path}"
                 this.plot = d.overview
                 this.year = (d.release_date ?: d.first_air_date)?.take(4)?.toIntOrNull()
                 this.tags = tags
+                this.rating = rating
+                this.actors = customActors
                 addImdbId(imdbId)
             }
         }
@@ -139,11 +139,11 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
     data class TmdbDetailResponse(
         val title: String?, val name: String?, val overview: String?, val poster_path: String?, 
         val external_ids: ExternalIds?, val seasons: List<TmdbSeason>?, val release_date: String?, 
-        val first_air_date: String?, val genres: List<Genre>?, val credits: Credits?
+        val first_air_date: String?, val genres: List<Genre>?, val credits: Credits?, val vote_average: Double?
     )
     data class ExternalIds(val imdb_id: String?)
     data class TmdbSeason(val season_number: Int?, val episode_count: Int?)
     data class Genre(val name: String?)
-    data class Credits(val cast: List<Cast>?)
-    data class Cast(val name: String?)
+    data class Credits(val cast: List<TmdbCast>?)
+    data class TmdbCast(val name: String?, val character: String?, val profile_path: String?)
 }
