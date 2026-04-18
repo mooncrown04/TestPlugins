@@ -3,7 +3,7 @@ package com.mooncrown
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
-import com.lagradost.cloudstream3.Score // Puanlama için eklendi
+import com.lagradost.cloudstream3.Score 
 
 class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
     override var name = "Vidmody"
@@ -34,7 +34,6 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                     newMovieSearchResponse(it.title ?: it.name ?: return@mapNotNull null, "tmdb|${it.id}|$type|$title", if (type == "tv") TvType.TvSeries else TvType.Movie) {
                         this.posterUrl = "https://image.tmdb.org/t/p/w500${it.poster_path}"
                         this.year = (it.release_date ?: it.first_air_date)?.take(4)?.toIntOrNull()
-                        // Arama sonuçlarında da puanı göster
                         this.score = it.vote_average?.let { v -> Score.from10(v) }
                     }
                 }
@@ -51,10 +50,9 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         val catName = if (parts.size > 3) parts[3] else "MoOnCrOwN"
 
         val detailsUrl = "https://api.themoviedb.org/3/$type/$tmdbId?api_key=$tmdbKey&language=tr-TR&append_to_response=external_ids,credits"
-        val d = app.get(detailsUrl).parsedSafe<TmdbDetailResponse>() ?: throw ErrorLoadingException("Detay alınamadı")
-        val imdbId = d.external_ids?.imdb_id ?: throw ErrorLoadingException("IMDB ID bulunamadı")
+        val d = app.get(detailsUrl).parsedSafe<TmdbDetailResponse>() ?: throw ErrorLoadingException("Hata")
+        val imdbId = d.external_ids?.imdb_id ?: throw ErrorLoadingException("No IMDB")
 
-        // Tam istediğin ActorData yapısı
         val actorsList = mutableListOf<ActorData>()
         actorsList.add(
             ActorData(
@@ -86,18 +84,17 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 addImdbId(imdbId)
             }
         } else {
-            val episodesList = mutableListOf<Episode>()
+            val epList = mutableListOf<Episode>()
             d.seasons?.filter { (it.season_number ?: 0) > 0 }?.forEach { s ->
                 for (i in 1..(s.episode_count ?: 0)) {
-                    episodesList.add(newEpisode("vid|$imdbId|${s.season_number}|$i") {
+                    epList.add(newEpisode("vid|$imdbId|${s.season_number}|$i") {
                         this.name = "Bölüm $i"
                         this.season = s.season_number
                         this.episode = i
-                        this.description = "S${s.season_number} E$i | MoOnCrOwN"
                     })
                 }
             }
-            newTvSeriesLoadResponse(d.name ?: d.title ?: "Dizi", url, TvType.TvSeries, episodesList) {
+            newTvSeriesLoadResponse(d.name ?: d.title ?: "Dizi", url, TvType.TvSeries, epList) {
                 this.posterUrl = "https://image.tmdb.org/t/p/w500${d.poster_path}"
                 this.plot = d.overview
                 this.year = (d.release_date ?: d.first_air_date)?.take(4)?.toIntOrNull()
@@ -114,13 +111,22 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         val imdbId = parts[1]
         val link = if (parts.size == 2) "https://vidmody.com/vs/$imdbId" else "https://vidmody.com/vs/$imdbId/s${parts[2]}/e${String.format("%02d", parts[3].toInt())}"
         
+        // Hata veren kısım düzeltildi: Parametreler blok içine alındı
         callback.invoke(
-            newExtractorLink(this.name, "Vidmody [TR]", link, "https://vidmody.com/", Qualities.P1080.value, true)
+            newExtractorLink(
+                source = this.name,
+                name = "Vidmody [TR]",
+                url = link,
+                type = ExtractorLinkType.M3U8
+            ) {
+                this.quality = Qualities.P1080.value
+                this.referer = "https://vidmody.com/"
+                this.isM3u8 = true
+            }
         )
         return true
     }
 
-    // Data Class Yapıları
     data class TmdbListResponse(val results: List<TmdbResult>?)
     data class TmdbResult(val id: Int?, val title: String?, val name: String?, val poster_path: String?, val media_type: String?, val release_date: String?, val first_air_date: String?, val vote_average: Double?)
     data class TmdbDetailResponse(val title: String?, val name: String?, val overview: String?, val poster_path: String?, val external_ids: ExternalIds?, val seasons: List<TmdbSeason>?, val release_date: String?, val first_air_date: String?, val genres: List<Genre>?, val credits: Credits?, val vote_average: Double?)
