@@ -43,7 +43,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
             // 8. Aksiyon & Macera (Tür: 28, 12)
             Pair("Aksiyon Dolu Dakikalar", "discover/movie?with_genres=28,12&sort_by=popularity.desc"),    
             // 9. Belgesel Tutkunları (Tür: 99)
-            Pair("Belgeseller", "discover/tv?with_genres=99&sort_by=popularity.desc")
+            Pair("Belgeseller", "discover/tv?with_genres=99&sort_by=popularity.desc"),
             Pair("En Çok Oy Alan Filmler", "movie/top_rated")
         )
         categories.forEach { (title, endpoint) ->
