@@ -3,7 +3,6 @@ package com.mooncrown
 import android.util.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import org.json.JSONArray
 import org.json.JSONObject
 import org.jsoup.nodes.Element
@@ -26,7 +25,7 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
         "$mainUrl/movies/" to "Filmler",
         "$mainUrl/tv-series/" to "Diziler",
         "$mainUrl/xfsearch/genre/animation/" to "Animasyon",
-        "$mainUrl/xfsearch/genre/korku/" to "Korku"
+        "$mainUrl/xfsearch/genre/action/" to "Aksiyon"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -42,9 +41,7 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
         val href = fixUrl(link.attr("href"))
         val title = link.text().split("(")[0].trim()
         val poster = fixUrlNull(this.selectFirst("img")?.attr("src"))
-        val isTv = href.contains("/tv-series/")
-
-        return if (isTv) {
+        return if (href.contains("/tv-series/")) {
             newTvSeriesSearchResponse(title, href, TvType.TvSeries) { this.posterUrl = poster }
         } else {
             newMovieSearchResponse(title, href, TvType.Movie) { this.posterUrl = poster }
@@ -59,25 +56,20 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse {
         val doc = app.get(url, headers = protectionHeaders).document
-        val title = doc.selectFirst("h1")?.text()?.trim() ?: throw ErrorLoadingException("Başlık yok")
+        val title = doc.selectFirst("h1")?.text()?.trim() ?: "İsimsiz"
         val poster = fixUrlNull(doc.selectFirst("div.dar-full_poster img")?.attr("src"))
         val plot = doc.selectFirst("div.ta-full_text1")?.text()?.trim()
-        val score = doc.selectFirst("span.rating-color")?.text()
-        
         val isTv = url.contains("/tv-series/")
-        val episodes = mutableListOf<Episode>()
         
-        // --- AKTOR VE KİMLİK KARTLARI ---
-        val actorsList = mutableListOf<ActorData>()
-        actorsList.add(ActorData(Actor("MoOnCrOwN", "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"), roleString = "Yazılım Amelesi"))
-        actorsList.add(ActorData(Actor(title, poster), roleString = "Yapım Bilgisi"))
-
-        // --- VERİ ÇÖZME MANTIĞI ---
+        val episodes = mutableListOf<Episode>()
         val script = doc.select("script").map { it.html() }.firstOrNull { it.contains("atob") }
+
         if (script != null) {
+            // Nuvio'daki gibi atob içindeki veriyi temizce ayıklayalım
             val base64Match = """atob\s*\(\s*["'](.*?)["']\s*\)""".toRegex().find(script)
             val decoded = base64Match?.let { base64Decode(it.groupValues[1]) } ?: ""
 
+            // Nuvio'da fileData JSON.parse(rawFile) yapılıyordu
             val fileRegex = """file\s*:\s*['"](\[.*?\]|http.*?)['"]""".toRegex(RegexOption.DOT_MATCHES_ALL)
             val fileData = fileRegex.find(decoded)?.groupValues?.get(1)
 
@@ -102,32 +94,34 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
                             })
                         }
                     }
-                } else if (fileData.startsWith("http")) {
-                    val movieJson = JSONObject().put("file", fileData).put("title", title)
+                } else {
+                    // Tekil link gelirse (Nuvio'daki processStr mantığı)
+                    val movieJson = JSONObject().put("file", fileData)
                     episodes.add(newEpisode(movieJson.toString()) { this.name = title })
                 }
             }
         }
 
-        // --- ÖNERİLENLER ---
-        val recommend = doc.select("div.ta-rel div.ta-rel_item").mapNotNull { it.toSearchResult() }
+        // Eğer hala boşsa (Play butonu gelmesi için şart)
+        if (episodes.isEmpty()) {
+            episodes.add(newEpisode(JSONObject().put("file", "empty").toString()) { this.name = "Kaynak Bulunamadı" })
+        }
+
+        val actorsList = mutableListOf<ActorData>()
+        actorsList.add(ActorData(Actor("MoOnCrOwN", "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"), roleString = "Yazılım Amelesi"))
 
         return if (isTv) {
-            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) { 
-                this.posterUrl = poster
-                this.plot = plot 
-                this.score = Score.from10(score)
-                this.actors = actorsList
-                this.recommendations = recommend
-            }
-        } else {
-            // Filmlerde Play tuşu için episodes listesinin ilk elemanı gönderilir
-            newMovieLoadResponse(title, url, TvType.Movie, episodes.firstOrNull()?.data ?: "") {
+            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
                 this.plot = plot
-                this.score = Score.from10(score)
                 this.actors = actorsList
-                this.recommendations = recommend
+            }
+        } else {
+            // Filmlerde data parametresi boş olmamalı!
+            newMovieLoadResponse(title, url, TvType.Movie, episodes.first().data) {
+                this.posterUrl = poster
+                this.plot = plot
+                this.actors = actorsList
             }
         }
     }
@@ -140,28 +134,36 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
     ): Boolean {
         try {
             val json = JSONObject(data)
-            val fileUrl = json.getString("file")
-            
-            val flags = mutableListOf<String>()
-            if (fileUrl.contains("turkish") || fileUrl.contains("_tr")) flags.add("🇹🇷")
-            if (fileUrl.contains("english") || fileUrl.contains("_en")) flags.add("🇺🇸")
-            
-            val label = if (flags.isEmpty()) "Orijinal" else flags.joinToString("")
+            val fileStr = json.optString("file")
+            if (fileStr.isNullOrBlank() || fileStr == "empty") return false
 
-            callback.invoke(
-                newExtractorLink(
-                    source = this.name,
-                    name = "$name [$label]",
-                    url = fileUrl,
-                    type = if (fileUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
-                ) {
-                    this.referer = "$mainUrl/"
-                    this.quality = getQualityFromName(fileUrl)
+            // Nuvio'daki virgülle ayırma ve kalite çekme mantığı (processStr)
+            fileStr.split(",").forEach { part ->
+                val qualityMatch = """\[(.*?)\]""".toRegex().find(part)
+                val qualityLabel = qualityMatch?.groupValues?.get(1) ?: ""
+                val streamUrl = part.replace("[$qualityLabel]", "").trim()
+
+                if (streamUrl.startsWith("http")) {
+                    val flags = mutableListOf<String>()
+                    if (streamUrl.contains("turkish") || streamUrl.contains("_tr")) flags.add("🇹🇷")
+                    if (streamUrl.contains("english") || streamUrl.contains("_en")) flags.add("🇺🇸")
+                    val label = if (flags.isEmpty()) "Orijinal" else flags.joinToString("")
+
+                    callback.invoke(
+                        newExtractorLink(
+                            this.name,
+                            "$name [$label] $qualityLabel",
+                            streamUrl,
+                            "$mainUrl/",
+                            getQualityFromName(qualityLabel),
+                            streamUrl.contains(".m3u8")
+                        )
+                    )
                 }
-            )
+            }
+            return true
         } catch (e: Exception) {
             return false
         }
-        return true
     }
 }
