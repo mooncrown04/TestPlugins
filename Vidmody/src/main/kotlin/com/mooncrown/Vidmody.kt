@@ -23,7 +23,11 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
             Pair("Haftalık Trendler", "trending/all/week"),
             Pair("Popüler Türk Yapımları", "discover/movie?with_original_language=tr&sort_by=popularity.desc"),
             Pair("Sinemalarda", "movie/now_playing"),
-            Pair("Popüler Diziler", "tv/popular"),
+            Pair("Popüler Diziler", "tv/popular"),     
+            Pair("Korku ve Gerilim", "discover/movie?with_genres=27,53"), // Korku(27) ve Gerilim(53)
+            Pair("Netflix Dizileri", "discover/tv?with_networks=213"),
+            Pair("Popüler Kore Dizileri", "discover/tv?with_original_language=ko"),
+            Pair("Bilim Kurgu Klasikleri", "discover/movie?with_genres=878&sort_by=vote_average.desc&vote_count.gte=500"),
             Pair("En Çok Oy Alan Filmler", "movie/top_rated")
         )
 
