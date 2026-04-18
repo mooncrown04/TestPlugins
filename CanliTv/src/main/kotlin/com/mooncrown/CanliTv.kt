@@ -16,7 +16,12 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
-    override val supportedTypes = setOf(TvType.TvSeries)
+    override val supportedTypes = setOf(TvType.Live) // Canlı yayın için Live daha iyidir.
+
+    // EPG Önbellekleme için değişkenler
+    private var cachedEpg: String? = null
+    private var lastEpgFetch: Long = 0
+    private val EPG_CACHE_TIME = 30 * 60 * 1000 // 30 Dakika
 
     private val DEFAULT_POSTER_URL = "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
 
@@ -26,7 +31,7 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
 
     private suspend fun parsePlaylist(): List<PlaylistItem> {
         return try {
-            val response = app.get(mainUrl).text
+            val response = app.get(mainUrl, timeout = 15).text
             val items = mutableListOf<PlaylistItem>()
             var lastInf: String? = null
 
@@ -73,9 +78,9 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
 
         val responses = categories.map { (name, items) ->
             val poster = items.firstOrNull { !it.logo.isNullOrBlank() }?.logo ?: DEFAULT_POSTER_URL
-            newAnimeSearchResponse(name, CategoryData(name, poster).toJson()) {
+            // Arayüzde düzgün görünmesi için LiveSearchResponse kullanıyoruz
+            newLiveSearchResponse(name, CategoryData(name, poster).toJson()) {
                 this.posterUrl = poster
-                this.type = TvType.TvSeries
             }
         }
         return newHomePageResponse(listOf(HomePageList("Kategoriler", responses, isHorizontalImages = true)), false)
@@ -84,8 +89,19 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
     override suspend fun load(url: String): LoadResponse {
         val cat = parseJson<CategoryData>(url)
         val allItems = parsePlaylist()
-        val fullEpgData = try { app.get(epgUrl, timeout = 10).text } catch (e: Exception) { "" }
         
+        // EPG Verisini güvenli ve önbellekli çekme
+        if (cachedEpg == null || System.currentTimeMillis() - lastEpgFetch > EPG_CACHE_TIME) {
+            try {
+                val epgResponse = app.get(epgUrl, timeout = 10).text
+                if (epgResponse.isNotBlank()) {
+                    cachedEpg = epgResponse
+                    lastEpgFetch = System.currentTimeMillis()
+                }
+            } catch (e: Exception) { /* Hata olsa da devam et */ }
+        }
+        
+        val currentEpg = cachedEpg ?: ""
         val filtered = allItems.filter { (it.group ?: "Genel") == cat.name }
         val grouped = filtered.groupBy { it.title ?: "Bilinmeyen" }
 
@@ -101,20 +117,21 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
                 first.tvgId
             ).toJson()
             
-            val channelEpg = extractEpg(fullEpgData, first.tvgId)
+            val channelEpg = extractEpg(currentEpg, first.tvgId)
 
             newEpisode(epData) {
                 this.name = title
                 this.episode = index + 1
-                this.season = 1
                 this.posterUrl = first.logo ?: cat.poster
                 this.description = "Kaynak: ${items.size} adet$channelEpg"
             }
         }
 
-        return newAnimeLoadResponse(cat.name, url, TvType.TvSeries) {
+        // LiveStreamLoadResponse canlı yayınlar için daha stabildir
+        return newLiveStreamLoadResponse(cat.name, url, url) {
             this.posterUrl = cat.poster
             this.episodes = mutableMapOf(DubStatus.Subbed to episodesList)
+            this.plot = "${cat.name} kategorisindeki kanallar listeleniyor."
         }
     }
 
@@ -124,22 +141,21 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val grouped = parseJson<GroupedEpisodeData>(data)
-        
-        grouped.urls.forEachIndexed { i, link ->
-            // KRİTİK DÜZELTME: Parametreleri isimleriyle (named arguments) veriyoruz.
-            // Bu sayede kütüphane versiyonu fark etmeksizin doğru eşleşme yapılır.
-            callback.invoke(
-                newExtractorLink(
-                    source = this.name,
-                    name = "${grouped.title} Kaynak ${i + 1}",
-                    url = link,
-                    type = ExtractorLinkType.M3U8
-                ) {
-                    this.quality = Qualities.P1080.value
-                }
-            )
-        }
-        return true
+        return try {
+            val grouped = parseJson<GroupedEpisodeData>(data)
+            grouped.urls.forEachIndexed { i, link ->
+                callback.invoke(
+                    newExtractorLink(
+                        source = this.name,
+                        name = "${grouped.title} Kaynak ${i + 1}",
+                        url = link,
+                        type = ExtractorLinkType.M3U8
+                    ) {
+                        this.quality = Qualities.Unknown.value
+                    }
+                )
+            }
+            true
+        } catch (e: Exception) { false }
     }
 }
