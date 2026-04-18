@@ -3,7 +3,6 @@ package com.mooncrown
 import android.util.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import org.json.JSONArray
 import org.json.JSONObject
 import org.jsoup.nodes.Element
@@ -11,12 +10,11 @@ import org.jsoup.nodes.Element
 class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
     override var mainUrl = "https://cinemacity.cc"
     override var name = "CinemaCity"
-    override var lang = "tr" // Site içeriği ağırlıklı TR/Multi olduğu için
+    override var lang = "tr"
     override val hasMainPage = true
     override val hasQuickSearch = true
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
-    // Not: Çerezler (Cookies) Cloudstream ayarlarından manuel güncellenmelidir.
     private val protectionHeaders = mapOf(
         "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Referer" to "$mainUrl/",
@@ -67,14 +65,11 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
         val isTv = url.contains("/tv-series/")
         val episodes = mutableListOf<Episode>()
 
-        // Şifreli scripti bul ve çöz
         val script = doc.select("script").map { it.html() }.firstOrNull { it.contains("atob") }
         if (script != null) {
-            // eval(atob("...")) içindeki Base64 verisini Regex ile yakala
             val base64Match = """atob\s*\(\s*["'](.*?)["']\s*\)""".toRegex().find(script)
             val decoded = base64Match?.let { base64Decode(it.groupValues[1]) } ?: ""
 
-            // Çözülen metnin içinden 'file' JSON verisini yakala
             val fileRegex = """file\s*:\s*['"](\[.*?\]|http.*?)['"]""".toRegex(RegexOption.DOT_MATCHES_ALL)
             val fileData = fileRegex.find(decoded)?.groupValues?.get(1)
 
@@ -83,7 +78,6 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
                 for (i in 0 until jArray.length()) {
                     val seasonObj = jArray.getJSONObject(i)
                     if (seasonObj.has("folder")) {
-                        // Dizi İşleme
                         val sNum = i + 1
                         val folder = seasonObj.getJSONArray("folder")
                         for (j in 0 until folder.length()) {
@@ -95,7 +89,6 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
                             })
                         }
                     } else {
-                        // Film İşleme
                         episodes.add(newEpisode(seasonObj.toString()) {
                             this.name = seasonObj.optString("title", "Film")
                         })
@@ -105,12 +98,14 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
         }
 
         return if (isTv) {
-            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) { this.posterUrl = poster; this.plot = plot }
+            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) { 
+                this.posterUrl = poster
+                this.plot = plot 
+            }
         } else {
-            newMovieLoadResponse(title, url, TvType.Movie, url) { // Film için tekil link mantığı
+            newMovieLoadResponse(title, url, TvType.Movie, episodes.firstOrNull()?.data ?: "") {
                 this.posterUrl = poster
                 this.plot = plot
-                // Eğer film datası episodes içindeyse buraya atanabilir
             }
         }
     }
@@ -125,29 +120,22 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
             val json = JSONObject(data)
             val fileUrl = json.getString("file")
             
-            // Bayrak Mantığı (JS'deki mantığın Kotlin versiyonu)
             val flags = mutableListOf<String>()
             if (fileUrl.contains("turkish") || fileUrl.contains("_tr")) flags.add("🇹🇷")
-            if (fileUrl.contains("english") || finalUrl.contains("_en")) flags.add("🇺🇸")
+            if (fileUrl.contains("english") || fileUrl.contains("_en")) flags.add("🇺🇸")
             
             val label = if (flags.isEmpty()) "Orijinal" else flags.joinToString("")
-
-            // Kaliteyi linkten çek
-            val quality = when {
-                fileUrl.contains("1080") -> 1080
-                fileUrl.contains("720") -> 720
-                else -> 480
-            }
 
             callback.invoke(
                 newExtractorLink(
                     source = this.name,
                     name = "$name [$label]",
                     url = fileUrl,
-                    referer = "$mainUrl/",
-                    quality = quality,
                     type = if (fileUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
-                )
+                ) {
+                    this.referer = "$mainUrl/"
+                    this.quality = getQualityFromName(fileUrl)
+                }
             )
         } catch (e: Exception) {
             return false
