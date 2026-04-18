@@ -1,191 +1,178 @@
-package com.mooncrown
+package com.example
 
-import android.content.SharedPreferences
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
-import com.lagradost.cloudstream3.utils.*
 import java.text.SimpleDateFormat
 import java.util.*
 
-class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
+class NeonSpor : MainAPI() {
     override var mainUrl = "https://raw.githubusercontent.com/mooncrown04/mooncrown/refs/heads/main/guncel_liste.m3u"
     private val epgUrl = "https://iptv-epg.org/files/epg-tr.xml"
-    
-    override var name = "epg-canlı tv-dizi"
+
+    override var name = "EPG-TV"
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
-    override val supportedTypes = setOf(TvType.TvSeries)
+    override val supportedTypes = setOf(TvType.Live)
 
-    private val DEFAULT_POSTER_URL = "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"
-
-    data class CategoryData(
-        val name: String,
-        val poster: String,
-        val items: List<PlaylistItem>
-    )
-
-    data class PlaylistItem(
-        val title: String? = null,
-        val url: String? = null,
-        val logo: String? = null,
-        val tvgId: String? = null,
-        val group: String? = null
-    )
-
-    data class GroupedEpisodeData(
-        val title: String,
-        val urls: List<String?>,
-        val logo: String?,
-        val tvgId: String?,
-        val hasEpg: Boolean = false // EPG yüklendi mi?
-    )
-
-    private suspend fun parsePlaylist(): List<PlaylistItem> {
-        val response = app.get(mainUrl).text
-        val items = mutableListOf<PlaylistItem>()
-        var lastInf: String? = null
-
-        response.lines().forEach { line ->
-            val t = line.trim()
-            if (t.startsWith("#EXTINF")) {
-                lastInf = t
-            } else if (t.isNotEmpty() && !t.startsWith("#") && lastInf != null) {
-                val title = lastInf?.split(",")?.lastOrNull()?.trim()
-                val logo = Regex("""tvg-logo="([^"]*)"""").find(lastInf!!)?.groupValues?.get(1)
-                val tvgId = Regex("""tvg-id="([^"]*)"""").find(lastInf!!)?.groupValues?.get(1)
-                val group = Regex("""group-title="([^"]*)"""").find(lastInf!!)?.groupValues?.get(1)
-                
-                items.add(PlaylistItem(title, t, logo, tvgId, group))
-                lastInf = null
-            }
+    // --- EPG ÖNBELLEK SİSTEMİ ---
+    private var epgCache: String? = null
+    private var epgCacheTime: Long = 0
+    private val EPG_CACHE_DURATION = 5 * 60 * 1000 // 5 dakika önbellek
+    
+    // --- EPG'yi önbellekten veya indirerek getir ---
+    private suspend fun getEpgData(): String {
+        val now = System.currentTimeMillis()
+        
+        // Önbellek geçerli mi kontrol et
+        if (epgCache != null && (now - epgCacheTime) < EPG_CACHE_DURATION) {
+            return epgCache!!
         }
-        return items
+        
+        // Yeni indir
+        return kotlin.runCatching {
+            val response = app.get(epgUrl, timeout = 15).text
+            epgCache = response
+            epgCacheTime = now
+            response
+        }.getOrElse { 
+            epgCache ?: "" // Hata olursa eski önbelleği kullan veya boş döndür
+        }
     }
 
-    // --- Bellek Dostu EPG Çekme (Sadece Tek Kanal) ---
-    private suspend fun fetchEpgForSingleChannel(tvgId: String?): String {
-        if (tvgId.isNullOrBlank()) return ""
+    // --- Önbellekten kanalın EPG'sini parse et ---
+    private suspend fun getEpgForChannel(tvgId: String): String {
+        if (tvgId.isBlank()) return ""
+        
+        val epgData = getEpgData()
+        if (epgData.isBlank()) return ""
         
         return kotlin.runCatching {
-            val response = app.get(epgUrl, timeout = 10).text
             val now = System.currentTimeMillis()
             val sdfInput = SimpleDateFormat("yyyyMMddHHmmss", Locale.ENGLISH)
             val sdfOutput = SimpleDateFormat("HH:mm", Locale.getDefault())
+            val programs = mutableListOf<String>()
             
-            // Sadece bu kanala ait programme etiketlerini bul - daha hafif pattern
-            val escapedId = Regex.escape(tvgId)
-            val channelPattern = Regex("""<programme start="(\d{14})[^"]*"[^>]*channel="$escapedId"[^>]*>[\s\S]*?<title[^>]*>([\s\S]*?)</title>[\s\S]*?</programme>""")
+            // Sadece bu kanala ait programme etiketlerini bul
+            val pattern = """<programme start="([^"]*)"[^>]*channel="${Regex.escape(tvgId)}">.*?<title[^>]*>(.*?)</title>"""
             
-            val programs = channelPattern.findAll(response)
-                .mapNotNull { match ->
-                    val startTimeStr = match.groupValues[1]
-                    val title = match.groupValues[2]
+            Regex(pattern, RegexOption.DOT_MATCHES_ALL).findAll(epgData).forEach { m ->
+                val startTime = sdfInput.parse(m.groupValues[1].substring(0, 14))?.time ?: 0L
+                if (startTime > now - 3600000) { 
+                    val title = m.groupValues[2]
                         .replace("<![CDATA[", "")
                         .replace("]]>", "")
-                        .replace(Regex("<[^>]+>"), "")
                         .trim()
-                    
-                    val startTime = sdfInput.parse(startTimeStr)?.time ?: return@mapNotNull null
-                    
-                    if (startTime > now - 3600000) {
-                        startTime to "[${sdfOutput.format(Date(startTime))}] $title"
-                    } else null
+                    programs.add("[${sdfOutput.format(Date(startTime))}] $title")
                 }
-                .sortedBy { it.first }
-                .take(4)
-                .map { it.second }
-                .toList()
+            }
             
-            if (programs.isNotEmpty()) "\n\n📺 YAYIN AKIŞI:\n" + programs.joinToString("\n")
-            else "\n\n📺 Güncel yayın bilgisi bulunamadı."
-            
-        }.getOrElse { "\n\n📺 EPG yüklenirken hata oluştu." }
+            if (programs.isNotEmpty()) {
+                "\n\n--- YAYIN AKIŞI ---\n" + programs.take(4).joinToString("\n")
+            } else {
+                ""
+            }
+        }.getOrElse { "" }
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val allItems = parsePlaylist()
-        val categories = allItems.groupBy { it.group ?: "Genel" }
-
-        val responses = categories.map { (name, items) ->
-            val poster = items.firstOrNull { !it.logo.isNullOrBlank() }?.logo ?: DEFAULT_POSTER_URL
-            val data = CategoryData(name, poster, items).toJson()
-
-            newAnimeSearchResponse(name, data) {
-                this.posterUrl = poster
-                this.type = TvType.TvSeries
+        return kotlin.runCatching {
+            val playlistText = app.get(mainUrl).text
+            val rawItems = mutableListOf<PlaylistItem>()
+            
+            var currentAttr = mutableMapOf<String, String>()
+            playlistText.lines().forEach { line ->
+                val t = line.trim()
+                if (t.startsWith("#EXTINF")) {
+                    currentAttr = mutableMapOf()
+                    Regex("""([\w-]+)="([^"]*)"""").findAll(t).forEach { 
+                        currentAttr[it.groupValues[1]] = it.groupValues[2] 
+                    }
+                    val title = t.split(",").lastOrNull()?.trim() ?: "Kanal"
+                    rawItems.add(PlaylistItem(title, currentAttr))
+                } else if (t.isNotEmpty() && !t.startsWith("#") && rawItems.isNotEmpty()) {
+                    rawItems[rawItems.lastIndex] = rawItems.last().copy(url = t)
+                }
             }
-        }
-        return newHomePageResponse(listOf(HomePageList("Tüm Kategoriler", responses, isHorizontalImages = true)), false)
+
+            // AYNI KANALLARI GRUPLAMA MANTIĞI
+            val groupedChannels = rawItems.groupBy { it.title ?: "Bilinmeyen Kanal" }
+
+            val homePageLists = rawItems.groupBy { it.attributes["group-title"] ?: "Genel" }.map { group ->
+                val distinctChannels = group.value.distinctBy { it.title }
+                
+                val responses = distinctChannels.mapNotNull { kanal ->
+                    val allLinksForThisChannel = groupedChannels[kanal.title]?.mapNotNull { it.url } ?: listOf()
+                    if (allLinksForThisChannel.isEmpty()) return@mapNotNull null
+                    
+                    val data = LoadData(
+                        urls = allLinksForThisChannel,
+                        title = kanal.title ?: "Kanal",
+                        poster = kanal.attributes["tvg-logo"] ?: "",
+                        group = group.key,
+                        tvgId = kanal.attributes["tvg-id"] ?: ""
+                    ).toJson()
+
+                    newLiveSearchResponse(kanal.title ?: "Kanal", data, TvType.Live) {
+                        this.posterUrl = kanal.attributes["tvg-logo"]
+                    }
+                }
+                HomePageList(group.key, responses, isHorizontalImages = true)
+            }
+            newHomePageResponse(homePageLists, false)
+        }.getOrElse { newHomePageResponse(emptyList(), false) }
     }
 
-    override suspend fun load(url: String): LoadResponse {
-        val cat = parseJson<CategoryData>(url)
-        val groupedItems = cat.items.groupBy { it.title ?: "Bilinmeyen Kanal" }
-        
-        // EPG'siz hızlı yükleme
-        val episodesList = groupedItems.entries.mapIndexed { index, entry ->
-            val title = entry.key
-            val items = entry.value
-            val firstItem = items.first()
-            
-            val epData = GroupedEpisodeData(
-                title = title,
-                urls = items.map { it.url },
-                logo = firstItem.logo,
-                tvgId = firstItem.tvgId,
-                hasEpg = false // Başlangıçta EPG yok
-            ).toJson()
-            
-            // EPG'siz açıklama - EPG sonradan yüklenecek
-            newEpisode(epData) {
-                this.name = title
-                this.episode = index + 1
-                this.season = 1
-                this.posterUrl = firstItem.logo ?: cat.poster
-                this.description = "Kanal: $title\nKaynak Sayısı: ${items.size}\n\n📺 Yayın akışı yükleniyor..."
-            }
-        }
+    override suspend fun load(url: String): LoadResponse? {
+        return kotlin.runCatching {
+            val loadData = parseJson<LoadData>(url)
+            val epgInfo = getEpgForChannel(loadData.tvgId)
 
-        return newAnimeLoadResponse(cat.name, url, TvType.TvSeries) {
-            this.posterUrl = cat.poster
-            this.episodes = mutableMapOf(DubStatus.Subbed to episodesList)
-            this.plot = "${cat.name} kategorisinde ${groupedItems.size} benzersiz içerik bulundu."
-        }
+            newLiveStreamLoadResponse(loadData.title, loadData.urls.first(), url) {
+                this.posterUrl = loadData.poster
+                this.plot = "Kategori: ${loadData.group}\nKaynak Sayısı: ${loadData.urls.size}$epgInfo"
+            }
+        }.getOrNull()
     }
 
     override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
+        data: String, 
+        isCasting: Boolean, 
+        subtitleCallback: (SubtitleFile) -> Unit, 
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val groupedData = parseJson<GroupedEpisodeData>(data)
-        
-        // EPG henüz yüklenmemişse ve tvgId varsa, şimdi çek
-        if (!groupedData.hasEpg && !groupedData.tvgId.isNullOrBlank()) {
-            // Not: CloudStream'in episode bilgisini runtime'da güncelleme yeteneği sınırlı
-            // Bu yüzden EPG'yi burada çekip log'a yazabilir veya farklı bir yöntem kullanabilirsiniz
-            val epgInfo = fetchEpgForSingleChannel(groupedData.tvgId)
-            // EPG bilgisi alındı - maalesef UI'yi burada güncelleyemeyiz
-            // Ancak bir sonraki açılışta önbellekten gelebilir
-        }
-        
-        groupedData.urls.forEachIndexed { index, link ->
-            if (!link.isNullOrBlank()) {
+        return kotlin.runCatching {
+            val loadData = parseJson<LoadData>(data)
+            
+            loadData.urls.forEachIndexed { index, videoUrl ->
                 callback.invoke(
                     newExtractorLink(
                         source = this.name,
-                        name = "${groupedData.title} - Kaynak ${index + 1}",
-                        url = link,
+                        name = "${loadData.title} Kaynak ${index + 1}",
+                        url = videoUrl,
                         type = ExtractorLinkType.M3U8
                     ) {
-                        quality = Qualities.P1080.value
+                        quality = Qualities.Unknown.value
                     }
                 )
             }
-        }
-        return true
+            true
+        }.getOrElse { false }
     }
+
+    data class LoadData(
+        val urls: List<String>,
+        val title: String, 
+        val poster: String, 
+        val group: String, 
+        val val tvgId: String
+    )
+    
+    data class PlaylistItem(
+        val title: String?, 
+        val attributes: Map<String, String>, 
+        val url: String? = null
+    )
 }
