@@ -1,6 +1,5 @@
 package com.mooncrown
 
-import android.util.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import org.json.JSONArray
@@ -15,11 +14,10 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
     override val hasQuickSearch = true
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
-    // Loglardaki 403 hatalarını önlemek için tarayıcı gibi davranan header seti
+    // JS'deki Cookies ve Header yapısı
     private val protectionHeaders = mapOf(
-        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language" to "tr-TR,tr;q=0.9",
+        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Cookie" to "dle_user_id=32729; dle_password=894171c6a8dab18ee594d5c652009a35;",
         "Referer" to "$mainUrl/",
         "Origin" to mainUrl
     )
@@ -58,12 +56,10 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        // Her istekte referer'ı güncelliyoruz
         val doc = app.get(url, headers = protectionHeaders + ("Referer" to url)).document
         val title = doc.selectFirst("h1")?.text()?.trim() ?: "İsimsiz"
         val poster = fixUrlNull(doc.selectFirst("div.dar-full_poster img")?.attr("src"))
         val plot = doc.selectFirst("div.ta-full_text1")?.text()?.trim()
-        val score = doc.selectFirst("span.rating-color")?.text()
         
         val episodes = mutableListOf<Episode>()
         val script = doc.select("script").map { it.html() }.firstOrNull { it.contains("atob") }
@@ -71,13 +67,15 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
         if (script != null) {
             val base64Match = """atob\s*\(\s*["'](.*?)["']\s*\)""".toRegex().find(script)
             val decoded = base64Match?.let { base64Decode(it.groupValues[1]) } ?: ""
-
             val fileRegex = """file\s*:\s*['"](\[.*?\]|http.*?)['"]""".toRegex(RegexOption.DOT_MATCHES_ALL)
-            val fileData = fileRegex.find(decoded)?.groupValues?.get(1)
+            var fileData = fileRegex.find(decoded)?.groupValues?.get(1)
 
             if (fileData != null) {
-                if (fileData.startsWith("[")) {
-                    val jArray = JSONArray(fileData)
+                // JS'deki unescape temizliği (Kritik: JSON bozulmasını önler)
+                val cleanedFileData = fileData.replace("\\/", "/").replace("\\\"", "\"")
+
+                if (cleanedFileData.startsWith("[")) {
+                    val jArray = JSONArray(cleanedFileData)
                     for (i in 0 until jArray.length()) {
                         val item = jArray.getJSONObject(i)
                         if (item.has("folder")) {
@@ -92,42 +90,33 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
                             }
                         } else {
                             episodes.add(newEpisode(item.toString()) {
-                                this.name = item.optString("title", "Film")
+                                this.name = item.optString("title", title)
                             })
                         }
                     }
                 } else {
-                    val movieJson = JSONObject().put("file", fileData)
+                    val movieJson = JSONObject().put("file", cleanedFileData)
                     episodes.add(newEpisode(movieJson.toString()) { this.name = title })
                 }
             }
         }
 
-        // Play butonu garantisi
+        // Play butonu için fallback
         if (episodes.isEmpty()) {
             episodes.add(newEpisode(JSONObject().put("file", "empty").toString()) { this.name = "Kaynak Bulunamadı" })
         }
-
-        val actorsList = mutableListOf<ActorData>()
-        actorsList.add(ActorData(Actor("MoOnCrOwN", "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"), roleString = "Yazılım Amelesi"))
-        
-        val recommend = doc.select("div.ta-rel div.ta-rel_item").mapNotNull { it.toSearchResult() }
 
         return if (url.contains("/tv-series/")) {
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
                 this.plot = plot
-                this.score = Score.from10(score)
-                this.actors = actorsList
-                this.recommendations = recommend
+                this.actors = listOf(ActorData(Actor("MoOnCrOwN"), roleString = "Developer"))
             }
         } else {
             newMovieLoadResponse(title, url, TvType.Movie, episodes.first().data) {
                 this.posterUrl = poster
                 this.plot = plot
-                this.score = Score.from10(score)
-                this.actors = actorsList
-                this.recommendations = recommend
+                this.actors = listOf(ActorData(Actor("MoOnCrOwN"), roleString = "Developer"))
             }
         }
     }
@@ -143,29 +132,45 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
             val fileStr = json.optString("file")
             if (fileStr.isNullOrBlank() || fileStr == "empty") return false
 
-            // Nuvio'daki çoklu kalite ayıklama mantığı
             fileStr.split(",").forEach { part ->
                 val qualityMatch = """\[(.*?)\]""".toRegex().find(part)
                 val qualityLabel = qualityMatch?.groupValues?.get(1) ?: ""
                 val streamUrl = part.replace("[$qualityLabel]", "").trim()
 
                 if (streamUrl.startsWith("http")) {
+                    val urlLower = streamUrl.toLowerCase()
                     val flags = mutableListOf<String>()
-                    if (streamUrl.contains("turkish") || streamUrl.contains("_tr")) flags.add("🇹🇷")
-                    if (streamUrl.contains("english") || streamUrl.contains("_en")) flags.add("🇺🇸")
-                    val label = if (flags.isEmpty()) "Orijinal" else flags.joinToString("")
+
+                    // JS'deki Genişletilmiş Dil Haritası
+                    val langMap = mapOf(
+                        "turkish" to "🇹🇷", "_tr" to "🇹🇷",
+                        "english" to "🇺🇸", "_en" to "🇺🇸",
+                        "german" to "🇩🇪", "_de" to "🇩🇪",
+                        "french" to "🇫🇷", "_fr" to "🇫🇷",
+                        "russian" to "🇷🇺", "_ru" to "🇷🇺"
+                    )
+                    
+                    langMap.forEach { (key, flag) ->
+                        if (urlLower.contains(key)) flags.add(flag)
+                    }
+
+                    // JS'deki Ses Kanalı Sayma (.m4a sayısına göre)
+                    val audioCount = "\\.m4a".toRegex().findAll(streamUrl).count()
+                    val infoLabel = when {
+                        audioCount > 1 -> "Multi: $audioCount ${flags.distinct().joinToString("")}"
+                        flags.isNotEmpty() -> flags.distinct().joinToString("")
+                        else -> "Orijinal 📄"
+                    }
 
                     callback.invoke(
                         newExtractorLink(
-                            source = this.name,
-                            name = "$name [$label] $qualityLabel",
+                            source = "$name [$infoLabel]",
+                            name = "$name $qualityLabel".trim(),
                             url = streamUrl,
+                            referer = "$mainUrl/",
+                            quality = getQualityFromName(qualityLabel),
                             type = if (streamUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
-                        ) {
-                            // 403 hatasını önlemek için referer site ana sayfası olmalı
-                            this.referer = "$mainUrl/"
-                            this.quality = getQualityFromName(qualityLabel)
-                        }
+                        )
                     )
                 }
             }
