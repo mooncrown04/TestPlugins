@@ -16,9 +16,10 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
     override val hasMainPage = true
     override var lang = "tr"
     override val hasQuickSearch = true
-    override val supportedTypes = setOf(TvType.Live) // Canlı yayın için Live daha iyidir.
+    // episodes özelliğini kullanabilmek için TvSeries olarak kalmalı
+    override val supportedTypes = setOf(TvType.TvSeries)
 
-    // EPG Önbellekleme için değişkenler
+    // EPG Önbellekleme değişkenleri
     private var cachedEpg: String? = null
     private var lastEpgFetch: Long = 0
     private val EPG_CACHE_TIME = 30 * 60 * 1000 // 30 Dakika
@@ -78,9 +79,9 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
 
         val responses = categories.map { (name, items) ->
             val poster = items.firstOrNull { !it.logo.isNullOrBlank() }?.logo ?: DEFAULT_POSTER_URL
-            // Arayüzde düzgün görünmesi için LiveSearchResponse kullanıyoruz
-            newLiveSearchResponse(name, CategoryData(name, poster).toJson()) {
+            newAnimeSearchResponse(name, CategoryData(name, poster).toJson()) {
                 this.posterUrl = poster
+                this.type = TvType.TvSeries
             }
         }
         return newHomePageResponse(listOf(HomePageList("Kategoriler", responses, isHorizontalImages = true)), false)
@@ -90,7 +91,7 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
         val cat = parseJson<CategoryData>(url)
         val allItems = parsePlaylist()
         
-        // EPG Verisini güvenli ve önbellekli çekme
+        // EPG'yi sadece 30 dakikada bir indirerek hızı koruyoruz
         if (cachedEpg == null || System.currentTimeMillis() - lastEpgFetch > EPG_CACHE_TIME) {
             try {
                 val epgResponse = app.get(epgUrl, timeout = 10).text
@@ -98,7 +99,7 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
                     cachedEpg = epgResponse
                     lastEpgFetch = System.currentTimeMillis()
                 }
-            } catch (e: Exception) { /* Hata olsa da devam et */ }
+            } catch (e: Exception) { }
         }
         
         val currentEpg = cachedEpg ?: ""
@@ -122,16 +123,17 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
             newEpisode(epData) {
                 this.name = title
                 this.episode = index + 1
+                this.season = 1
                 this.posterUrl = first.logo ?: cat.poster
                 this.description = "Kaynak: ${items.size} adet$channelEpg"
             }
         }
 
-        // LiveStreamLoadResponse canlı yayınlar için daha stabildir
-        return newLiveStreamLoadResponse(cat.name, url, url) {
+        // episodes özelliğini destekleyen LoadResponse tipi
+        return newAnimeLoadResponse(cat.name, url, TvType.TvSeries) {
             this.posterUrl = cat.poster
             this.episodes = mutableMapOf(DubStatus.Subbed to episodesList)
-            this.plot = "${cat.name} kategorisindeki kanallar listeleniyor."
+            this.plot = "${cat.name} kategorisi altındaki tüm kanallar."
         }
     }
 
