@@ -21,7 +21,12 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
             Pair("Haftalık Trendler", "trending/all/week"),
             Pair("Popüler Türk Yapımları", "discover/movie?with_original_language=tr&sort_by=popularity.desc"),
             Pair("Sinemalarda", "movie/now_playing"),
-            Pair("Popüler Diziler", "tv/popular")
+            Pair("Popüler Diziler", "tv/popular"),     
+            Pair("Korku ve Gerilim", "discover/movie?with_genres=27,53"),
+            Pair("Netflix Dizileri", "discover/tv?with_networks=213"),
+            Pair("Popüler Kore Dizileri", "discover/tv?with_original_language=ko"),
+            Pair("Bilim Kurgu Klasikleri", "discover/movie?with_genres=878&sort_by=vote_average.desc&vote_count.gte=500"),
+            Pair("En Çok Oy Alan Filmler", "movie/top_rated")
         )
 
         categories.forEach { (title, endpoint) ->
@@ -50,8 +55,8 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         val catName = if (parts.size > 3) parts[3] else "MoOnCrOwN"
 
         val detailsUrl = "https://api.themoviedb.org/3/$type/$tmdbId?api_key=$tmdbKey&language=tr-TR&append_to_response=external_ids,credits"
-        val d = app.get(detailsUrl).parsedSafe<TmdbDetailResponse>() ?: throw ErrorLoadingException("Hata")
-        val imdbId = d.external_ids?.imdb_id ?: throw ErrorLoadingException("No IMDB")
+        val d = app.get(detailsUrl).parsedSafe<TmdbDetailResponse>() ?: throw ErrorLoadingException("Detay alınamadı")
+        val imdbId = d.external_ids?.imdb_id ?: throw ErrorLoadingException("IMDB ID bulunamadı")
 
         val actorsList = mutableListOf<ActorData>()
         actorsList.add(
@@ -111,7 +116,6 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         val imdbId = parts[1]
         val link = if (parts.size == 2) "https://vidmody.com/vs/$imdbId" else "https://vidmody.com/vs/$imdbId/s${parts[2]}/e${String.format("%02d", parts[3].toInt())}"
         
-        // Hata veren kısım düzeltildi: Parametreler blok içine alındı
         callback.invoke(
             newExtractorLink(
                 source = this.name,
@@ -121,7 +125,6 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
             ) {
                 this.quality = Qualities.P1080.value
                 this.referer = "https://vidmody.com/"
-                this.isM3u8 = true
             }
         )
         return true
