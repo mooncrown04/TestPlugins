@@ -1,4 +1,4 @@
-   package com.mooncrown
+package com.mooncrown
 
 import android.util.Log
 import com.lagradost.cloudstream3.*
@@ -15,8 +15,11 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
     override val hasQuickSearch = true
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
+    // Loglardaki 403 hatalarını önlemek için tarayıcı gibi davranan header seti
     private val protectionHeaders = mapOf(
         "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language" to "tr-TR,tr;q=0.9",
         "Referer" to "$mainUrl/",
         "Origin" to mainUrl
     )
@@ -25,7 +28,7 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
         "$mainUrl/movies/" to "Filmler",
         "$mainUrl/tv-series/" to "Diziler",
         "$mainUrl/xfsearch/genre/animation/" to "Animasyon",
-        "$mainUrl/xfsearch/genre/action/" to "Aksiyon"
+        "$mainUrl/xfsearch/genre/korku/" to "Korku"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -55,11 +58,12 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val doc = app.get(url, headers = protectionHeaders).document
+        // Her istekte referer'ı güncelliyoruz
+        val doc = app.get(url, headers = protectionHeaders + ("Referer" to url)).document
         val title = doc.selectFirst("h1")?.text()?.trim() ?: "İsimsiz"
         val poster = fixUrlNull(doc.selectFirst("div.dar-full_poster img")?.attr("src"))
         val plot = doc.selectFirst("div.ta-full_text1")?.text()?.trim()
-        val isTv = url.contains("/tv-series/")
+        val score = doc.selectFirst("span.rating-color")?.text()
         
         val episodes = mutableListOf<Episode>()
         val script = doc.select("script").map { it.html() }.firstOrNull { it.contains("atob") }
@@ -99,25 +103,31 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
             }
         }
 
-        // Play tuşu için zorunlu doluluk
+        // Play butonu garantisi
         if (episodes.isEmpty()) {
             episodes.add(newEpisode(JSONObject().put("file", "empty").toString()) { this.name = "Kaynak Bulunamadı" })
         }
 
         val actorsList = mutableListOf<ActorData>()
         actorsList.add(ActorData(Actor("MoOnCrOwN", "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"), roleString = "Yazılım Amelesi"))
+        
+        val recommend = doc.select("div.ta-rel div.ta-rel_item").mapNotNull { it.toSearchResult() }
 
-        return if (isTv) {
+        return if (url.contains("/tv-series/")) {
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
                 this.posterUrl = poster
                 this.plot = plot
+                this.score = Score.from10(score)
                 this.actors = actorsList
+                this.recommendations = recommend
             }
         } else {
             newMovieLoadResponse(title, url, TvType.Movie, episodes.first().data) {
                 this.posterUrl = poster
                 this.plot = plot
+                this.score = Score.from10(score)
                 this.actors = actorsList
+                this.recommendations = recommend
             }
         }
     }
@@ -133,6 +143,7 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
             val fileStr = json.optString("file")
             if (fileStr.isNullOrBlank() || fileStr == "empty") return false
 
+            // Nuvio'daki çoklu kalite ayıklama mantığı
             fileStr.split(",").forEach { part ->
                 val qualityMatch = """\[(.*?)\]""".toRegex().find(part)
                 val qualityLabel = qualityMatch?.groupValues?.get(1) ?: ""
@@ -144,7 +155,6 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
                     if (streamUrl.contains("english") || streamUrl.contains("_en")) flags.add("🇺🇸")
                     val label = if (flags.isEmpty()) "Orijinal" else flags.joinToString("")
 
-                    // Hatalı yer burasıydı, düzelttik:
                     callback.invoke(
                         newExtractorLink(
                             source = this.name,
@@ -152,6 +162,7 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
                             url = streamUrl,
                             type = if (streamUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
                         ) {
+                            // 403 hatasını önlemek için referer site ana sayfası olmalı
                             this.referer = "$mainUrl/"
                             this.quality = getQualityFromName(qualityLabel)
                         }
