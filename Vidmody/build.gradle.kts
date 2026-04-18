@@ -28,6 +28,6 @@ cloudstream {
      * 3: Beta only
     **/
     status  = 1 // will be 3 if unspecified
-    tvTypes = listOf("Movie"),listOf("Series")
+    tvTypes = listOf("Movie", "TvSeries")
     iconUrl = "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png"
 }
