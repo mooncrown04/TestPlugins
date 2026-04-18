@@ -26,41 +26,42 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
             Pair("Netflix Dizileri", "discover/tv?with_networks=213"),
             Pair("Popüler Kore Dizileri", "discover/tv?with_original_language=ko"),
             Pair("Bilim Kurgu Klasikleri", "discover/movie?with_genres=878&sort_by=vote_average.desc&vote_count.gte=500"),
-            // 1. Disney+ Orijinal İçerikleri (Network ID: 2739)
             Pair("Disney+ Orijinalleri", "discover/tv?with_networks=2739"),    
-            // 2. Apple TV+ Dizileri (Network ID: 2552)
             Pair("Apple TV+ Dizileri", "discover/tv?with_networks=2552"),    
-            // 3. Türk Komedi Filmleri (Tür: 35, Dil: tr)
             Pair("Yerli Komediler", "discover/movie?with_genres=35&with_original_language=tr&sort_by=popularity.desc"),   
-            // 4. Marvel Sinematik Evreni (Şirket ID: 420)
             Pair("Marvel Dünyası", "discover/movie?with_companies=420&sort_by=release_date.desc"),    
-            // 5. Animasyon & Aile (Tür: 16, 10751)
             Pair("Animasyon Kuşağı", "discover/movie?with_genres=16,10751&sort_by=popularity.desc"),    
-            // 6. Ödüllü Dramalar (Tür: 18, Min Oy Sayısı: 1000)
             Pair("Ödüllü Dramlar", "discover/movie?with_genres=18&sort_by=vote_average.desc&vote_count.gte=1000"),    
-            // 7. Yeni Çıkan Diziler (İlk Hava Tarihi 2026 - Mevcut Yıl)
             Pair("2026 Yeni Diziler", "discover/tv?first_air_date_year=2026&sort_by=popularity.desc"),    
-            // 8. Aksiyon & Macera (Tür: 28, 12)
             Pair("Aksiyon Dolu Dakikalar", "discover/movie?with_genres=28,12&sort_by=popularity.desc"),    
-            // 9. Belgesel Tutkunları (Tür: 99)
             Pair("Belgeseller", "discover/tv?with_genres=99&sort_by=popularity.desc"),
             Pair("En Çok Oy Alan Filmler", "movie/top_rated")
         )
+
         categories.forEach { (title, endpoint) ->
+            // Bir kategori hata verirse diğerlerinin bozulmaması için try-catch
             try {
                 val sep = if (endpoint.contains("?")) "&" else "?"
                 val url = "https://api.themoviedb.org/3/$endpoint${sep}api_key=$tmdbKey&language=tr-TR"
                 val res = app.get(url).parsedSafe<TmdbListResponse>()
+                
                 val items = res?.results?.mapNotNull {
                     val type = if (endpoint.contains("tv")) "tv" else (it.media_type ?: "movie")
                     newMovieSearchResponse(it.title ?: it.name ?: return@mapNotNull null, "tmdb|${it.id}|$type|$title", if (type == "tv") TvType.TvSeries else TvType.Movie) {
                         this.posterUrl = "https://image.tmdb.org/t/p/w500${it.poster_path}"
                         this.year = (it.release_date ?: it.first_air_date)?.take(4)?.toIntOrNull()
+                        // Puanlama hatasız şekilde eklendi
                         this.score = it.vote_average?.let { v -> Score.from10(v) }
                     }
                 }
-                if (!items.isNullOrEmpty()) homeLists.add(HomePageList(title, items))
-            } catch (e: Exception) { }
+                
+                if (!items.isNullOrEmpty()) {
+                    homeLists.add(HomePageList(title, items))
+                }
+            } catch (e: Exception) {
+                // Hata durumunda sadece bu kategoriyi atla
+                println("Kategori yüklenemedi ($title): ${e.message}")
+            }
         }
         return newHomePageResponse(homeLists, false)
     }
@@ -75,6 +76,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         val d = app.get(detailsUrl).parsedSafe<TmdbDetailResponse>() ?: throw ErrorLoadingException("Detay alınamadı")
         val imdbId = d.external_ids?.imdb_id ?: throw ErrorLoadingException("IMDB ID bulunamadı")
 
+        // Özel MoOnCrOwN Aktör İmzası
         val actorsList = mutableListOf<ActorData>()
         actorsList.add(
             ActorData(
@@ -106,6 +108,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 addImdbId(imdbId)
             }
         } else {
+            // Dizi Bölüm Detayları
             val epList = mutableListOf<Episode>()
             d.seasons?.filter { (it.season_number ?: 0) > 0 }?.forEach { s ->
                 for (i in 1..(s.episode_count ?: 0)) {
@@ -147,6 +150,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         return true
     }
 
+    // JSON Veri Yapıları
     data class TmdbListResponse(val results: List<TmdbResult>?)
     data class TmdbResult(val id: Int?, val title: String?, val name: String?, val poster_path: String?, val media_type: String?, val release_date: String?, val first_air_date: String?, val vote_average: Double?)
     data class TmdbDetailResponse(val title: String?, val name: String?, val overview: String?, val poster_path: String?, val external_ids: ExternalIds?, val seasons: List<TmdbSeason>?, val release_date: String?, val first_air_date: String?, val genres: List<Genre>?, val credits: Credits?, val vote_average: Double?)
