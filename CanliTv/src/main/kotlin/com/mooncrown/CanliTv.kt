@@ -127,17 +127,16 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
         val grouped = parseJson<GroupedEpisodeData>(data)
         
         grouped.urls.forEachIndexed { i, link ->
-            // DERLEME HATASI ÇÖZÜLDÜ: 
-            // Parametreleri isimle vermek yerine süslü parantez içinde atıyoruz.
+            // KRİTİK DÜZELTME: Parametreleri isimleriyle (named arguments) veriyoruz.
+            // Bu sayede kütüphane versiyonu fark etmeksizin doğru eşleşme yapılır.
             callback.invoke(
                 newExtractorLink(
-                    this.name,
-                    "${grouped.title} Kaynak ${i + 1}",
-                    link,
-                    "" // Referer buraya (üçüncü sıraya) String olarak gelir
+                    source = this.name,
+                    name = "${grouped.title} Kaynak ${i + 1}",
+                    url = link,
+                    type = ExtractorLinkType.M3U8
                 ) {
                     this.quality = Qualities.P1080.value
-                    this.type = ExtractorLinkType.M3U8
                 }
             )
         }
