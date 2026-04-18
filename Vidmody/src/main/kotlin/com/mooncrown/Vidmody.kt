@@ -14,11 +14,8 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
 
     private val tmdbKey = "500330721680edb6d5f7f12ba7cd9023"
 
-    // --- 1. ANA SAYFA: TAM KATALOG YAPISI ---
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val homeLists = mutableListOf<HomePageList>()
-        
-        // Gösterilecek Kategoriler
         val categories = listOf(
             Pair("Haftalık Trendler", "trending/all/week"),
             Pair("Sinemalarda", "movie/now_playing"),
@@ -33,7 +30,6 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 val res = app.get(url).parsedSafe<TmdbListResponse>()
                 
                 val items = res?.results?.mapNotNull {
-                    // Sadece film ve dizileri al, kişileri (person) atla
                     val type = if (endpoint.contains("tv")) "tv" else (it.media_type ?: "movie")
                     if (type == "person") return@mapNotNull null
                     
@@ -45,17 +41,14 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                         this.posterUrl = "https://image.tmdb.org/t/p/w500${it.poster_path}"
                     }
                 }
-                
                 if (!items.isNullOrEmpty()) {
                     homeLists.add(HomePageList(title, items, isHorizontalImages = false))
                 }
-            } catch (e: Exception) { /* Bir liste hata verirse diğerlerini bozma */ }
+            } catch (e: Exception) { }
         }
-
         return newHomePageResponse(homeLists, hasNext = false)
     }
 
-    // --- 2. ARAMA FONKSİYONU ---
     override suspend fun search(query: String): List<SearchResponse> {
         val url = "https://api.themoviedb.org/3/search/multi?api_key=$tmdbKey&language=tr-TR&query=$query"
         val res = app.get(url).parsedSafe<TmdbListResponse>()
@@ -63,7 +56,6 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         return res?.results?.mapNotNull {
             val type = it.media_type ?: "movie"
             if (type == "person") return@mapNotNull null
-            
             newMovieSearchResponse(
                 it.title ?: it.name ?: return@mapNotNull null,
                 "tmdb|${it.id}|$type",
@@ -74,18 +66,14 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         } ?: emptyList()
     }
 
-    // --- 3. DETAY YÜKLEME (ID SORUNU ÇÖZÜLDÜ) ---
     override suspend fun load(url: String): LoadResponse {
         val parts = url.split("|")
-        if (parts.size < 3) throw ErrorLoadingException("Hatalı veri iletildi")
-        
         val tmdbId = parts[1]
         val type = parts[2]
 
         val detailsUrl = "https://api.themoviedb.org/3/$type/$tmdbId?api_key=$tmdbKey&language=tr-TR&append_to_response=external_ids"
-        val d = app.get(detailsUrl).parsedSafe<TmdbDetailResponse>() ?: throw ErrorLoadingException("TMDB detayları çekilemedi")
-        
-        val imdbId = d.external_ids?.imdb_id ?: throw ErrorLoadingException("İçeriğin IMDB ID'si (tt...) yok")
+        val d = app.get(detailsUrl).parsedSafe<TmdbDetailResponse>() ?: throw ErrorLoadingException("TMDB Hatası")
+        val imdbId = d.external_ids?.imdb_id ?: throw ErrorLoadingException("IMDB ID Bulunamadı")
 
         return if (type == "movie") {
             newMovieLoadResponse(d.title ?: d.name ?: "Film", url, TvType.Movie, "vid|$imdbId") {
@@ -112,29 +100,24 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         }
     }
 
-    // --- 4. LİNK OLUŞTURMA (VİDMODY MANTIĞI) ---
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
         val parts = data.split("|")
         val imdbId = parts[1]
-        
         val targetUrl = if (parts.size == 2) {
             "https://vidmody.com/vs/$imdbId"
         } else {
-            val s = parts[2]
-            val e = String.format("%02d", parts[3].toInt())
-            "https://vidmody.com/vs/$imdbId/s$s/e$e"
+            "https://vidmody.com/vs/$imdbId/s${parts[2]}/e${String.format("%02d", parts[3].toInt())}"
         }
 
         callback.invoke(
-            ExtractorLink(
-                this.name, "Vidmody", targetUrl, "https://vidmody.com/",
-                Qualities.P1080.value, ExtractorLinkType.M3U8
-            )
+            newExtractorLink(this.name, "Vidmody", targetUrl, ExtractorLinkType.M3U8) {
+                this.quality = Qualities.P1080.value
+                this.referer = "https://vidmody.com/"
+            }
         )
         return true
     }
 
-    // DATA MODELLERİ
     data class TmdbListResponse(val results: List<TmdbResult>?)
     data class TmdbResult(val id: Int?, val title: String?, val name: String?, val poster_path: String?, val media_type: String?)
     data class TmdbDetailResponse(val title: String?, val name: String?, val overview: String?, val poster_path: String?, val external_ids: ExternalIds?, val seasons: List<TmdbSeason>?)
