@@ -14,7 +14,7 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
     override val hasQuickSearch = true
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
-    // JS'deki Cookies ve Header yapısı
+    // Nuvio'da çalışan üyelik çerezleri ve güncel Header seti
     private val protectionHeaders = mapOf(
         "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Cookie" to "dle_user_id=32729; dle_password=894171c6a8dab18ee594d5c652009a35;",
@@ -25,8 +25,7 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
     override val mainPage = mainPageOf(
         "$mainUrl/movies/" to "Filmler",
         "$mainUrl/tv-series/" to "Diziler",
-        "$mainUrl/xfsearch/genre/animation/" to "Animasyon",
-        "$mainUrl/xfsearch/genre/korku/" to "Korku"
+        "$mainUrl/xfsearch/genre/animation/" to "Animasyon"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -71,7 +70,7 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
             var fileData = fileRegex.find(decoded)?.groupValues?.get(1)
 
             if (fileData != null) {
-                // JS'deki unescape temizliği (Kritik: JSON bozulmasını önler)
+                // NUVIO FIX: Kaçış karakterlerini (unescape) temizle
                 val cleanedFileData = fileData.replace("\\/", "/").replace("\\\"", "\"")
 
                 if (cleanedFileData.startsWith("[")) {
@@ -101,7 +100,6 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
             }
         }
 
-        // Play butonu için fallback
         if (episodes.isEmpty()) {
             episodes.add(newEpisode(JSONObject().put("file", "empty").toString()) { this.name = "Kaynak Bulunamadı" })
         }
@@ -141,12 +139,14 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
                     val urlLower = streamUrl.toLowerCase()
                     val flags = mutableListOf<String>()
 
-                    // JS'deki Genişletilmiş Dil Haritası
+                    // Gelişmiş Bayrak Haritası (İlk JS'den alınan liste)
                     val langMap = mapOf(
                         "turkish" to "🇹🇷", "_tr" to "🇹🇷",
                         "english" to "🇺🇸", "_en" to "🇺🇸",
                         "german" to "🇩🇪", "_de" to "🇩🇪",
                         "french" to "🇫🇷", "_fr" to "🇫🇷",
+                        "italian" to "🇮🇹", "_it" to "🇮🇹",
+                        "spanish" to "🇪🇸", "_es" to "🇪🇸",
                         "russian" to "🇷🇺", "_ru" to "🇷🇺"
                     )
                     
@@ -154,8 +154,9 @@ class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
                         if (urlLower.contains(key)) flags.add(flag)
                     }
 
-                    // JS'deki Ses Kanalı Sayma (.m4a sayısına göre)
+                    // Ses Kanalı Tespiti (.m4a dosyalarını sayar)
                     val audioCount = "\\.m4a".toRegex().findAll(streamUrl).count()
+                    
                     val infoLabel = when {
                         audioCount > 1 -> "Multi: $audioCount ${flags.distinct().joinToString("")}"
                         flags.isNotEmpty() -> flags.distinct().joinToString("")
