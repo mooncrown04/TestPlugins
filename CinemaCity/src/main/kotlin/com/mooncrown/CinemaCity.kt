@@ -8,7 +8,7 @@ import org.jsoup.nodes.Element
 
 class CinemaCity(private val plugin: CinemaCityPlugin) : MainAPI() {
     override var mainUrl = "https://cinemacity.cc"
-    override var name = "CinemaCity4"
+    override var name = "CinemaCity"
     override var lang = "tr"
     override val hasMainPage = true
     override val hasQuickSearch = true
