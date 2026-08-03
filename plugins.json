@@ -1,10 +1,10 @@
 [
     {
         "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png",
-        "fileHash": "sha256-a3df2d67daccd4b3351013a0914e91ee48b3bb0520ca6f40e3e1abf40a42cb19",
+        "fileHash": "sha256-67c9d88dffb0a8c3505296e8797907b4f3c981e668734bf67ff0a6ddba16cdc1",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
-        "fileSize": 17255,
+        "fileSize": 18254,
         "status": 1,
         "language": "tr",
         "authors": [
@@ -24,10 +24,10 @@
     },
     {
         "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png",
-        "fileHash": "sha256-992d66ed86c4997380afce01a354596da9e8eb0412497159095e812f78df6b98",
+        "fileHash": "sha256-655ae96536c4114e82a083ade12bbed9b688fc34412742f7a4f7c11d0b5d2bdf",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
-        "fileSize": 31250,
+        "fileSize": 32448,
         "status": 1,
         "language": "tr",
         "authors": [
@@ -47,10 +47,10 @@
     },
     {
         "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png",
-        "fileHash": "sha256-ee03bef7d4f0e7608979b14bd014d2eebe51ca951a57cd1a9978d9396fd16e8b",
+        "fileHash": "sha256-24a9593f4a84604f04849b16be6d769f9adbba7a95a6a57dddce548db36dc31b",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
-        "fileSize": 15748,
+        "fileSize": 16686,
         "status": 1,
         "language": "tr",
         "authors": [
@@ -70,31 +70,10 @@
     },
     {
         "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png",
-        "fileHash": "sha256-36ec631ca6ccc1a7549a19e5c66e154eca5c31876b31553c513491a4a8d61093",
+        "fileHash": "sha256-afa08431c1e485277355a8488d524496212c8dd764bbe18ad7dd3da77b8d3403",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
-        "fileSize": 16688,
-        "status": 1,
-        "language": "tr",
-        "authors": [
-            "MoOnCrOwN"
-        ],
-        "tvTypes": [
-            "Movie",
-            "TvSeries"
-        ],
-        "version": 3,
-        "internalName": "CinemaCity",
-        "description": "CinemaCity` sinema ve dizi",
-        "url": "https://raw.githubusercontent.com/mooncrown04/TestPlugins/builds/CinemaCity.cs3",
-        "name": "CinemaCity"
-    },
-    {
-        "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png",
-        "fileHash": "sha256-c2616f8b7587d2c6fc272a4efad2ce1af6d703e977c00038daf2fd89d0deaf32",
-        "apiVersion": 1,
-        "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
-        "fileSize": 45808,
+        "fileSize": 47107,
         "status": 1,
         "language": "tr",
         "authors": [
@@ -114,10 +93,10 @@
     },
     {
         "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png",
-        "fileHash": "sha256-641d36a1b14d1bfa68161f71af15c20bd89ca77df4d3ff9d50fd15996faefa13",
+        "fileHash": "sha256-40cf71bbf267a5dc051ddd9fe9d01506e1359c4d1b9a22a30cef63fb1b462914",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
-        "fileSize": 31268,
+        "fileSize": 31973,
         "status": 1,
         "language": "tr",
         "authors": [
@@ -136,10 +115,10 @@
     },
     {
         "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powerdizi/powerdizi.png",
-        "fileHash": "sha256-708748c82fd4b5894427fb84eeaf2f92cf323d8f9ee2c88f190ae29d2734d66b",
+        "fileHash": "sha256-d0dc9395dc92da931566932b71c589859a3a1283da1485bfaff30822267a5297",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
-        "fileSize": 24702,
+        "fileSize": 25581,
         "status": 1,
         "language": "tr",
         "authors": [
@@ -180,10 +159,10 @@
     },
     {
         "iconUrl": "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png",
-        "fileHash": "sha256-42b5ee773f873b6f0dc66a1db690ffae11a5e60a6965ca6221ea6a017b8c24b1",
+        "fileHash": "sha256-9d843e052a27aec207d34ad437f6e380a595777376fefb7626ed70f8bbf66256",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/mooncrown04/TestPlugins",
-        "fileSize": 30903,
+        "fileSize": 31788,
         "status": 1,
         "language": "tr",
         "authors": [
