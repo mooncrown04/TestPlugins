@@ -83,6 +83,13 @@ jobs:
           find . -name "*.cs3" -exec cp {} $GITHUB_WORKSPACE/builds \;
           cp -f build/plugins.json $GITHUB_WORKSPACE/builds || echo "plugins.json bulunamadı"
 
+          cd $GITHUB_WORKSPACE/builds
+          if [ -f "plugins.json" ]; then
+            # plugins.json içindeki "fileHash" ile başlayan satırları tamamen temizler
+            sed -i '/"fileHash"/d' plugins.json
+            echo "fileHash alanları plugins.json dosyasından kaldırıldı."
+          fi
+
       - name: Push builds
         run: |
           cd builds
