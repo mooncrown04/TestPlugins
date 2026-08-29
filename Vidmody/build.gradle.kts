@@ -18,7 +18,7 @@ android {
 cloudstream {
     authors     = listOf("MoOnCrOwN")
     language    = "tr"
-    description = "Vidmody`un sinema  ve dizi arşivi"
+    description = "Vidmody  Sinema  Ve Dizi Arşivi"
 
     /**
      * Status int as the following:
@@ -28,6 +28,6 @@ cloudstream {
      * 3: Beta only
     **/
     status  = 1 // will be 3 if unspecified
-    tvTypes = listOf("Movie")
+    tvTypes = listOf("Movie","TvSeries")
     iconUrl = "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png"
 }
