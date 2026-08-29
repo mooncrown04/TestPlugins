@@ -22,7 +22,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
             Pair("Popüler Türk Yapımları", "discover/movie?with_original_language=tr&sort_by=popularity.desc"),
             Pair("Sinemalarda", "movie/now_playing"),
             Pair("Popüler Diziler", "tv/popular"),
-            Pair("Korku ve Gerilim", "discover/movie?with_genres=27,53"),
+            Pair("Korku dan Gerilim", "discover/movie?with_genres=27,53"),
             Pair("Netflix Dizileri", "discover/tv?with_networks=213"),
             Pair("Popüler Kore Dizileri", "discover/tv?with_original_language=ko"),
             Pair("Marvel Dünyası", "discover/movie?with_companies=420&sort_by=release_date.desc"),
@@ -35,7 +35,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 val url = "https://api.themoviedb.org/3/$endpoint${sep}api_key=$tmdbKey&language=tr-TR"
                 val res = app.get(url).parsedSafe<TmdbListResponse>()
                 
-                val items = res?.results?.mapNotNull {
+                val items = res?.results?.mapNotNull { it ->
                     val type = if (endpoint.contains("tv") || it.media_type == "tv") "tv" else "movie"
                     newMovieSearchResponse(it.title ?: it.name ?: return@mapNotNull null, "tmdb|${it.id}|$type|$title", if (type == "tv") TvType.TvSeries else TvType.Movie) {
                         this.posterUrl = "https://image.tmdb.org/t/p/w500${it.poster_path}"
@@ -55,7 +55,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
             try {
                 val url = "https://api.themoviedb.org/3/search/$type?api_key=$tmdbKey&query=$query&language=tr-TR"
                 val res = app.get(url).parsedSafe<TmdbListResponse>()
-                res?.results?.forEach {
+                res?.results?.forEach { it ->
                     results.add(newMovieSearchResponse(it.title ?: it.name ?: return@forEach, "tmdb|${it.id}|$type", if (type == "tv") TvType.TvSeries else TvType.Movie) {
                         this.posterUrl = "https://image.tmdb.org/t/p/w500${it.poster_path}"
                         this.year = (it.release_date ?: it.first_air_date)?.take(4)?.toIntOrNull()
@@ -78,26 +78,22 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
 
         val actorsList = mutableListOf<ActorData>()
         
-        // 1. Geliştirici İmzası
         actorsList.add(ActorData(Actor("MoOnCrOwN", "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"), roleString = "Yazılım Amelesi"))
-
-        // 2. Dinamik Yapım Kartı
         actorsList.add(ActorData(Actor(d.name ?: d.title ?: "Bilgi", "https://image.tmdb.org/t/p/w500${d.poster_path}"), roleString = d.genres?.firstOrNull()?.name ?: "Kategori"))
 
-        // 3. Filtreli Oyuncular
         d.credits?.cast?.take(20)?.forEach { castItem ->
             if (!castItem.character.isNullOrBlank()) {
                 actorsList.add(ActorData(Actor(castItem.name ?: "Oyuncu", if (castItem.profile_path != null) "https://image.tmdb.org/t/p/w185${castItem.profile_path}" else null), roleString = castItem.character))
             }
         }
 
-        val tags = mutableListOf("MoOnCrOwN", catName).apply { d.genres?.forEach { it.name?.let { add(it) } } }
+        val tags = mutableListOf("MoOnCrOwN", catName).apply { d.genres?.forEach { it.name?.let { genreName -> add(genreName) } } }
         val finalScore = d.vote_average?.let { Score.from10(it) }
 
-        // Cloudstream resmi dizi durumu eşlemesi (Derleme hatası veren geçersiz sabitler temizlendi)
+        // Doğru Cloudstream sınıfı olan SeriesStatus kullanımı:
         val seriesStatus = when (d.status) {
-            "Returning Series" -> ShowStatus.Ongoing
-            "Ended" -> ShowStatus.Completed
+            "Returning Series" -> SeriesStatus.Ongoing
+            "Ended" -> SeriesStatus.Completed
             else -> null
         }
 
@@ -135,7 +131,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 this.year = (d.release_date ?: d.first_air_date)?.take(4)?.toIntOrNull()
                 this.tags = tags
                 this.score = finalScore
-                this.showStatus = seriesStatus
+                this.showStatus = seriesStatus // Doğru değişken adı ve SeriesStatus değeri
                 this.actors = actorsList
                 addImdbId(imdbId)
             }
