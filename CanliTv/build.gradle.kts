@@ -16,7 +16,7 @@ android {
 }
 
 cloudstream {
-    authors     = listOf("MoOnCrOwN","GitLatte", "patr0nq", "keyiflerolsun")
+    authors     = listOf("MoOnCrOwN","GitLatte","keyiflerolsun")
     language    = "tr"
     description = "powerboard`un sinema arşivi"
 
