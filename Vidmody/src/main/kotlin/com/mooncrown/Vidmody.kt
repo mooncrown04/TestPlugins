@@ -111,7 +111,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 this.tags = tags
                 this.score = finalScore
                 this.actors = actorsList
-                this.showStatus = getStatus(d.status) // Film durumu eklendi
+                // Filmlerde showStatus alanı desteklenmediği için kaldırıldı
                 addImdbId(imdbId)
             }
         } else {
@@ -138,7 +138,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 this.tags = tags
                 this.score = finalScore
                 this.actors = actorsList
-                this.showStatus = getStatus(d.status) // Dizi durumu eklendi
+                this.showStatus = getStatus(d.status) // Sadece dizilerde çalışır
                 addImdbId(imdbId)
             }
         }
@@ -165,7 +165,6 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
 
     data class TmdbListResponse(val results: List<TmdbResult>?)
     data class TmdbResult(val id: Int?, val title: String?, val name: String?, val poster_path: String?, val media_type: String?, val release_date: String?, val first_air_date: String?, val vote_average: Double?)
-    // TmdbDetailResponse sınıfına 'status' alanı eklendi:
     data class TmdbDetailResponse(val title: String?, val name: String?, val overview: String?, val poster_path: String?, val external_ids: ExternalIds?, val seasons: List<TmdbSeason>?, val release_date: String?, val first_air_date: String?, val genres: List<Genre>?, val credits: Credits?, val vote_average: Double?, val status: String?)
     data class TmdbSeasonResponse(val episodes: List<TmdbEpisode>?)
     data class TmdbEpisode(val name: String?, val overview: String?, val episode_number: Int?, val still_path: String?)
