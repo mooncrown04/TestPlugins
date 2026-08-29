@@ -1,33 +1,188 @@
-version = 3
+package com.mooncrown
 
-dependencies {
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-}
+import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
+import com.lagradost.cloudstream3.Score 
 
-android {
-    buildFeatures {
-        buildConfig = true
+class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
+    override var name = "Vidmody"
+    override var mainUrl = "https://vidmody.com"
+    override var lang = "tr"
+    override val hasMainPage = true
+    override val hasQuickSearch = true
+    override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
+
+    private val tmdbKey = "500330721680edb6d5f7f12ba7cd9023"
+
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val homeLists = mutableListOf<HomePageList>()
+        val categories = listOf(
+            Pair("Haftalık Trendler", "trending/all/week"),
+            Pair("Popüler Türk Yapımları", "discover/movie?with_original_language=tr&sort_by=popularity.desc"),
+            Pair("Sinemalarda", "movie/now_playing"),
+            Pair("Popüler Diziler", "tv/popular"),
+            Pair("Korku ve Gerilim", "discover/movie?with_genres=27,53"),
+            Pair("Netflix Dizileri", "discover/tv?with_networks=213"),
+            Pair("Popüler Kore Dizileri", "discover/tv?with_original_language=ko"),
+            Pair("Marvel Dünyası", "discover/movie?with_companies=420&sort_by=release_date.desc"),
+            Pair("Disney+ Orijinalleri", "discover/tv?with_networks=2739")
+        )
+
+        categories.forEach { (title, endpoint) ->
+            try {
+                val sep = if (endpoint.contains("?")) "&" else "?"
+                val url = "https://api.themoviedb.org/3/$endpoint${sep}api_key=$tmdbKey&language=tr-TR"
+                val res = app.get(url).parsedSafe<TmdbListResponse>()
+                
+                val items = res?.results?.mapNotNull {
+                    val type = if (endpoint.contains("tv") || it.media_type == "tv") "tv" else "movie"
+                    newMovieSearchResponse(it.title ?: it.name ?: return@mapNotNull null, "tmdb|${it.id}|$type|$title", if (type == "tv") TvType.TvSeries else TvType.Movie) {
+                        this.posterUrl = "https://image.tmdb.org/t/p/w500${it.poster_path}"
+                        this.year = (it.release_date ?: it.first_air_date)?.take(4)?.toIntOrNull()
+                        this.score = it.vote_average?.let { v -> Score.from10(v) }
+                    }
+                }
+                if (!items.isNullOrEmpty()) homeLists.add(HomePageList(title, items))
+            } catch (e: Exception) { }
+        }
+        return newHomePageResponse(homeLists, false)
     }
 
-    defaultConfig {
-        val apiKey = project.findProperty("tmdbApiKey")?.toString() ?: ""
-        buildConfigField("String", "TMDB_SECRET_API", "\"$apiKey\"")
+    override suspend fun search(query: String): List<SearchResponse> {
+        val results = mutableListOf<SearchResponse>()
+        listOf("movie", "tv").forEach { type ->
+            try {
+                val url = "https://api.themoviedb.org/3/search/$type?api_key=$tmdbKey&query=$query&language=tr-TR"
+                val res = app.get(url).parsedSafe<TmdbListResponse>()
+                res?.results?.forEach {
+                    results.add(newMovieSearchResponse(it.title ?: it.name ?: return@forEach, "tmdb|${it.id}|$type", if (type == "tv") TvType.TvSeries else TvType.Movie) {
+                        this.posterUrl = "https://image.tmdb.org/t/p/w500${it.poster_path}"
+                        this.year = (it.release_date ?: it.first_air_date)?.take(4)?.toIntOrNull()
+                    })
+                }
+            } catch (e: Exception) { }
+        }
+        return results
     }
-}
 
-cloudstream {
-    authors     = listOf("MoOnCrOwN")
-    language    = "tr"
-    description = "Vidmody`un sinema  ve dizi arşivi"
+    override suspend fun load(url: String): LoadResponse {
+        val parts = url.split("|")
+        val tmdbId = parts[1]
+        val type = parts[2]
+        val catName = if (parts.size > 3) parts[3] else "MoOnCrOwN"
 
-    /**
-     * Status int as the following:
-     * 0: Down
-     * 1: Ok
-     * 2: Slow
-     * 3: Beta only
-    **/
-    status  = 1 // will be 3 if unspecified
-    tvTypes = listOf("Movie", "TvSeries")
-    iconUrl = "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png"
+        val detailsUrl = "https://api.themoviedb.org/3/$type/$tmdbId?api_key=$tmdbKey&language=tr-TR&append_to_response=external_ids,credits"
+        val d = app.get(detailsUrl).parsedSafe<TmdbDetailResponse>() ?: throw ErrorLoadingException("Detay Hatası")
+        val imdbId = d.external_ids?.imdb_id ?: throw ErrorLoadingException("IMDB Yok")
+
+        val actorsList = mutableListOf<ActorData>()
+        
+        // 1. Geliştirici İmzası
+        actorsList.add(ActorData(Actor("MoOnCrOwN", "https://st5.depositphotos.com/1041725/67731/v/380/depositphotos_677319750-stock-illustration-ararat-mountain-illustration-vector-white.jpg"), roleString = "Yazılım Amelesi"))
+
+        // 2. Dinamik Yapım Kartı
+        actorsList.add(ActorData(Actor(d.name ?: d.title ?: "Bilgi", "https://image.tmdb.org/t/p/w500${d.poster_path}"), roleString = d.genres?.firstOrNull()?.name ?: "Kategori"))
+
+        // 3. Filtreli Oyuncular
+        d.credits?.cast?.take(20)?.forEach { castItem ->
+            if (!castItem.character.isNullOrBlank()) {
+                actorsList.add(ActorData(Actor(castItem.name ?: "Oyuncu", if (castItem.profile_path != null) "https://image.tmdb.org/t/p/w185${castItem.profile_path}" else null), roleString = castItem.character))
+            }
+        }
+
+        val tags = mutableListOf("MoOnCrOwN", catName).apply { d.genres?.forEach { it.name?.let { add(it) } } }
+        val finalScore = d.vote_average?.let { Score.from10(it) }
+
+        // Cloudstream resmi dizi durumu eşlemesi (Derleme hatası veren geçersiz sabitler temizlendi)
+        val seriesStatus = when (d.status) {
+            "Returning Series" -> ShowStatus.Ongoing
+            "Ended" -> ShowStatus.Completed
+            else -> null
+        }
+
+        return if (type == "movie") {
+            newMovieLoadResponse(d.title ?: d.name ?: "Film", url, TvType.Movie, "vid|$imdbId") {
+                this.posterUrl = "https://image.tmdb.org/t/p/w500${d.poster_path}"
+                this.plot = d.overview
+                this.year = (d.release_date ?: d.first_air_date)?.take(4)?.toIntOrNull()
+                this.tags = tags
+                this.score = finalScore
+                this.duration = d.runtime
+                this.actors = actorsList
+                addImdbId(imdbId)
+            }
+        } else {
+            val epList = mutableListOf<Episode>()
+            d.seasons?.filter { (it.season_number ?: 0) > 0 }?.forEach { s ->
+                try {
+                    val sUrl = "https://api.themoviedb.org/3/tv/$tmdbId/season/${s.season_number}?api_key=$tmdbKey&language=tr-TR"
+                    val sData = app.get(sUrl).parsedSafe<TmdbSeasonResponse>()
+                    sData?.episodes?.forEach { ep ->
+                        epList.add(newEpisode("vid|$imdbId|${s.season_number}|${ep.episode_number}") {
+                            this.name = ep.name ?: "Bölüm ${ep.episode_number}"
+                            this.season = s.season_number
+                            this.episode = ep.episode_number
+                            this.description = ep.overview
+                            this.posterUrl = if (ep.still_path != null) "https://image.tmdb.org/t/p/w500${ep.still_path}" else null
+                        })
+                    }
+                } catch (e: Exception) { }
+            }
+            newTvSeriesLoadResponse(d.name ?: d.title ?: "Dizi", url, TvType.TvSeries, epList) {
+                this.posterUrl = "https://image.tmdb.org/t/p/w500${d.poster_path}"
+                this.plot = d.overview
+                this.year = (d.release_date ?: d.first_air_date)?.take(4)?.toIntOrNull()
+                this.tags = tags
+                this.score = finalScore
+                this.showStatus = seriesStatus
+                this.actors = actorsList
+                addImdbId(imdbId)
+            }
+        }
+    }
+
+    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
+        val parts = data.split("|")
+        val imdbId = parts[1]
+        val link = if (parts.size == 2) "https://vidmody.com/vs/$imdbId" else "https://vidmody.com/vs/$imdbId/s${parts[2]}/e${String.format("%02d", parts[3].toInt())}"
+        
+        callback.invoke(
+            newExtractorLink(
+                source = this.name,
+                name = "Vidmody [TR]",
+                url = link,
+                type = ExtractorLinkType.M3U8
+            ) {
+                this.referer = "https://vidmody.com/"
+                this.quality = Qualities.P1080.value
+            }
+        )
+        return true
+    }
+
+    data class TmdbListResponse(val results: List<TmdbResult>?)
+    data class TmdbResult(val id: Int?, val title: String?, val name: String?, val poster_path: String?, val media_type: String?, val release_date: String?, val first_air_date: String?, val vote_average: Double?)
+    data class TmdbDetailResponse(
+        val title: String?, 
+        val name: String?, 
+        val overview: String?, 
+        val poster_path: String?, 
+        val external_ids: ExternalIds?, 
+        val seasons: List<TmdbSeason>?, 
+        val release_date: String?, 
+        val first_air_date: String?, 
+        val genres: List<Genre>?, 
+        val credits: Credits?, 
+        val vote_average: Double?,
+        val status: String?,
+        val runtime: Int?
+    )
+    data class TmdbSeasonResponse(val episodes: List<TmdbEpisode>?)
+    data class TmdbEpisode(val name: String?, val overview: String?, val episode_number: Int?, val still_path: String?)
+    data class ExternalIds(val imdb_id: String?)
+    data class TmdbSeason(val season_number: Int?, val episode_count: Int?)
+    data class Genre(val name: String?)
+    data class Credits(val cast: List<TmdbCast>?)
+    data class TmdbCast(val name: String?, val character: String?, val profile_path: String?)
 }
