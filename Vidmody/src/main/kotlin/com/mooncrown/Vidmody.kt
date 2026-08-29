@@ -81,8 +81,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         val type = parts[2]
         val catName = if (parts.size > 3) parts[3] else "MoOnCrOwN"
 
-        // Fragman ve ek detaylar için append_to_response içerisine 'videos' eklendi
-        val detailsUrl = "https://api.themoviedb.org/3/$type/$tmdbId?api_key=$tmdbKey&language=tr-TR&append_to_response=external_ids,credits,videos"
+        val detailsUrl = "https://api.themoviedb.org/3/$type/$tmdbId?api_key=$tmdbKey&language=tr-TR&append_to_response=external_ids,credits"
         val d = app.get(detailsUrl).parsedSafe<TmdbDetailResponse>() ?: throw ErrorLoadingException("Detay Hatası")
         val imdbId = d.external_ids?.imdb_id ?: throw ErrorLoadingException("IMDB Yok")
 
@@ -104,10 +103,6 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         val tags = mutableListOf("MoOnCrOwN", catName).apply { d.genres?.forEach { it.name?.let { add(it) } } }
         val finalScore = d.vote_average?.let { Score.from10(it) }
         val backgroundPoster = if (d.backdrop_path != null) "https://image.tmdb.org/t/p/original${d.backdrop_path}" else null
-        
-        // Fragman bulma (YouTube üzerinden)
-        val trailerKey = d.videos?.results?.firstOrNull { it.site.equals("YouTube", true) && (it.type.equals("Trailer", true) || it.type.equals("Teaser", true)) }?.key
-        val trailerLink = if (trailerKey != null) "https://www.youtube.com/watch?v=$trailerKey" else null
 
         return if (type == "movie") {
             newMovieLoadResponse(d.title ?: d.name ?: "Film", url, TvType.Movie, "vid|$imdbId") {
@@ -119,7 +114,6 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 this.score = finalScore
                 this.actors = actorsList
                 this.duration = d.runtime
-                if (trailerLink != null) this.addTrailer(trailerLink)
                 addImdbId(imdbId)
             }
         } else {
@@ -149,7 +143,6 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 this.actors = actorsList
                 this.showStatus = getStatus(d.status)
                 this.duration = d.episode_run_time?.firstOrNull()
-                if (trailerLink != null) this.addTrailer(trailerLink)
                 addImdbId(imdbId)
             }
         }
@@ -192,12 +185,9 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         val vote_average: Double?, 
         val status: String?,
         val runtime: Int?,
-        val episode_run_time: List<Int>?,
-        val videos: TmdbVideos?
+        val episode_run_time: List<Int>?
     )
     
-    data class TmdbVideos(val results: List<TmdbVideo>?)
-    data class TmdbVideo(val key: String?, val site: String?, val type: String?)
     data class TmdbSeasonResponse(val episodes: List<TmdbEpisode>?)
     data class TmdbEpisode(val name: String?, val overview: String?, val episode_number: Int?, val still_path: String?)
     data class ExternalIds(val imdb_id: String?)
