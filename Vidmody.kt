@@ -6,7 +6,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.Score 
 
 class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
-    override var name = "Vidmody4"
+    override var name = "Vidmody"
     override var mainUrl = "https://vidmody.com"
     override var lang = "tr"
     override val hasMainPage = true
