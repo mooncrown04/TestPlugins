@@ -94,6 +94,13 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         val tags = mutableListOf("MoOnCrOwN", catName).apply { d.genres?.forEach { it.name?.let { add(it) } } }
         val finalScore = d.vote_average?.let { Score.from10(it) }
 
+        // Dizi durumunu (status) TMDb verisinden çevirme
+        val seriesStatus = when (d.status?.lowercase()) {
+            "returning series", "in production" -> ShowStatus.Ongoing
+            "ended", "canceled" -> ShowStatus.Completed
+            else -> ShowStatus.Unknown
+        }
+
         return if (type == "movie") {
             newMovieLoadResponse(d.title ?: d.name ?: "Film", url, TvType.Movie, "vid|$imdbId") {
                 this.posterUrl = "https://image.tmdb.org/t/p/w500${d.poster_path}"
@@ -128,6 +135,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 this.tags = tags
                 this.score = finalScore
                 this.actors = actorsList
+                this.status = seriesStatus // <-- Dizi durumu buraya eklendi
                 addImdbId(imdbId)
             }
         }
@@ -154,7 +162,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
 
     data class TmdbListResponse(val results: List<TmdbResult>?)
     data class TmdbResult(val id: Int?, val title: String?, val name: String?, val poster_path: String?, val media_type: String?, val release_date: String?, val first_air_date: String?, val vote_average: Double?)
-    data class TmdbDetailResponse(val title: String?, val name: String?, val overview: String?, val poster_path: String?, val external_ids: ExternalIds?, val seasons: List<TmdbSeason>?, val release_date: String?, val first_air_date: String?, val genres: List<Genre>?, val credits: Credits?, val vote_average: Double?)
+    data class TmdbDetailResponse(val title: String?, val name: String?, val overview: String?, val poster_path: String?, val external_ids: ExternalIds?, val seasons: List<TmdbSeason>?, val release_date: String?, val first_air_date: String?, val genres: List<Genre>?, val credits: Credits?, val vote_average: Double?, val status: String?) // <-- status alanı buraya eklendi
     data class TmdbSeasonResponse(val episodes: List<TmdbEpisode>?)
     data class TmdbEpisode(val name: String?, val overview: String?, val episode_number: Int?, val still_path: String?)
     data class ExternalIds(val imdb_id: String?)
