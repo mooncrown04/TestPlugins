@@ -15,6 +15,15 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
 
     private val tmdbKey = "500330721680edb6d5f7f12ba7cd9023"
 
+    // Yayın durumunu çeviren fonksiyon
+    private fun getStatus(status: String?): ShowStatus? {
+        return when (status?.lowercase()) {
+            "airing", "returning series" -> ShowStatus.Ongoing
+            "ended", "canceled" -> ShowStatus.Completed
+            else -> null
+        }
+    }
+
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val homeLists = mutableListOf<HomePageList>()
         val categories = listOf(
@@ -102,6 +111,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 this.tags = tags
                 this.score = finalScore
                 this.actors = actorsList
+                this.showStatus = getStatus(d.status) // Film durumu eklendi
                 addImdbId(imdbId)
             }
         } else {
@@ -128,6 +138,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 this.tags = tags
                 this.score = finalScore
                 this.actors = actorsList
+                this.showStatus = getStatus(d.status) // Dizi durumu eklendi
                 addImdbId(imdbId)
             }
         }
@@ -154,7 +165,8 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
 
     data class TmdbListResponse(val results: List<TmdbResult>?)
     data class TmdbResult(val id: Int?, val title: String?, val name: String?, val poster_path: String?, val media_type: String?, val release_date: String?, val first_air_date: String?, val vote_average: Double?)
-    data class TmdbDetailResponse(val title: String?, val name: String?, val overview: String?, val poster_path: String?, val external_ids: ExternalIds?, val seasons: List<TmdbSeason>?, val release_date: String?, val first_air_date: String?, val genres: List<Genre>?, val credits: Credits?, val vote_average: Double?)
+    // TmdbDetailResponse sınıfına 'status' alanı eklendi:
+    data class TmdbDetailResponse(val title: String?, val name: String?, val overview: String?, val poster_path: String?, val external_ids: ExternalIds?, val seasons: List<TmdbSeason>?, val release_date: String?, val first_air_date: String?, val genres: List<Genre>?, val credits: Credits?, val vote_average: Double?, val status: String?)
     data class TmdbSeasonResponse(val episodes: List<TmdbEpisode>?)
     data class TmdbEpisode(val name: String?, val overview: String?, val episode_number: Int?, val still_path: String?)
     data class ExternalIds(val imdb_id: String?)
