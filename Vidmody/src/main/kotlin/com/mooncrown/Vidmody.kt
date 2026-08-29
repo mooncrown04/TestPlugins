@@ -94,24 +94,13 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         val tags = mutableListOf("MoOnCrOwN", catName).apply { d.genres?.forEach { it.name?.let { add(it) } } }
         val finalScore = d.vote_average?.let { Score.from10(it) }
 
-        // Durum Türkçeleştirme ve Açıklama Zenginleştirme
-        val statusTr = when (d.status) {
-            "Returning Series" -> "Devam Ediyor"
-            "Ended" -> "Final Yapmış"
-            "Canceled" -> "İptal Edildi"
-            else -> d.status
-        }
-
-        val enrichedPlot = buildString {
-            if (!d.overview.isNullOrBlank()) {
-                append(d.overview)
-                append("\n\n")
-            }
-            if (type == "tv" && !statusTr.isNullOrBlank()) {
-                append("📌 Durum: $statusTr")
-                if (d.number_of_seasons != null) append(" • ${d.number_of_seasons} Sezon")
-                if (d.number_of_episodes != null) append(" • ${d.number_of_episodes} Bölüm")
-            }
+        // Cloudstream resmi dizi durumu (ShowStatus)
+        val seriesStatus = when (d.status) {
+            "Returning Series" -> ShowStatus.Ongoing
+            "Ended" -> ShowStatus.Completed
+            "Canceled" -> ShowStatus.Cancelled
+            "In Production" -> ShowStatus.NotYetAired
+            else -> null
         }
 
         return if (type == "movie") {
@@ -121,6 +110,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 this.year = (d.release_date ?: d.first_air_date)?.take(4)?.toIntOrNull()
                 this.tags = tags
                 this.score = finalScore
+                this.duration = d.runtime // Resmi film süresi (dakika)
                 this.actors = actorsList
                 addImdbId(imdbId)
             }
@@ -143,10 +133,11 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
             }
             newTvSeriesLoadResponse(d.name ?: d.title ?: "Dizi", url, TvType.TvSeries, epList) {
                 this.posterUrl = "https://image.tmdb.org/t/p/w500${d.poster_path}"
-                this.plot = enrichedPlot
+                this.plot = d.overview
                 this.year = (d.release_date ?: d.first_air_date)?.take(4)?.toIntOrNull()
                 this.tags = tags
                 this.score = finalScore
+                this.showStatus = seriesStatus // Resmi dizi durumu alanı
                 this.actors = actorsList
                 addImdbId(imdbId)
             }
@@ -187,8 +178,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         val credits: Credits?, 
         val vote_average: Double?,
         val status: String?,
-        val number_of_seasons: Int?,
-        val number_of_episodes: Int?
+        val runtime: Int? // Film süresi için gerekli alan
     )
     data class TmdbSeasonResponse(val episodes: List<TmdbEpisode>?)
     data class TmdbEpisode(val name: String?, val overview: String?, val episode_number: Int?, val still_path: String?)
