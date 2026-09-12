@@ -1,7 +1,7 @@
 version = 1
 
 cloudstream {
-    name = "Galatasaray Font Eklentisi" 
+    name = "Galatasaray Font Eklentisi"
     description = "Uygulamanın genel yazı tipini Galatasaray temasındaki özel font ile değiştirir."
     authors = listOf("Aytac Afsar")
     
