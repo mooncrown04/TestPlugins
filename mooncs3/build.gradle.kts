@@ -1,15 +1,15 @@
 version = 1
 
 cloudstream {
-    name = "Galatasaray Font Eklentisi"
-    description = "Uygulamanın genel yazı tipini Galatasaray temasındaki özel font ile değiştirir."
-    authors = listOf("Aytac Afsar")
+    name.set("Galatasaray Font Eklentisi")
+    description.set("Uygulamanın genel yazı tipini Galatasaray temasındaki özel font ile değiştirir.")
+    authors.set(listOf("Aytac Afsar"))
     
     // Status: 1 = Ok, 2 = Down, 3 = Beta
-    status = 1 
+    status.set(1)
     
     // Eklenti kategorisi
-    tvTypes = listOf("Others") 
+    tvTypes.set(listOf("Others"))
 
-    iconUrl = "https://raw.githubusercontent.com/.../icon.png"
+    iconUrl.set("https://raw.githubusercontent.com/.../icon.png")
 }
