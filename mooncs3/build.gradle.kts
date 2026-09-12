@@ -1,13 +1,16 @@
 import com.lagradost.cloudstream3.gradle.CloudstreamExtension
 
-// Üst taraftaki plugins ve dependencies bloklarından sonra:
+plugins {
+    id("com.lagradost.cloudstream3.gradle")
+}
 
-configure<CloudstreamExtension> {
+// Tüm metadata ayarlarının 'cloudstream' bloğu İÇİNDE olduğundan emin olun
+cloudstream {
     name.set("Galatasaray Font Eklentisi")
     description.set("Uygulamanın genel yazı tipini Galatasaray temasındaki özel font ile değiştirir.")
     authors.set(listOf("Aytac Afsar"))
     
-    status.set(1) // 1 = Working
+    status.set(1) // 1: Working (Çalışıyor)
     tvTypes.set(listOf("Others"))
     iconUrl.set("https://raw.githubusercontent.com/.../icon.png")
 }
