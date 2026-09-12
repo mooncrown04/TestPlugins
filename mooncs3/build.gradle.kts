@@ -4,7 +4,6 @@ plugins {
     id("com.lagradost.cloudstream3.gradle")
 }
 
-// Tüm metadata ayarlarının 'cloudstream' bloğu İÇİNDE olduğundan emin olun
 cloudstream {
     name.set("Galatasaray Font Eklentisi")
     description.set("Uygulamanın genel yazı tipini Galatasaray temasındaki özel font ile değiştirir.")
