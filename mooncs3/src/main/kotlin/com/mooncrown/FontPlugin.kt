@@ -1,4 +1,4 @@
-package com.mooncrown.fontplugin
+package com.mooncrown
 
 
 import android.content.Context
