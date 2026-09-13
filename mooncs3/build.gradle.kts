@@ -3,7 +3,7 @@ plugins {
 }
 
 cloudstream {
-    name        = "Galatasaray Font Eklentisi"
+    // name satırını kaldırın veya yorum satırı yapın
     description = "Uygulamanın genel yazı tipini Galatasaray temasındaki özel font ile değiştirir."
     authors     = listOf("Aytac Afsar")
     
