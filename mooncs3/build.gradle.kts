@@ -14,3 +14,10 @@ cloudstream {
     tvTypes = listOf("Movie")
     iconUrl = "https://raw.githubusercontent.com/GitLatte/Sinetech/master/img/powersinema/powersinema.png"
 }
+
+// JVM 11 Derleme Ayarı (Eklentinin derlenebilmesi için ekleyin)
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    kotlinOptions {
+        jvmTarget = "11"
+    }
+}
