@@ -98,27 +98,51 @@ class CanliTv(private val sharedPref: SharedPreferences?) : MainAPI() {
         }
     }
 
-    override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        val grouped = parseJson<GroupedEpisodeData>(data)
-        grouped.urls.forEachIndexed { i, link ->
-            if (!link.isNullOrBlank()) {
+override suspend fun loadLinks(
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    val grouped = parseJson<GroupedEpisodeData>(data)
+    
+    grouped.urls.forEachIndexed { i, link ->
+        if (!link.isNullOrBlank()) {
+            val cleanLink = link.trim()
+
+            // 1. Durum: Doğrudan M3U8 veya TS canlı yayın / video adresi ise
+            if (cleanLink.contains(".m3u8") || cleanLink.contains(".ts")) {
                 callback.invoke(
                     ExtractorLink(
                         source = this.name,
                         name = "${grouped.title} K${i + 1}",
-                        url = link,
-                        referer = "",
+                        url = cleanLink,
+                        referer = "https://vidmody.com/", // Vidmody engeline karşı varsayılan referer
                         quality = Qualities.P1080.value,
                         type = ExtractorLinkType.M3U8
                     )
                 )
+            } 
+            // 2. Durum: Vidmody veya embed web sayfası linki ise (Otomatik Extractor Çözücü)
+            else {
+                // Cloudstream'in dahili Vidmody extractor'ını çağırır
+                val success = loadExtractor(cleanLink, subtitleCallback, callback)
+                
+                // Eğer dahili extractor bulamazsa yedek olarak M3U8 dener
+                if (!success) {
+                    callback.invoke(
+                        ExtractorLink(
+                            source = this.name,
+                            name = "${grouped.title} K${i + 1} (Yedek)",
+                            url = cleanLink,
+                            referer = "https://vidmody.com/",
+                            quality = Qualities.Unknown.value,
+                            type = ExtractorLinkType.M3U8
+                        )
+                    )
+                }
             }
         }
-        return true
     }
+    return true
 }
