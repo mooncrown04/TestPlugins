@@ -6,8 +6,8 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.Score 
 
 class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
-    override var name = "Vidmody35"
-    override var mainUrl = "https://vidmody.com"
+    override var name = "Vidmody"
+    override var mainUrl = "https://ha.vixolity.com"
     override var lang = "tr"
     override val hasMainPage = true
     override val hasQuickSearch = true
@@ -136,16 +136,16 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
         val parts = data.split("|")
         val imdbId = parts[1]
-        val link = if (parts.size == 2) "https://vidmody.com/vs/$imdbId" else "https://vidmody.com/vs/$imdbId/s${parts[2]}/e${String.format("%02d", parts[3].toInt())}"
+        val link = if (parts.size == 2) "https://ha.vixolity.com/vs/$imdbId" else "https://ha.vixolity.com/vs/$imdbId/s${parts[2]}/e${String.format("%02d", parts[3].toInt())}"
         
         callback.invoke(
             newExtractorLink(
                 source = this.name,
-                name = "Vidmody [TR]",
+                name = "Vidmody]",
                 url = link,
                 type = ExtractorLinkType.M3U8
             ) {
-                this.referer = "https://vidmody.com/"
+                this.referer = "https://ha.vixolity.com/"
                 this.quality = Qualities.P1080.value
             }
         )
