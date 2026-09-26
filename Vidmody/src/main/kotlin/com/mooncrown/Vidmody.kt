@@ -6,8 +6,8 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.Score 
 
 class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
-    override var name = "Vidmody02"
-    override var mainUrl = "https://vidmody.com"
+    override var name = "Vidmody"
+    override var mainUrl = "https://vidmody.to"
     override var lang = "tr"
     override val hasMainPage = true
     override val hasQuickSearch = true
@@ -133,81 +133,24 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         }
     }
 
-override suspend fun loadLinks(
-    data: String,
-    isCasting: Boolean,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
-): Boolean {
-
-    println("VIDMODY_1 loadLinks başladı")
-    println("VIDMODY_2 data = $data")
-
-    try {
-        val parts = data.split('|')
-
-        println("VIDMODY_3 parts = ${parts.joinToString()}")
-
+    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
+        val parts = data.split("|")
         val imdbId = parts[1]
-
-        val link =
-            if (parts.size == 2) {
-                "https://vidmody.com/vs/$imdbId"
-            } else {
-                "https://vidmody.com/vs/$imdbId/s${parts[2]}/e${String.format("%02d", parts[3].toInt())}"
-            }
-
-        println("VIDMODY_4 generated link = $link")
-
-        try {
-            val response = app.get(
-                link,
-                headers = mapOf(
-                    "Referer" to "https://vidmody.com/",
-                    "User-Agent" to USER_AGENT
-                )
-            )
-
-            println("VIDMODY_5 status = ${response.code}")
-            println("VIDMODY_6 final url = ${response.url}")
-
-            val body = response.text
-
-            println("VIDMODY_7 body length = ${body.length}")
-
-            if (body.contains(".m3u8")) {
-                println("VIDMODY_8 m3u8 bulundu")
-            } else {
-                println("VIDMODY_8 m3u8 bulunamadı")
-            }
-
-        } catch (e: Exception) {
-            println("VIDMODY_HTTP_ERROR = ${e.message}")
-        }
-
+        val link = if (parts.size == 2) "https://vidmody.to/vs/$imdbId" else "https://vidmody.to/vs/$imdbId/s${parts[2]}/e${String.format("%02d", parts[3].toInt())}"
+        
         callback.invoke(
-            ExtractorLink(
-                source = "VIDMODY DEBUG",
-                name = "VIDMODY DEBUG",
+            newExtractorLink(
+                source = this.name,
+                name = "Vidmody",
                 url = link,
-                referer = "https://vidmody.com/",
-                quality = Qualities.Unknown.value,
                 type = ExtractorLinkType.M3U8
-            )
+            ) {
+                this.referer = "https://vidmody.to/"
+                this.quality = Qualities.P1080.value
+            }
         )
-
-        println("VIDMODY_9 callback gönderildi")
-
         return true
-
-    } catch (e: Exception) {
-
-        println("VIDMODY_FATAL = ${e.message}")
-        e.printStackTrace()
-
-        return false
     }
-}
 
     data class TmdbListResponse(val results: List<TmdbResult>?)
     data class TmdbResult(val id: Int?, val title: String?, val name: String?, val poster_path: String?, val media_type: String?, val release_date: String?, val first_air_date: String?, val vote_average: Double?)
