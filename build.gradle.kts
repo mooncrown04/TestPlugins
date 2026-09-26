@@ -15,7 +15,7 @@ buildscript {
     dependencies {
 //jitpack tarafından verilen metadata bozuk...
         classpath("com.android.tools.build:gradle:9.1.1")
-        classpath("com.github.recloudstream:gradle:-SNAPSHOT")
+       classpath("com.github.recloudstream:gradle:32895aedb6")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.0")
     }
 }
