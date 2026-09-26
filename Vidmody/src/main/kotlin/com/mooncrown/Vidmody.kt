@@ -4,10 +4,9 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.Score 
-import com.lagradost.cloudstream3.utils.Coroutines.main
-import android.widget.Toast
+
 class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
-    override var name = "Vidmody05"
+    override var name = "Vidmody02"
     override var mainUrl = "https://vidmody.com"
     override var lang = "tr"
     override val hasMainPage = true
@@ -141,63 +140,72 @@ override suspend fun loadLinks(
     callback: (ExtractorLink) -> Unit
 ): Boolean {
 
+    println("VIDMODY_1 loadLinks başladı")
+    println("VIDMODY_2 data = $data")
+
     try {
-        val parts = data.split("|")
+        val parts = data.split('|')
+
+        println("VIDMODY_3 parts = ${parts.joinToString()}")
+
         val imdbId = parts[1]
 
-        val testUrls = mutableListOf<String>()
-
-        testUrls.add("https://vidmody.com/vs/$imdbId")
-
-        testUrls.add("https://vidmody.com/vs/$imdbId/")
-
-        testUrls.add("https://vidmody.com/mm/$imdbId/main/index.m3u8")
-
-        for (url in testUrls) {
-            try {
-                val r = app.get(
-                    url,
-                    headers = mapOf(
-                        "Referer" to "https://vidmody.com/",
-                        "User-Agent" to USER_AGENT
-                    )
-                )
-
-                callback.invoke(
-                    ExtractorLink(
-                        source = "Vidmody Test",
-                        name = "TEST => ${r.code}",
-                        url = url,
-                        referer = "https://vidmody.com/",
-                        quality = Qualities.Unknown.value,
-                        type = if (url.contains(".m3u8"))
-                            ExtractorLinkType.M3U8
-                        else
-                            ExtractorLinkType.VIDEO
-                    )
-                )
-
-            } catch (e: Exception) {
-
-                callback.invoke(
-                    ExtractorLink(
-                        source = "Vidmody Hata",
-                        name = "HATA => ${e.message}",
-                        url = "https://example.com/test.mp4",
-                        referer = "",
-                        quality = Qualities.Unknown.value,
-                        type = ExtractorLinkType.VIDEO
-                    )
-                )
+        val link =
+            if (parts.size == 2) {
+                "https://vidmody.com/vs/$imdbId"
+            } else {
+                "https://vidmody.com/vs/$imdbId/s${parts[2]}/e${String.format("%02d", parts[3].toInt())}"
             }
+
+        println("VIDMODY_4 generated link = $link")
+
+        try {
+            val response = app.get(
+                link,
+                headers = mapOf(
+                    "Referer" to "https://vidmody.com/",
+                    "User-Agent" to USER_AGENT
+                )
+            )
+
+            println("VIDMODY_5 status = ${response.code}")
+            println("VIDMODY_6 final url = ${response.url}")
+
+            val body = response.text
+
+            println("VIDMODY_7 body length = ${body.length}")
+
+            if (body.contains(".m3u8")) {
+                println("VIDMODY_8 m3u8 bulundu")
+            } else {
+                println("VIDMODY_8 m3u8 bulunamadı")
+            }
+
+        } catch (e: Exception) {
+            println("VIDMODY_HTTP_ERROR = ${e.message}")
         }
+
+        callback.invoke(
+            ExtractorLink(
+                source = "VIDMODY DEBUG",
+                name = "VIDMODY DEBUG",
+                url = link,
+                referer = "https://vidmody.com/",
+                quality = Qualities.Unknown.value,
+                type = ExtractorLinkType.M3U8
+            )
+        )
+
+        println("VIDMODY_9 callback gönderildi")
 
         return true
 
     } catch (e: Exception) {
-        throw ErrorLoadingException(
-            "Vidmody Debug: ${e.message}"
-        )
+
+        println("VIDMODY_FATAL = ${e.message}")
+        e.printStackTrace()
+
+        return false
     }
 }
 
