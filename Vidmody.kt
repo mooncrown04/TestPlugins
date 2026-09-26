@@ -141,7 +141,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         callback.invoke(
             newExtractorLink(
                 source = this.name,
-                name = "Vidmody]",
+                name = "Vidmody",
                 url = link,
                 type = ExtractorLinkType.M3U8
             ) {
