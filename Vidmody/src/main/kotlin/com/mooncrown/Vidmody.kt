@@ -6,7 +6,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.Score 
 
 class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
-    override var name = "Vidmody35"
+    override var name = "Vidmody04"
     override var mainUrl = "https://vidmody.com"
     override var lang = "tr"
     override val hasMainPage = true
@@ -133,24 +133,72 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         }
     }
 
-    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
+override suspend fun loadLinks(
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+
+    try {
         val parts = data.split("|")
         val imdbId = parts[1]
-        val link = if (parts.size == 2) "https://vidmody.com/vs/$imdbId" else "https://vidmody.com/vs/$imdbId/s${parts[2]}/e${String.format("%02d", parts[3].toInt())}"
-        
-        callback.invoke(
-            newExtractorLink(
-                source = this.name,
-                name = "Vidmody [TR]",
-                url = link,
-                type = ExtractorLinkType.M3U8
-            ) {
-                this.referer = "https://vidmody.com/"
-                this.quality = Qualities.P1080.value
+
+        val testUrls = mutableListOf<String>()
+
+        testUrls.add("https://vidmody.com/vs/$imdbId")
+
+        testUrls.add("https://vidmody.com/vs/$imdbId/")
+
+        testUrls.add("https://vidmody.com/mm/$imdbId/main/index.m3u8")
+
+        for (url in testUrls) {
+            try {
+                val r = app.get(
+                    url,
+                    headers = mapOf(
+                        "Referer" to "https://vidmody.com/",
+                        "User-Agent" to USER_AGENT
+                    )
+                )
+
+                callback.invoke(
+                    ExtractorLink(
+                        source = "Vidmody Test",
+                        name = "TEST => ${r.code}",
+                        url = url,
+                        referer = "https://vidmody.com/",
+                        quality = Qualities.Unknown.value,
+                        type = if (url.contains(".m3u8"))
+                            ExtractorLinkType.M3U8
+                        else
+                            ExtractorLinkType.VIDEO
+                    )
+                )
+
+            } catch (e: Exception) {
+
+                callback.invoke(
+                    ExtractorLink(
+                        source = "Vidmody Hata",
+                        name = "HATA => ${e.message}",
+                        url = "https://example.com/test.mp4",
+                        referer = "",
+                        quality = Qualities.Unknown.value,
+                        type = ExtractorLinkType.VIDEO
+                    )
+                )
             }
-        )
+        }
+
         return true
+
+    } catch (e: Exception) {
+        throw ErrorLoadingException(
+            "Vidmody Debug: ${e.message}"
+        )
     }
+}
 
     data class TmdbListResponse(val results: List<TmdbResult>?)
     data class TmdbResult(val id: Int?, val title: String?, val name: String?, val poster_path: String?, val media_type: String?, val release_date: String?, val first_air_date: String?, val vote_average: Double?)
