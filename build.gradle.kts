@@ -7,20 +7,15 @@ buildscript {
     repositories {
         google()
         mavenCentral()
-        // Shitpack repo which contains our tools and dependencies
         maven("https://jitpack.io")
     }
 
     dependencies {
-       classpath("com.android.tools.build:gradle:8.13.0")
-        // Cloudstream gradle plugin which makes everything work and builds plugins
-        //classpath("com.github.recloudstream:gradle:-SNAPSHOT")
-      classpath("com.github.recloudstream:gradle:master-SNAPSHOT")
-      classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.0")
-
-
-
-}
+        classpath("com.android.tools.build:gradle:8.7.3")
+        // JitPack üzerinde çalışan stabil recloudstream gradle eklentisi commit hash'i
+        classpath("com.github.recloudstream:gradle:22467d32e9")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21")
+    }
 }
 
 allprojects {
@@ -31,18 +26,19 @@ allprojects {
     }
 }
 
-fun Project.cloudstream(configuration: CloudstreamExtension.() -> Unit) = extensions.getByName<CloudstreamExtension>("cloudstream").configuration()
+fun Project.cloudstream(configuration: CloudstreamExtension.() -> Unit) =
+    extensions.getByName<CloudstreamExtension>("cloudstream").configuration()
 
-fun Project.android(configuration: BaseExtension.() -> Unit) = extensions.getByName<BaseExtension>("android").configuration()
+fun Project.android(configuration: BaseExtension.() -> Unit) =
+    extensions.getByName<BaseExtension>("android").configuration()
 
 subprojects {
     apply(plugin = "com.android.library")
     apply(plugin = "kotlin-android")
     apply(plugin = "com.lagradost.cloudstream3.gradle")
-  
-    
-cloudstream {
-        // when running through github workflow, GITHUB_REPOSITORY should contain current repository name
+
+    cloudstream {
+        // GitHub Actions çalışırken mevcut repo adını alır, yerelde varsayılanı kullanır
         setRepo(System.getenv("GITHUB_REPOSITORY") ?: "https://github.com/mooncrown04/TestPlugins")
     }
 
@@ -62,7 +58,7 @@ cloudstream {
 
         tasks.withType<KotlinJvmCompile> {
             compilerOptions {
-                jvmTarget.set(JvmTarget.JVM_1_8) // Required
+                jvmTarget.set(JvmTarget.JVM_1_8)
                 freeCompilerArgs.addAll(
                     "-Xno-call-assertions",
                     "-Xno-param-assertions",
@@ -72,27 +68,22 @@ cloudstream {
         }
     }
 
-  dependencies {
+    dependencies {
         val cloudstream by configurations
         val implementation by configurations
 
-        // Stubs for all Cloudstream classes
-       cloudstream("com.lagradost:cloudstream3:pre-release")
+        // Cloudstream sınıfları için stub kütüphanesi
+        cloudstream("com.lagradost:cloudstream3:pre-release")
 
-
-        // these dependencies can include any of those which are added by the app,
-        // but you dont need to include any of them if you dont need them
-        // https://github.com/recloudstream/cloudstream/blob/master/app/build.gradle
-      //  implementation("org.jetbrains.kotlin:kotlin-stdlib")  //yeni       
-       implementation(kotlin("stdlib"))                                              // Kotlin'in temel kütüphanesi
-        implementation("com.github.Blatzar:NiceHttp:0.4.11")                          // HTTP kütüphanesi
-        implementation("org.jsoup:jsoup:1.18.3")                                      // HTML ayrıştırıcı
-        implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.16.0")   // Kotlin için Jackson JSON kütüphanesi
-        implementation("com.fasterxml.jackson.core:jackson-databind:2.16.0")          // JSON-nesne dönüştürme kütüphanesi
-        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1")      // Kotlin için asenkron işlemler
+        // Eklenti bağımlılıkları
+        implementation(kotlin("stdlib"))
+        implementation("com.github.Blatzar:NiceHttp:0.4.11")
+        implementation("org.jsoup:jsoup:1.18.3")
+        implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.16.0")
+        implementation("com.fasterxml.jackson.core:jackson-databind:2.16.0")
+        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1")
         implementation("com.github.vidstige:jadb:v1.2.1")
-      
-  }
+    }
 }
 
 task<Delete>("clean") {
