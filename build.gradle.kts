@@ -11,10 +11,9 @@ buildscript {
     }
 
     dependencies {
-        classpath("com.android.tools.build:gradle:8.7.3")
-        // JitPack üzerinde çalışan stabil recloudstream gradle eklentisi commit hash'i
-        classpath("com.github.recloudstream:gradle:22467d32e9")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21")
+          classpath("com.android.tools.build:gradle:9.1.1")
+        classpath("com.github.recloudstream:gradle:-SNAPSHOT")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.0")
     }
 }
 
