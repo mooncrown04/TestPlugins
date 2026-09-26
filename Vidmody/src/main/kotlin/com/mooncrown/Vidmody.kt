@@ -4,9 +4,10 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.Score 
-
+import com.lagradost.cloudstream3.utils.Coroutines.main
+import android.widget.Toast
 class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
-    override var name = "Vidmody04"
+    override var name = "Vidmody05"
     override var mainUrl = "https://vidmody.com"
     override var lang = "tr"
     override val hasMainPage = true
