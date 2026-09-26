@@ -6,7 +6,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.Score 
 
 class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
-    override var name = "Vidmody-vixolity"
+    override var name = "Vidmody"
     override var mainUrl = "https://ha.vixolity.com"
     override var lang = "tr"
     override val hasMainPage = true
@@ -133,42 +133,15 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         }
     }
 
-override suspend fun loadLinks(
-    data: String, 
-    isCasting: Boolean, 
-    subtitleCallback: (SubtitleFile) -> Unit, 
-    callback: (ExtractorLink) -> Unit
-): Boolean {
-    val parts = data.split("|")
-    val imdbId = parts[1]
-    
-    // Farklı URL varyasyonları listesi
-    val links = if (parts.size == 2) {
-        // Film URL Yapıları
-        listOf(
-            "https://ha.vixolity.com/vs/$imdbId",
-            "https://ha.vixolity.com/movie/$imdbId",
-            "https://ha.vixolity.com/embed/movie/$imdbId"
-        )
-    } else {
-        val season = parts[2]
-        val episode = String.format("%02d", parts[3].toInt()) // "01" formatı
-        val episodeRaw = parts[3] // "1" formatı
+    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
+        val parts = data.split("|")
+        val imdbId = parts[1]
+        val link = if (parts.size == 2) "https://ha.vixolity.com/vs/$imdbId" else "https://ha.vixolity.com/vs/$imdbId/s${parts[2]}/e${String.format("%02d", parts[3].toInt())}"
         
-        // Dizi URL Yapıları
-        listOf(
-            "https://ha.vixolity.com/vs/$imdbId/s$season/e$episode",
-            "https://ha.vixolity.com/tv/$imdbId-$season-$episodeRaw",
-            "https://ha.vixolity.com/embed/tv/$imdbId/$season/$episodeRaw"
-        )
-    }
-
-    // Her URL seçeneğini extractor link olarak ekle
-    links.forEachIndexed { index, link ->
         callback.invoke(
             newExtractorLink(
                 source = this.name,
-                name = "Vidmody [Sunucu ${index + 1}]",
+                name = "Vidmody]",
                 url = link,
                 type = ExtractorLinkType.M3U8
             ) {
@@ -176,9 +149,8 @@ override suspend fun loadLinks(
                 this.quality = Qualities.P1080.value
             }
         )
+        return true
     }
-    return true
-}
 
     data class TmdbListResponse(val results: List<TmdbResult>?)
     data class TmdbResult(val id: Int?, val title: String?, val name: String?, val poster_path: String?, val media_type: String?, val release_date: String?, val first_air_date: String?, val vote_average: Double?)
