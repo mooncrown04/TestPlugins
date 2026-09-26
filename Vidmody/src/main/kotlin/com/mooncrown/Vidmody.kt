@@ -15,15 +15,6 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
 
     private val tmdbKey = "500330721680edb6d5f7f12ba7cd9023"
 
-    // Yayın durumunu çeviren fonksiyon
-    private fun getStatus(status: String?): ShowStatus? {
-        return when (status?.lowercase()) {
-            "airing", "returning series" -> ShowStatus.Ongoing
-            "ended", "canceled" -> ShowStatus.Completed
-            else -> null
-        }
-    }
-
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val homeLists = mutableListOf<HomePageList>()
         val categories = listOf(
@@ -102,18 +93,15 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
 
         val tags = mutableListOf("MoOnCrOwN", catName).apply { d.genres?.forEach { it.name?.let { add(it) } } }
         val finalScore = d.vote_average?.let { Score.from10(it) }
-        val backgroundPoster = if (d.backdrop_path != null) "https://image.tmdb.org/t/p/original${d.backdrop_path}" else null
 
         return if (type == "movie") {
             newMovieLoadResponse(d.title ?: d.name ?: "Film", url, TvType.Movie, "vid|$imdbId") {
                 this.posterUrl = "https://image.tmdb.org/t/p/w500${d.poster_path}"
-                this.backgroundPosterUrl = backgroundPoster
                 this.plot = d.overview
                 this.year = (d.release_date ?: d.first_air_date)?.take(4)?.toIntOrNull()
                 this.tags = tags
                 this.score = finalScore
                 this.actors = actorsList
-                this.duration = d.runtime
                 addImdbId(imdbId)
             }
         } else {
@@ -135,14 +123,11 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
             }
             newTvSeriesLoadResponse(d.name ?: d.title ?: "Dizi", url, TvType.TvSeries, epList) {
                 this.posterUrl = "https://image.tmdb.org/t/p/w500${d.poster_path}"
-                this.backgroundPosterUrl = backgroundPoster
                 this.plot = d.overview
                 this.year = (d.release_date ?: d.first_air_date)?.take(4)?.toIntOrNull()
                 this.tags = tags
                 this.score = finalScore
                 this.actors = actorsList
-                this.showStatus = getStatus(d.status)
-                this.duration = d.episode_run_time?.firstOrNull()
                 addImdbId(imdbId)
             }
         }
@@ -169,25 +154,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
 
     data class TmdbListResponse(val results: List<TmdbResult>?)
     data class TmdbResult(val id: Int?, val title: String?, val name: String?, val poster_path: String?, val media_type: String?, val release_date: String?, val first_air_date: String?, val vote_average: Double?)
-    
-    data class TmdbDetailResponse(
-        val title: String?, 
-        val name: String?, 
-        val overview: String?, 
-        val poster_path: String?,
-        val backdrop_path: String?,
-        val external_ids: ExternalIds?, 
-        val seasons: List<TmdbSeason>?, 
-        val release_date: String?, 
-        val first_air_date: String?, 
-        val genres: List<Genre>?, 
-        val credits: Credits?, 
-        val vote_average: Double?, 
-        val status: String?,
-        val runtime: Int?,
-        val episode_run_time: List<Int>?
-    )
-    
+    data class TmdbDetailResponse(val title: String?, val name: String?, val overview: String?, val poster_path: String?, val external_ids: ExternalIds?, val seasons: List<TmdbSeason>?, val release_date: String?, val first_air_date: String?, val genres: List<Genre>?, val credits: Credits?, val vote_average: Double?)
     data class TmdbSeasonResponse(val episodes: List<TmdbEpisode>?)
     data class TmdbEpisode(val name: String?, val overview: String?, val episode_number: Int?, val still_path: String?)
     data class ExternalIds(val imdb_id: String?)
