@@ -6,12 +6,6 @@ pluginManagement {
         mavenCentral()
         google()
         maven("https://jitpack.io")
-        maven("https://maven.pkg.github.com/LagradOst/CloudStream-Releases/") {
-            credentials {
-                username = System.getenv("GITHUB_ACTOR") ?: "github"
-                password = System.getenv("GITHUB_TOKEN") ?: ""
-            }
-        }
     }
 }
 
