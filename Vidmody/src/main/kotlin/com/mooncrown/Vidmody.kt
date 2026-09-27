@@ -109,7 +109,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 this.score = finalScore
                 this.duration = d.runtime
                 this.actors = actorsList
-                this.comingFromUser = d.production_countries?.firstOrNull()?.name ?: d.production_countries?.firstOrNull()?.iso_3166_1
+                this.country = d.production_countries?.firstOrNull()?.name ?: d.production_countries?.firstOrNull()?.iso_3166_1
                 
                 trailerUrl?.let { addTrailer(it) }
                 addImdbId(imdbId)
@@ -140,7 +140,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 this.tags = tags
                 this.score = finalScore
                 this.actors = actorsList
-                this.comingFromUser = d.production_countries?.firstOrNull()?.name ?: d.production_countries?.firstOrNull()?.iso_3166_1
+                this.country = d.production_countries?.firstOrNull()?.name ?: d.production_countries?.firstOrNull()?.iso_3166_1
                 
                 // Dizi Devam/Bitiş Durumu
                 this.showStatus = when (d.status) {
