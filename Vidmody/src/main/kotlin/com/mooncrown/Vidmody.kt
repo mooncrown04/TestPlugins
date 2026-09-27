@@ -2,14 +2,12 @@ package com.mooncrown
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.LoadResponse.Companion.addCountry
 import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.Score
 
 class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
-    override var name = "ha.vixolity.com"
+    override var name = "vixolity"
     override var mainUrl = "https://ha.vixolity.com"
     override var lang = "tr"
     override val hasMainPage = true
@@ -60,9 +58,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                     }
                 }
                 if (!items.isNullOrEmpty()) homeLists.add(HomePageList(title, items))
-            } catch (e: Exception) {
-                // Hata durumunu pas geç
-            }
+            } catch (e: Exception) { }
         }
         return newHomePageResponse(homeLists, false)
     }
@@ -120,13 +116,17 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
             }
         }
 
-        val tags = mutableListOf("MoOnCrOwN", catName).apply { d.genres?.forEach { it.name?.let { g -> add(g) } } }
+        // Ülke bilgisini de etiketlere (tags) güvenle dahil ediyoruz
+        val countryName = d.production_countries?.firstOrNull()?.name ?: d.production_countries?.firstOrNull()?.iso_3166_1
+        val tags = mutableListOf("MoOnCrOwN", catName).apply {
+            countryName?.let { add(it) }
+            d.genres?.forEach { it.name?.let { g -> add(g) } }
+        }
         val finalScore = d.vote_average?.let { Score.from10(it) }
 
         // Fragman Tanımlaması
         val trailerKey = d.videos?.results?.firstOrNull { it.type == "Trailer" && it.site == "YouTube" }?.key
         val trailerUrl = trailerKey?.let { "https://www.youtube.com/watch?v=$it" }
-        val countryName = d.production_countries?.firstOrNull()?.name ?: d.production_countries?.firstOrNull()?.iso_3166_1
 
         return if (type == "movie") {
             newMovieLoadResponse(d.title ?: d.name ?: "Film", url, TvType.Movie, "vid|$imdbId") {
@@ -139,7 +139,6 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 this.duration = d.runtime
                 this.actors = actorsList
                 
-                countryName?.let { addCountry(it) }
                 trailerUrl?.let { addTrailer(it) }
                 addImdbId(imdbId)
             }
@@ -178,7 +177,6 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                     else -> null
                 }
 
-                countryName?.let { addCountry(it) }
                 trailerUrl?.let { addTrailer(it) }
                 addImdbId(imdbId)
             }
