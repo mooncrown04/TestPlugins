@@ -7,7 +7,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.Score
 
 class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
-    override var name = "ha.vixolity.com"
+    override var name = "vixolity"
     override var mainUrl = "https://ha.vixolity.com"
     override var lang = "tr"
     override val hasMainPage = true
