@@ -6,8 +6,8 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.Score 
 
 class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
-    override var name = "Vidmody-Vixolity"
-    override var mainUrl = "https://ha.vixolity.com"
+    override var name = "Vidmody"
+    override var mainUrl = "https://vidmody.com"
     override var lang = "tr"
     override val hasMainPage = true
     override val hasQuickSearch = true
@@ -101,6 +101,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 this.year = (d.release_date ?: d.first_air_date)?.take(4)?.toIntOrNull()
                 this.tags = tags
                 this.score = finalScore
+                this.duration = d.runtime // Filmin süresi (dakika cinsinden) eklendi
                 this.actors = actorsList
                 addImdbId(imdbId)
             }
@@ -128,6 +129,12 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 this.tags = tags
                 this.score = finalScore
                 this.actors = actorsList
+				// Dizi Durum Bilgisi (Devam Ediyor / Sona Erdi)
+    this.showStatus = when (d.status) {
+        "Returning Series" -> ShowStatus.Ongoing
+        "Ended", "Canceled" -> ShowStatus.Completed
+        else -> null
+    }
                 addImdbId(imdbId)
             }
         }
@@ -136,16 +143,16 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
         val parts = data.split("|")
         val imdbId = parts[1]
-        val link = if (parts.size == 2) "https://ha.vixolity.com/vs/$imdbId" else "https://ha.vixolity.com/vs/$imdbId/s${parts[2]}/e${String.format("%02d", parts[3].toInt())}"
+        val link = if (parts.size == 2) "https://vidmody.com/vs/$imdbId" else "https://vidmody.com/vs/$imdbId/s${parts[2]}/e${String.format("%02d", parts[3].toInt())}"
         
         callback.invoke(
             newExtractorLink(
                 source = this.name,
-                name = "Vixolity",
+                name = "Vidmody [TR]",
                 url = link,
                 type = ExtractorLinkType.M3U8
             ) {
-                this.referer = "https://ha.vixolity.com/"
+                this.referer = "https://vidmody.com/"
                 this.quality = Qualities.P1080.value
             }
         )
@@ -154,7 +161,21 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
 
     data class TmdbListResponse(val results: List<TmdbResult>?)
     data class TmdbResult(val id: Int?, val title: String?, val name: String?, val poster_path: String?, val media_type: String?, val release_date: String?, val first_air_date: String?, val vote_average: Double?)
-    data class TmdbDetailResponse(val title: String?, val name: String?, val overview: String?, val poster_path: String?, val external_ids: ExternalIds?, val seasons: List<TmdbSeason>?, val release_date: String?, val first_air_date: String?, val genres: List<Genre>?, val credits: Credits?, val vote_average: Double?)
+    data class TmdbDetailResponse(
+        val title: String?, 
+        val name: String?, 
+        val overview: String?, 
+        val poster_path: String?, 
+        val external_ids: ExternalIds?, 
+        val seasons: List<TmdbSeason>?, 
+        val release_date: String?, 
+        val first_air_date: String?, 
+        val genres: List<Genre>?, 
+        val credits: Credits?, 
+        val vote_average: Double?,
+		val status: String?,
+        val runtime: Int? // TMDB'den gelen film süresi (dakika)
+    )
     data class TmdbSeasonResponse(val episodes: List<TmdbEpisode>?)
     data class TmdbEpisode(val name: String?, val overview: String?, val episode_number: Int?, val still_path: String?)
     data class ExternalIds(val imdb_id: String?)
