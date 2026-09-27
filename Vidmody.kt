@@ -22,12 +22,20 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
             Pair("Haftalık Trendler", "trending/all/week"),
             Pair("Popüler Türk Yapımları", "discover/movie?with_original_language=tr&sort_by=popularity.desc"),
             Pair("Sinemalarda", "movie/now_playing"),
-            Pair("Popüler Diziler", "tv/popular"),
-            Pair("Korku ve Gerilim", "discover/movie?with_genres=27,53"),
-            Pair("Netflix Dizileri", "discover/tv?with_networks=213"),
+            Pair("Popüler Diziler", "tv/popular"),            
+             Pair("Haftalık Trendler", "trending/all/week"),
             Pair("Popüler Kore Dizileri", "discover/tv?with_original_language=ko"),
+            Pair("Netflix Dizileri", "discover/tv?with_networks=213"),
+            Pair("Disney+ Orijinalleri", "discover/tv?with_networks=2739"),
+            Pair("Popüler Türk Filmleri", "discover/movie?with_original_language=tr&sort_by=popularity.desc"),
+            Pair("Popüler Türk Dizileri", "discover/tv?with_original_language=tr&sort_by=popularity.desc"),
+            Pair("Amazon Prime Dizileri", "discover/tv?with_networks=1024"),
+            Pair("Apple TV+ Yapımları", "discover/tv?with_networks=2552"),
+            Pair("HBO Efsaneleri", "discover/tv?with_networks=49"),
+            Pair("Korku ve Gerilim", "discover/movie?with_genres=27,53"),
+            Pair("Bilim Kurgu & Fantastik", "discover/movie?with_genres=878,14"),
             Pair("Marvel Dünyası", "discover/movie?with_companies=420&sort_by=release_date.desc"),
-            Pair("Disney+ Orijinalleri", "discover/tv?with_networks=2739")
+            Pair("Top 250 / Yüksek Puanlılar", "movie/top_rated")
         )
 
         categories.forEach { (title, endpoint) ->
@@ -97,7 +105,8 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         val type = parts.getOrNull(2) ?: "movie"
         val catName = parts.getOrNull(3) ?: "MoOnCrOwN"
 
-        val detailsUrl = "https://api.themoviedb.org/3/$type/$tmdbId?api_key=$tmdbKey&language=tr-TR&append_to_response=external_ids,credits,videos"
+        // append_to_response içerisine recommendations eklendi
+        val detailsUrl = "https://api.themoviedb.org/3/$type/$tmdbId?api_key=$tmdbKey&language=tr-TR&append_to_response=external_ids,credits,videos,recommendations"
         val d = app.get(detailsUrl).parsedSafe<TmdbDetailResponse>() ?: throw ErrorLoadingException("Detay Hatası")
         val imdbId = d.external_ids?.imdb_id ?: throw ErrorLoadingException("IMDB ID Bulunamadı")
 
@@ -116,11 +125,33 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
             }
         }
 
-        // Ülke bilgisini de etiketlere (tags) güvenle dahil ediyoruz
+        // Öneriler / Benzer Yapımlar (Recommendations) İşleme
+        val recommendationList = d.recommendations?.results?.mapNotNull { rec ->
+            val recId = rec.id ?: return@mapNotNull null
+            val recTitle = rec.title ?: rec.name ?: return@mapNotNull null
+            val recIsTv = rec.media_type == "tv" || type == "tv"
+            val recTypeStr = if (recIsTv) "tv" else "movie"
+            val recPoster = rec.poster_path?.let { "https://image.tmdb.org/t/p/w500$it" }
+
+            if (recIsTv) {
+                newTvSeriesSearchResponse(recTitle, "tmdb|$recId|$recTypeStr|Tavsiye", TvType.TvSeries) {
+                    this.posterUrl = recPoster
+                    this.year = (rec.release_date ?: rec.first_air_date)?.take(4)?.toIntOrNull()
+                }
+            } else {
+                newMovieSearchResponse(recTitle, "tmdb|$recId|$recTypeStr|Tavsiye", TvType.Movie) {
+                    this.posterUrl = recPoster
+                    this.year = (rec.release_date ?: rec.first_air_date)?.take(4)?.toIntOrNull()
+                }
+            }
+        }
+
+        // Ülke, Türler ve Production Companies (Yapım Şirketleri) etiketlere ekleniyor
         val countryName = d.production_countries?.firstOrNull()?.name ?: d.production_countries?.firstOrNull()?.iso_3166_1
         val tags = mutableListOf("MoOnCrOwN", catName).apply {
             countryName?.let { add(it) }
             d.genres?.forEach { it.name?.let { g -> add(g) } }
+            d.production_companies?.forEach { company -> company.name?.let { add(it) } }
         }
         val finalScore = d.vote_average?.let { Score.from10(it) }
 
@@ -138,6 +169,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 this.score = finalScore
                 this.duration = d.runtime
                 this.actors = actorsList
+                this.recommendations = recommendationList
                 
                 trailerUrl?.let { addTrailer(it) }
                 addImdbId(imdbId)
@@ -170,6 +202,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 this.tags = tags
                 this.score = finalScore
                 this.actors = actorsList
+                this.recommendations = recommendationList
 
                 this.showStatus = when (d.status) {
                     "Returning Series" -> ShowStatus.Ongoing
@@ -195,6 +228,14 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
             val formattedEp = String.format("%02d", episode)
             "${this.mainUrl}/vs/$imdbId/s$season/e$formattedEp"
         }
+
+        val subUrl = "${this.mainUrl}/subtitles/$imdbId/tr.vtt"
+        subtitleCallback.invoke(
+            SubtitleFile(
+                lang = "Türkçe",
+                url = subUrl
+            )
+        )
 
         callback.invoke(
             newExtractorLink(
@@ -237,7 +278,9 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         val runtime: Int?,
         val status: String?,
         val videos: TmdbVideos?,
-        val production_countries: List<ProductionCountry>?
+        val production_countries: List<ProductionCountry>?,
+        val production_companies: List<ProductionCompany>?,
+        val recommendations: TmdbListResponse?
     )
     data class TmdbSeasonResponse(val episodes: List<TmdbEpisode>?)
     data class TmdbEpisode(
@@ -255,4 +298,5 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
     data class TmdbVideos(val results: List<TmdbVideoResult>?)
     data class TmdbVideoResult(val key: String?, val site: String?, val type: String?)
     data class ProductionCountry(val iso_3166_1: String?, val name: String?)
+    data class ProductionCompany(val id: Int?, val name: String?, val logo_path: String?, val origin_country: String?)
 }
