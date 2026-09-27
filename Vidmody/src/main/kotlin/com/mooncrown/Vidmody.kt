@@ -6,7 +6,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.Score 
 
 class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
-    override var name = "Vidmody-Vixolity"
+    override var name = "Vidmody"
     override var mainUrl = "https://ha.vixolity.com"
     override var lang = "tr"
     override val hasMainPage = true
@@ -101,6 +101,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
                 this.year = (d.release_date ?: d.first_air_date)?.take(4)?.toIntOrNull()
                 this.tags = tags
                 this.score = finalScore
+                this.duration = d.runtime // Filmin süresi (dakika cinsinden) eklendi
                 this.actors = actorsList
                 addImdbId(imdbId)
             }
@@ -141,7 +142,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         callback.invoke(
             newExtractorLink(
                 source = this.name,
-                name = "Vixolity",
+                name = "Vidmody",
                 url = link,
                 type = ExtractorLinkType.M3U8
             ) {
@@ -154,7 +155,20 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
 
     data class TmdbListResponse(val results: List<TmdbResult>?)
     data class TmdbResult(val id: Int?, val title: String?, val name: String?, val poster_path: String?, val media_type: String?, val release_date: String?, val first_air_date: String?, val vote_average: Double?)
-    data class TmdbDetailResponse(val title: String?, val name: String?, val overview: String?, val poster_path: String?, val external_ids: ExternalIds?, val seasons: List<TmdbSeason>?, val release_date: String?, val first_air_date: String?, val genres: List<Genre>?, val credits: Credits?, val vote_average: Double?)
+    data class TmdbDetailResponse(
+        val title: String?, 
+        val name: String?, 
+        val overview: String?, 
+        val poster_path: String?, 
+        val external_ids: ExternalIds?, 
+        val seasons: List<TmdbSeason>?, 
+        val release_date: String?, 
+        val first_air_date: String?, 
+        val genres: List<Genre>?, 
+        val credits: Credits?, 
+        val vote_average: Double?,
+        val runtime: Int? // TMDB'den gelen film süresi (dakika)
+    )
     data class TmdbSeasonResponse(val episodes: List<TmdbEpisode>?)
     data class TmdbEpisode(val name: String?, val overview: String?, val episode_number: Int?, val still_path: String?)
     data class ExternalIds(val imdb_id: String?)
