@@ -6,7 +6,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
 import com.lagradost.cloudstream3.Score 
 
 class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
-    override var name = "Vidmody"
+    override var name = "Vidmody-Vixolity"
     override var mainUrl = "https://ha.vixolity.com"
     override var lang = "tr"
     override val hasMainPage = true
@@ -141,7 +141,7 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
         callback.invoke(
             newExtractorLink(
                 source = this.name,
-                name = "Vidmody",
+                name = "Vixolity",
                 url = link,
                 type = ExtractorLinkType.M3U8
             ) {
