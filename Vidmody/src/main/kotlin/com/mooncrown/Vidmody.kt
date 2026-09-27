@@ -22,12 +22,20 @@ class Vidmody(private val plugin: VidmodyPlugin) : MainAPI() {
             Pair("Haftalık Trendler", "trending/all/week"),
             Pair("Popüler Türk Yapımları", "discover/movie?with_original_language=tr&sort_by=popularity.desc"),
             Pair("Sinemalarda", "movie/now_playing"),
-            Pair("Popüler Diziler", "tv/popular"),
-            Pair("Korku ve Gerilim", "discover/movie?with_genres=27,53"),
-            Pair("Netflix Dizileri", "discover/tv?with_networks=213"),
+            Pair("Popüler Diziler", "tv/popular"),            
+             Pair("Haftalık Trendler", "trending/all/week"),
             Pair("Popüler Kore Dizileri", "discover/tv?with_original_language=ko"),
+            Pair("Netflix Dizileri", "discover/tv?with_networks=213"),
+            Pair("Disney+ Orijinalleri", "discover/tv?with_networks=2739"),
+            Pair("Popüler Türk Filmleri", "discover/movie?with_original_language=tr&sort_by=popularity.desc"),
+            Pair("Popüler Türk Dizileri", "discover/tv?with_original_language=tr&sort_by=popularity.desc"),
+            Pair("Amazon Prime Dizileri", "discover/tv?with_networks=1024"),
+            Pair("Apple TV+ Yapımları", "discover/tv?with_networks=2552"),
+            Pair("HBO Efsaneleri", "discover/tv?with_networks=49"),
+            Pair("Korku ve Gerilim", "discover/movie?with_genres=27,53"),
+            Pair("Bilim Kurgu & Fantastik", "discover/movie?with_genres=878,14"),
             Pair("Marvel Dünyası", "discover/movie?with_companies=420&sort_by=release_date.desc"),
-            Pair("Disney+ Orijinalleri", "discover/tv?with_networks=2739")
+            Pair("Top 250 / Yüksek Puanlılar", "movie/top_rated")
         )
 
         categories.forEach { (title, endpoint) ->
