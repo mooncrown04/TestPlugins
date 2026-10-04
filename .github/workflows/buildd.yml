@@ -81,44 +81,45 @@ jobs:
 
           cd $GITHUB_WORKSPACE/builds
           if [ -f "plugins.json" ]; then
-            # 1. fileHash alanlarını temizle
             sed -i '/"fileHash"/d' plugins.json
             
-            # 2. JSON anahtar sırasını belirtilen özel sıraya getir
-            python3 -c '
+            python3 -c "
 import json
 
 DESIRED_ORDER = [
-    "iconUrl",
-    "apiVersion",
-    "repositoryUrl",
-    "fileSize",
-    "status",
-    "language",
-    "authors",
-    "tvTypes",
-    "version",
-    "internalName",
-    "description",
-    "url",
-    "name"
+    'iconUrl',
+    'apiVersion',
+    'repositoryUrl',
+    'fileSize',
+    'status',
+    'language',
+    'authors',
+    'tvTypes',
+    'version',
+    'internalName',
+    'description',
+    'url',
+    'name'
 ]
 
-with open("plugins.json", "r", encoding="utf-8") as f:
-    data = json.load(f)
+try:
+    with open('plugins.json', 'r', encoding='utf-8') as f:
+        data = json.load(f)
 
-ordered_data = []
-for item in data:
-    ordered_item = {k: item[k] for k in DESIRED_ORDER if k in item}
-    for k, v in item.items():
-        if k not in ordered_item:
-            ordered_item[k] = v
-    ordered_data.append(ordered_item)
+    ordered_data = []
+    for item in data:
+        ordered_item = {k: item[k] for k in DESIRED_ORDER if k in item}
+        for k, v in item.items():
+            if k not in ordered_item:
+                ordered_item[k] = v
+        ordered_data.append(ordered_item)
 
-with open("plugins.json", "w", encoding="utf-8") as f:
-    json.dump(ordered_data, f, indent=4, ensure_ascii=False)
-'
-            echo "plugins.json sıralaması başarıyla güncellendi."
+    with open('plugins.json', 'w', encoding='utf-8') as f:
+        json.dump(ordered_data, f, indent=4, ensure_ascii=False)
+    print('plugins.json sıralaması başarıyla güncellendi.')
+except Exception as e:
+    print('Hata oluştu:', e)
+"
           fi
 
       - name: Push builds
