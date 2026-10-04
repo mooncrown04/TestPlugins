@@ -83,34 +83,7 @@ jobs:
           if [ -f "plugins.json" ]; then
             sed -i '/"fileHash"/d' plugins.json
             
-            python3 -c '
-import json
-
-DESIRED_ORDER = [
-    "iconUrl", "apiVersion", "repositoryUrl", "fileSize", 
-    "status", "language", "authors", "tvTypes", 
-    "version", "internalName", "description", "url", "name"
-]
-
-try:
-    with open("plugins.json", "r", encoding="utf-8") as f:
-        data = json.load(f)
-    
-    ordered_data = []
-    for item in data:
-        ordered_item = {k: item[k] for k in DESIRED_ORDER if k in item}
-        for k, v in item.items():
-            if k not in ordered_item:
-                ordered_item[k] = v
-        ordered_data.append(ordered_item)
-        
-    with open("plugins.json", "w", encoding="utf-8") as f:
-        json.dump(ordered_data, f, indent=4, ensure_ascii=False)
-        
-    print("plugins.json sıralaması başarıyla güncellendi.")
-except Exception as e:
-    print("Hata oluştu:", e)
-'
+            python3 -c 'import json; order=["iconUrl","apiVersion","repositoryUrl","fileSize","status","language","authors","tvTypes","version","internalName","description","url","name"]; data=json.load(open("plugins.json", encoding="utf-8")); ordered=[{**{k: i[k] for k in order if k in i}, **{k: v for k, v in i.items() if k not in order}} for i in data]; json.dump(ordered, open("plugins.json", "w", encoding="utf-8"), indent=4, ensure_ascii=False); print("Sıralama tamamlandı.")'
           fi
 
       - name: Push builds
