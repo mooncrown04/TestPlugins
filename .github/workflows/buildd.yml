@@ -83,27 +83,27 @@ jobs:
           if [ -f "plugins.json" ]; then
             sed -i '/"fileHash"/d' plugins.json
             
-            python3 -c "
+            cat << 'EOF' > reorder.py
 import json
 
 DESIRED_ORDER = [
-    'iconUrl',
-    'apiVersion',
-    'repositoryUrl',
-    'fileSize',
-    'status',
-    'language',
-    'authors',
-    'tvTypes',
-    'version',
-    'internalName',
-    'description',
-    'url',
-    'name'
+    "iconUrl",
+    "apiVersion",
+    "repositoryUrl",
+    "fileSize",
+    "status",
+    "language",
+    "authors",
+    "tvTypes",
+    "version",
+    "internalName",
+    "description",
+    "url",
+    "name"
 ]
 
 try:
-    with open('plugins.json', 'r', encoding='utf-8') as f:
+    with open("plugins.json", "r", encoding="utf-8") as f:
         data = json.load(f)
 
     ordered_data = []
@@ -114,12 +114,15 @@ try:
                 ordered_item[k] = v
         ordered_data.append(ordered_item)
 
-    with open('plugins.json', 'w', encoding='utf-8') as f:
+    with open("plugins.json", "w", encoding="utf-8") as f:
         json.dump(ordered_data, f, indent=4, ensure_ascii=False)
-    print('plugins.json sıralaması başarıyla güncellendi.')
+    print("plugins.json sıralaması başarıyla güncellendi.")
 except Exception as e:
-    print('Hata oluştu:', e)
-"
+    print("Hata oluştu:", e)
+EOF
+
+            python3 reorder.py
+            rm -f reorder.py
           fi
 
       - name: Push builds
