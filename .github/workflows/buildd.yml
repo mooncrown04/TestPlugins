@@ -83,29 +83,11 @@ jobs:
           if [ -f "plugins.json" ]; then
             sed -i '/"fileHash"/d' plugins.json
             
-            cat << 'EOF' > reorder.py
-import json
-
-DESIRED_ORDER = [
-    "iconUrl",
-    "apiVersion",
-    "repositoryUrl",
-    "fileSize",
-    "status",
-    "language",
-    "authors",
-    "tvTypes",
-    "version",
-    "internalName",
-    "description",
-    "url",
-    "name"
-]
-
+            echo 'import json
+DESIRED_ORDER = ["iconUrl", "apiVersion", "repositoryUrl", "fileSize", "status", "language", "authors", "tvTypes", "version", "internalName", "description", "url", "name"]
 try:
     with open("plugins.json", "r", encoding="utf-8") as f:
         data = json.load(f)
-
     ordered_data = []
     for item in data:
         ordered_item = {k: item[k] for k in DESIRED_ORDER if k in item}
@@ -113,13 +95,11 @@ try:
             if k not in ordered_item:
                 ordered_item[k] = v
         ordered_data.append(ordered_item)
-
     with open("plugins.json", "w", encoding="utf-8") as f:
         json.dump(ordered_data, f, indent=4, ensure_ascii=False)
     print("plugins.json sıralaması başarıyla güncellendi.")
 except Exception as e:
-    print("Hata oluştu:", e)
-EOF
+    print("Hata oluştu:", e)' > reorder.py
 
             python3 reorder.py
             rm -f reorder.py
