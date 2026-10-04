@@ -83,23 +83,7 @@ jobs:
           if [ -f "plugins.json" ]; then
             sed -i '/"fileHash"/d' plugins.json
             
-            echo 'import json
-DESIRED_ORDER = ["iconUrl", "apiVersion", "repositoryUrl", "fileSize", "status", "language", "authors", "tvTypes", "version", "internalName", "description", "url", "name"]
-try:
-    with open("plugins.json", "r", encoding="utf-8") as f:
-        data = json.load(f)
-    ordered_data = []
-    for item in data:
-        ordered_item = {k: item[k] for k in DESIRED_ORDER if k in item}
-        for k, v in item.items():
-            if k not in ordered_item:
-                ordered_item[k] = v
-        ordered_data.append(ordered_item)
-    with open("plugins.json", "w", encoding="utf-8") as f:
-        json.dump(ordered_data, f, indent=4, ensure_ascii=False)
-    print("plugins.json sıralaması başarıyla güncellendi.")
-except Exception as e:
-    print("Hata oluştu:", e)' > reorder.py
+            echo "aW1wb3J0IGpzb24KREVTSVJFRF9PUkRFUiA9IFsiaWNvblVybCIsICJhcGlWZXJzaW9uIiwgInJlcG9zaXRvcnlVcmwiLCAiZmlsZVNpemUiLCAic3RhdHVzIiwgImxhbmd1YWdlIiwgImF1dGhvcnMiLCAidHZUeXBlcyIsICJ2ZXJzaW9uIiwgImludGVybmFsTmFtZSIsICJkZXNjcmlwdGlvbiIsICJ1cmwiLCAibmFtZSJdCnRyeToKICAgIHdpdGggb3BlbigicGx1Z2lucy5qc29uIiwgInIiLCBlbmNvZGluZz0idXRmLTgiKSBhcyBmOgogICAgICAgIGRhdGEgPSBqc29uLmxvYWQoZikKICAgIG9yZGVyZWRfZGF0YSA9IFtdCiAgICBmb3IgaXRlbSBpbiBkYXRhOgogICAgICAgIG9yZGVyZWRfaXRlbSA9IHtrOiBpdGVtW2tdIGZvciBrIGluIERFU0lSRURfT1JERVJfIGlmIGsgaW4gaXRlbX0KICAgICAgICBmb3IgayB2IGluIGl0ZW0uaXRlbXMoKToKICAgICAgICAgICAgaWYgayBub3QgaW4gb3JkZXJlZF9pdGVtOgogICAgICAgICAgICAgICAgb3JkZXJlZF9pdGVtW2tdID0gCgogICAgICAgIG9yZGVyZWRfZGF0YS5hcHBlbmQob3JkZXJlZF9pdGVtKQogICAgd2l0aCBvcGVuKCJwbHVnaW5zLmpzb24iLCAidyIsIGVuY29kaW5nPSJ1dGYtOCIpIGFzIGY6CiAgICAgICAganNvbi5kdW1wKG9yZGVyZWRfZGF0YSwgZiwgaW5kZW50PTQsIGVuc3VyZV9hc2NpaT1GYWxzZSkKICAgIHByaW50KCJwbHVnaW5zLmpzb24gc3lyYWxhbWFzaSBiYXNhcml5bGEgZ3VuY2VsbGVuZGkuIikKZXhjZXB0IEV4Y2VwdGlvbiBhcyBlOgogICAgcHJpbnQoIkhhdGEgb2x1c3R1OiIsIGUpCg==" | base64 -d > reorder.py
 
             python3 reorder.py
             rm -f reorder.py
