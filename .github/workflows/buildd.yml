@@ -83,7 +83,7 @@ jobs:
           if [ -f "plugins.json" ]; then
             sed -i '/"fileHash"/d' plugins.json
             
-            cat << 'EOF' > reorder.py
+            python3 -c '
 import json
 
 DESIRED_ORDER = [
@@ -110,10 +110,7 @@ try:
     print("plugins.json sıralaması başarıyla güncellendi.")
 except Exception as e:
     print("Hata oluştu:", e)
-EOF
-
-            python3 reorder.py
-            rm -f reorder.py
+'
           fi
 
       - name: Push builds
